@@ -234,12 +234,15 @@ const Index = () => {
             color: rgb(1, 1, 1),
           });
         } else {
-          page.drawText(ann.text || "", {
-            x: ann.x * scale,
-            y: height - (ann.y * scale) - 12,
-            size: 11,
-            font,
-            color: rgb(0, 0, 0),
+          const lines = (ann.text || "").split('\n');
+          lines.forEach((line, idx) => {
+            page.drawText(line, {
+              x: ann.x * scale,
+              y: height - (ann.y * scale) - 12 - (idx * 14),
+              size: 11,
+              font,
+              color: rgb(0, 0, 0),
+            });
           });
         }
       }
