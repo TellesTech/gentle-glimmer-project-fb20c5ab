@@ -31,17 +31,6 @@ const Index = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [ocrWorker, setOcrWorker] = useState<any>(null);
 
-  useEffect(() => {
-    const initOCR = async () => {
-      const worker = await createWorker('por');
-      setOcrWorker(worker);
-    };
-    initOCR();
-    return () => {
-      if (ocrWorker) ocrWorker.terminate();
-    };
-  }, []);
-
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || file.type !== "application/pdf") {
@@ -75,10 +64,16 @@ const Index = () => {
   };
 
   const runOCR = async () => {
-    if (!pdfFile || !ocrWorker) return;
+    if (!pdfFile) return;
     setIsProcessingOCR(true);
-    toast.info("Processando páginas com OCR...");
+    toast.info("Processando páginas com OCR... Isso pode levar alguns segundos.");
+    let worker: any = null;
     try {
+      worker = await createWorker('por', 1, {
+        workerPath: 'https://unpkg.com/tesseract.js@v5.0.3/dist/worker.min.js',
+        langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+        corePath: 'https://unpkg.com/tesseract.js-core@v5.0.0/tesseract-core.wasm.js',
+      });
       const pdf = await pdfjsLib.getDocument({ data: await pdfFile.arrayBuffer() }).promise;
       const newAnns: Annotation[] = [];
       for (let i = 1; i <= pdf.numPages; i++) {
@@ -89,23 +84,25 @@ const Index = () => {
         canvas.height = viewport.height;
         canvas.width = viewport.width;
         await page.render({ canvasContext: context!, viewport }).promise;
-        const { data } = await ocrWorker.recognize(canvas.toDataURL());
+        const { data } = await worker.recognize(canvas.toDataURL('image/png'));
         data.lines.forEach((line: any) => {
-          if (line.confidence < 60) return;
+          if (line.confidence < 50) return;
           const scale = 1.5 / 2;
           const x = line.bbox.x0 * scale;
           const y = line.bbox.y0 * scale;
           const w = (line.bbox.x1 - line.bbox.x0) * scale;
           const h = (line.bbox.y1 - line.bbox.y0) * scale;
           newAnns.push({ id: Math.random().toString(36).substr(2, 9), type: 'whiteout', x, y, width: w, height: h, page: i });
-          newAnns.push({ id: Math.random().toString(36).substr(2, 9), type: 'text', x, y, page: i, text: line.text.trim() });
+          newAnns.push({ id: Math.random().toString(36).substr(2, 9), type: 'text', x: x, y: y, page: i, text: line.text.trim() });
         });
       }
       setAnnotations([...annotations, ...newAnns]);
       toast.success("Textos de imagem agora são editáveis!");
     } catch (err) {
-      toast.error("Erro no OCR.");
+      console.error("OCR Error detail:", err);
+      toast.error("Erro no processamento OCR. Verifique o console para detalhes.");
     } finally {
+      if (worker) await worker.terminate();
       setIsProcessingOCR(false);
     }
   };
