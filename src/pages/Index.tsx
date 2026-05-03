@@ -196,7 +196,7 @@ const Index = () => {
         <div className="flex items-center gap-2">
           {pdfFile && (
             <>
-              <Button variant="secondary" size="sm" onClick={runOCR} disabled={isProcessingOCR} className="bg-blue-50 text-blue-600 border-blue-100">
+              <Button variant="secondary" size="sm" onClick={runOCR} disabled={isProcessingOCR} className="bg-blue-50 text-blue-600 border-blue-100 disabled:opacity-50">
                 {isProcessingOCR ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Languages className="w-4 h-4 mr-2" />}
                 Liberar Textos (OCR)
               </Button>
