@@ -80,8 +80,21 @@ const Index = () => {
 
   const downloadPdf = () => {
     const doc = new jsPDF();
-    const splitText = doc.splitTextToSize(ocrText, 180);
-    doc.text(splitText, 10, 10);
+    const margin = 10;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const splitText = doc.splitTextToSize(ocrText, pageWidth - (margin * 2));
+    
+    let cursorY = margin;
+    splitText.forEach((line: string) => {
+      if (cursorY > pageHeight - margin) {
+        doc.addPage();
+        cursorY = margin;
+      }
+      doc.text(line, margin, cursorY);
+      cursorY += 7; // Approx line height
+    });
+    
     doc.save("texto_editado.pdf");
   };
 
