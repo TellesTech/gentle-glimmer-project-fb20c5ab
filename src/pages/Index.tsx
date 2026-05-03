@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { createWorker } from "tesseract.js";
 import * as pdfjsLib from "pdfjs-dist";
 import { saveAs } from "file-saver";
+import { jsPDF } from "jspdf";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -77,6 +78,13 @@ const Index = () => {
     saveAs(blob, "texto_extraido.txt");
   };
 
+  const downloadPdf = () => {
+    const doc = new jsPDF();
+    const splitText = doc.splitTextToSize(ocrText, 180);
+    doc.text(splitText, 10, 10);
+    doc.save("texto_editado.pdf");
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -112,7 +120,14 @@ const Index = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Texto Extraído</CardTitle>
-              <Button variant="outline" size="sm" onClick={downloadText}><FileDown className="mr-2 h-4 w-4" /> Baixar .txt</Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={downloadText}>
+                  <FileDown className="mr-2 h-4 w-4" /> Baixar .txt
+                </Button>
+                <Button variant="outline" size="sm" onClick={downloadPdf}>
+                  <FileText className="mr-2 h-4 w-4" /> Baixar .pdf
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <Textarea value={ocrText} onChange={(e) => setOcrText(e.target.value)} className="min-h-[400px]" />
