@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import * as pdfjsLib from "pdfjs-dist";
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { PDFDocument, rgb, StandardFonts, PDFPage } from "pdf-lib";
 import Draggable from "react-draggable";
 import { createWorker } from "tesseract.js";
 import { Button } from "@/components/ui/button";
