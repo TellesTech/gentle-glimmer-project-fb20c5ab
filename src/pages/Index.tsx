@@ -159,6 +159,12 @@ const Index = () => {
         const scale = 0.67; // Compensation for 1.5 preview scale
         
         const pageAnns = annotations.filter(a => a.page === i + 1);
+      const allPages = pdfDoc.getPages();
+      for (let idx = 0; idx < allPages.length; idx++) {
+        const page = allPages[idx];
+        const { height } = page.getSize();
+        const scale = 0.67;
+        const pageAnns = annotations.filter(a => a.page === idx + 1);
         for (const ann of pageAnns) {
           if (ann.type === 'whiteout') {
             page.drawRectangle({
@@ -178,6 +184,7 @@ const Index = () => {
             });
           }
         }
+      }
       }
       const pdfBytes = await pdfDoc.save();
       const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
