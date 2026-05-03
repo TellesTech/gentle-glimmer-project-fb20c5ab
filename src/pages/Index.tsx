@@ -153,36 +153,27 @@ const Index = () => {
       const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
       const pages = pdfDoc.getPages();
       
-      for (const ann of annotations) {
-        const page = pages[ann.page - 1];
-        const { height } = page.getSize();
-        const scale = 0.67; // Compensation for 1.5 preview scale
-        
-        const pageAnns = annotations.filter(a => a.page === i + 1);
       const allPages = pdfDoc.getPages();
-      for (let idx = 0; idx < allPages.length; idx++) {
-        const page = allPages[idx];
+      const scale = 0.67;
+      for (const ann of annotations) {
+        const page = allPages[ann.page - 1];
         const { height } = page.getSize();
-        const scale = 0.67;
-        const pageAnns = annotations.filter(a => a.page === idx + 1);
-        for (const ann of pageAnns) {
-          if (ann.type === 'whiteout') {
-            page.drawRectangle({
-              x: ann.x * scale,
-              y: height - (ann.y * scale) - (ann.height! * scale),
-              width: ann.width! * scale,
-              height: ann.height! * scale,
-              color: rgb(1, 1, 1),
-            });
-          } else {
-            page.drawText(ann.text || "", {
-              x: ann.x * scale,
-              y: height - (ann.y * scale) - 12,
-              size: 11,
-              font,
-              color: rgb(0, 0, 0),
-            });
-          }
+        if (ann.type === 'whiteout') {
+          page.drawRectangle({
+            x: ann.x * scale,
+            y: height - (ann.y * scale) - (ann.height! * scale),
+            width: ann.width! * scale,
+            height: ann.height! * scale,
+            color: rgb(1, 1, 1),
+          });
+        } else {
+          page.drawText(ann.text || "", {
+            x: ann.x * scale,
+            y: height - (ann.y * scale) - 12,
+            size: 11,
+            font,
+            color: rgb(0, 0, 0),
+          });
         }
       }
       }
