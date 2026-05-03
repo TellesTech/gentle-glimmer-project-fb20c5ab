@@ -79,11 +79,14 @@ const Index = () => {
         canvas.width = viewport.width;
         await page.render({ canvasContext: context!, viewport }).promise;
         
-        const { data } = await Tesseract.recognize(canvas.toDataURL('image/png'), 'por', {
+        const result = await Tesseract.recognize(canvas.toDataURL('image/png'), 'por', {
           logger: m => console.log(m)
         });
 
-        data.lines.forEach((line: any) => {
+        // @ts-ignore - Tesseract result structure can vary across versions
+        const lines = result.data?.lines || [];
+
+        lines.forEach((line: any) => {
           if (line.confidence < 50) return;
           const scale = 1.5 / 2;
           const x = line.bbox.x0 * scale;
