@@ -1,6 +1,8 @@
 import { useState, useRef } from "react";
 import { createWorker } from "tesseract.js";
 import * as pdfjsLib from "pdfjs-dist";
+// @ts-ignore
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 import { saveAs } from "file-saver";
 import { jsPDF } from "jspdf";
 import { Button } from "@/components/ui/button";
@@ -11,7 +13,7 @@ import { Loader2, Upload, FileDown, FileText, Languages } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
