@@ -63,7 +63,8 @@ const Index = () => {
       const context = canvas.getContext("2d");
       canvas.height = viewport.height;
       canvas.width = viewport.width;
-      await page.render({ canvasContext: context!, viewport }).promise;
+      // @ts-ignore - The types in pdfjs-dist 5.x can be inconsistent with build environments
+      await page.render({ canvasContext: context!, viewport, canvas }).promise;
       const { data: { text } } = await worker.recognize(canvas.toDataURL("image/png"));
       fullText += `--- Página ${i} ---\n${text}\n\n`;
     }
