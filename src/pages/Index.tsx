@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import * as pdfjsLib from "pdfjs-dist";
-import { PDFDocument, rgb, StandardFonts, PDFPage } from "pdf-lib";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import Draggable from "react-draggable";
-import { createWorker } from "tesseract.js";
+import Tesseract from "tesseract.js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,6 @@ const Index = () => {
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [ocrWorker, setOcrWorker] = useState<any>(null);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -67,11 +66,10 @@ const Index = () => {
     if (!pdfFile) return;
     setIsProcessingOCR(true);
     toast.info("Processando páginas com OCR... Isso pode levar alguns segundos.");
-    let worker: any = null;
     try {
-      worker = await createWorker('por');
       const pdf = await pdfjsLib.getDocument({ data: await pdfFile.arrayBuffer() }).promise;
       const newAnns: Annotation[] = [];
+      
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const viewport = page.getViewport({ scale: 2 });
@@ -80,7 +78,11 @@ const Index = () => {
         canvas.height = viewport.height;
         canvas.width = viewport.width;
         await page.render({ canvasContext: context!, viewport }).promise;
-        const { data } = await worker.recognize(canvas.toDataURL('image/png'));
+        
+        const { data } = await Tesseract.recognize(canvas.toDataURL('image/png'), 'por', {
+          logger: m => console.log(m)
+        });
+
         data.lines.forEach((line: any) => {
           if (line.confidence < 50) return;
           const scale = 1.5 / 2;
@@ -98,7 +100,6 @@ const Index = () => {
       console.error("OCR Error detail:", err);
       toast.error(`Erro no OCR: ${err.message || 'Falha ao processar imagens'}`);
     } finally {
-      if (worker) await worker.terminate();
       setIsProcessingOCR(false);
     }
   };
