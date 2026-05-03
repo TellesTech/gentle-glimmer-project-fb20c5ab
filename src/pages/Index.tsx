@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
+import * as pdfjsLib from "pdfjs-dist";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import Draggable from "react-draggable";
 import { Button } from "@/components/ui/button";
