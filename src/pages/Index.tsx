@@ -94,9 +94,9 @@ const Index = () => {
       }
       setAnnotations([...annotations, ...newAnns]);
       toast.success("Textos de imagem agora são editáveis!");
-    } catch (err) {
+    } catch (err: any) {
       console.error("OCR Error detail:", err);
-      toast.error("Erro no processamento OCR. Verifique o console para detalhes.");
+      toast.error(`Erro no OCR: ${err.message || 'Falha ao processar imagens'}`);
     } finally {
       if (worker) await worker.terminate();
       setIsProcessingOCR(false);
