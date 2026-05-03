@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import Draggable from "react-draggable";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Upload, FileDown, X, Type, Eraser } from "lucide-react";
 import { toast } from "sonner";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
 
 interface Annotation {
   id: string;
@@ -27,6 +27,11 @@ const Index = () => {
   const [pdfPages, setPdfPages] = useState<string[]>([]);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    console.log("PDF.js version:", pdfjsLib.version);
+    console.log("Worker source:", pdfjsLib.GlobalWorkerOptions.workerSrc);
+  }, []);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -47,8 +52,7 @@ const Index = () => {
         const context = canvas.getContext("2d");
         canvas.height = viewport.height;
         canvas.width = viewport.width;
-        // @ts-ignore
-        await page.render({ canvasContext: context!, viewport, canvas }).promise;
+        await page.render({ canvasContext: context!, viewport }).promise;
         pages.push(canvas.toDataURL());
       }
       setPdfPages(pages);
