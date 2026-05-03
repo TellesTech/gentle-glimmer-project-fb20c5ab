@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import * as pdfjsLib from "pdfjs-dist";
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { PDFDocument, rgb, StandardFonts, PDFPage } from "pdf-lib";
 import Draggable from "react-draggable";
 import { createWorker } from "tesseract.js";
 import { Button } from "@/components/ui/button";
@@ -69,11 +69,7 @@ const Index = () => {
     toast.info("Processando páginas com OCR... Isso pode levar alguns segundos.");
     let worker: any = null;
     try {
-      worker = await createWorker('por', 1, {
-        workerPath: 'https://unpkg.com/tesseract.js@v5.0.3/dist/worker.min.js',
-        langPath: 'https://tessdata.projectnaptha.com/4.0.0',
-        corePath: 'https://unpkg.com/tesseract.js-core@v5.0.0/tesseract-core.wasm.js',
-      });
+      worker = await createWorker('por');
       const pdf = await pdfjsLib.getDocument({ data: await pdfFile.arrayBuffer() }).promise;
       const newAnns: Annotation[] = [];
       for (let i = 1; i <= pdf.numPages; i++) {
@@ -98,9 +94,9 @@ const Index = () => {
       }
       setAnnotations([...annotations, ...newAnns]);
       toast.success("Textos de imagem agora são editáveis!");
-    } catch (err) {
+    } catch (err: any) {
       console.error("OCR Error detail:", err);
-      toast.error("Erro no processamento OCR. Verifique o console para detalhes.");
+      toast.error(`Erro no OCR: ${err.message || 'Falha ao processar imagens'}`);
     } finally {
       if (worker) await worker.terminate();
       setIsProcessingOCR(false);
