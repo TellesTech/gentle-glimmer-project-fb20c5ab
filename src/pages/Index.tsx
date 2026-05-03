@@ -52,8 +52,7 @@ const Index = () => {
         const context = canvas.getContext("2d");
         canvas.height = viewport.height;
         canvas.width = viewport.width;
-        // @ts-ignore
-        await page.render({ canvasContext: context!, viewport, canvas }).promise;
+        await page.render({ canvasContext: context!, viewport }).promise;
         pages.push(canvas.toDataURL());
       }
       setPdfPages(pages);
