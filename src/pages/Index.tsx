@@ -320,10 +320,16 @@ const Index = () => {
                         {ann.type === 'whiteout' ? (
                           <div className="bg-white border border-slate-200 border-dashed group-hover:border-blue-500" style={{ width: ann.width, height: ann.height }} />
                         ) : (
-                          <Input 
-                            value={ann.text} 
-                            onChange={(e) => updateAnnotation(ann.id, { text: e.target.value })} 
-                            className="h-8 bg-white/90 border-slate-300 min-w-[120px]" 
+                          <textarea 
+                            value={ann.text}
+                            onChange={(e) => updateAnnotation(ann.id, { text: e.target.value })}
+                            className="h-8 bg-white/90 border border-slate-300 min-w-[120px] text-[11px] leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 rounded px-1 resize-none overflow-hidden"
+                            rows={1}
+                            onInput={(e) => {
+                              const target = e.target as HTMLTextAreaElement;
+                              target.style.height = 'auto';
+                              target.style.height = target.scrollHeight + 'px';
+                            }}
                           />
                         )}
                         <button onClick={() => removeAnnotation(ann.id)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100"><X className="w-3 h-3" /></button>
