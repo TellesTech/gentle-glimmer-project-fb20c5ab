@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import Draggable from "react-draggable";
@@ -27,11 +27,6 @@ const Index = () => {
   const [pdfPages, setPdfPages] = useState<string[]>([]);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    console.log("PDF.js version:", pdfjsLib.version);
-    console.log("Worker source:", pdfjsLib.GlobalWorkerOptions.workerSrc);
-  }, []);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -63,6 +58,65 @@ const Index = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePageClick = async (e: React.MouseEvent<HTMLDivElement>, pageNum: number) => {
+    if ((e.target as HTMLElement).closest('.annotation-item')) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    if (!pdfFile) return;
+    try {
+      const arrayBuffer = await pdfFile.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const viewport = page.getViewport({ scale: 1.5 });
+      let detectedText = "";
+      let bestDist = 40;
+      textContent.items.forEach((item: any) => {
+        if (!item.str) return;
+        const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
+        const itemX = tx[4];
+        const itemY = viewport.height - tx[5] - (item.height * 1.5);
+        const dist = Math.sqrt(Math.pow(x - itemX, 2) + Math.pow(y - itemY, 2));
+        if (dist < bestDist) {
+          bestDist = dist;
+          detectedText = item.str;
+        }
+      });
+      if (detectedText) {
+        const newAnn: Annotation = {
+          id: Math.random().toString(36).substr(2, 9),
+          type: 'text',
+          x, y, page: pageNum,
+          text: detectedText
+        };
+        const whiteout: Annotation = {
+          id: Math.random().toString(36).substr(2, 9),
+          type: 'whiteout',
+          x: x - 2, y: y - 2,
+          width: detectedText.length * 9,
+          height: 22,
+          page: pageNum
+        };
+        setAnnotations([...annotations, whiteout, newAnn]);
+        toast.success("Texto detectado!");
+      } else {
+        addAnnotationAt('text', x, y, pageNum);
+      }
+    } catch (err) {
+      addAnnotationAt('text', x, y, pageNum);
+    }
+  };
+
+  const addAnnotationAt = (type: 'text' | 'whiteout', x: number, y: number, page: number) => {
+    const newAnn: Annotation = {
+      id: Math.random().toString(36).substr(2, 9),
+      type, x, y, page,
+      ...(type === 'text' ? { text: "" } : { width: 100, height: 20 })
+    };
+    setAnnotations([...annotations, newAnn]);
   };
 
   const addAnnotation = (type: 'text' | 'whiteout') => {
@@ -168,7 +222,11 @@ const Index = () => {
         ) : (
           <div className="flex flex-col gap-8">
             {pdfPages.map((pageSrc, i) => (
-              <div key={i} className="relative shadow-2xl bg-white h-fit">
+              <div 
+                key={i} 
+                className="relative shadow-2xl bg-white h-fit cursor-crosshair"
+                onClick={(e) => handlePageClick(e, i + 1)}
+              >
                 <img src={pageSrc} alt={`Página ${i+1}`} className="block pointer-events-none" />
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
                   {annotations.filter(ann => ann.page === i + 1).map(ann => (
@@ -178,7 +236,7 @@ const Index = () => {
                       onStop={(e, data) => updateAnnotation(ann.id, { x: data.x, y: data.y })}
                       bounds="parent"
                     >
-                      <div className="absolute pointer-events-auto cursor-move group" style={{ zIndex: 100 }}>
+                      <div className="absolute pointer-events-auto cursor-move group annotation-item" style={{ zIndex: 100 }}>
                         {ann.type === 'whiteout' ? (
                           <div className="bg-white border border-slate-200 border-dashed group-hover:border-blue-500" style={{ width: ann.width, height: ann.height }} />
                         ) : (
