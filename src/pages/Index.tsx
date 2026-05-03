@@ -152,8 +152,8 @@ const Index = () => {
         const newAnn: Annotation = {
           id: Math.random().toString(36).substr(2, 9),
           type: 'text',
-          x: x - (detectedText.length * 4), // Center roughly
-          y: y - 10,
+          x: x - (detectedText.length * 3), // Better horizontal alignment
+          y: y - 15, // Better vertical alignment
           page: pageNum,
           text: detectedText
         };
