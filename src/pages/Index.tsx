@@ -176,7 +176,6 @@ const Index = () => {
           });
         }
       }
-      }
       const pdfBytes = await pdfDoc.save();
       const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
       const link = document.createElement("a");
