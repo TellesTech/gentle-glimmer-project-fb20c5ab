@@ -107,10 +107,80 @@ const Index = () => {
     }
   };
 
-  const handlePageClick = (e: React.MouseEvent<HTMLDivElement>, pageNum: number) => {
+  const handlePageClick = async (e: React.MouseEvent<HTMLDivElement>, pageNum: number) => {
     if ((e.target as HTMLElement).closest('.annotation-item')) return;
+    
     const rect = e.currentTarget.getBoundingClientRect();
-    addAnnotationAt('text', e.clientX - rect.left, e.clientY - rect.top, pageNum);
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // If we haven't run OCR yet, we can try to detect text at click point
+    // But since the user wants to "click and edit", let's make it automatic
+    if (isProcessingOCR) return;
+
+    setIsProcessingOCR(true);
+    const toastId = toast.loading("Analisando texto sob o clique...");
+    
+    try {
+      // Capture a small area around the click for faster OCR
+      const arrayBuffer = await pdfFile!.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const page = await pdf.getPage(pageNum);
+      
+      // We render a zoomed version of the area around the click
+      const viewport = page.getViewport({ scale: 4 }); // High zoom for better OCR
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      
+      // Crop to a reasonable area around the click (e.g., 200x50 pixels)
+      // We need to map screen coordinates to PDF coordinates
+      const canvasScale = 4 / 1.5; // Our preview is 1.5, OCR is 4
+      const cropW = 300;
+      const cropH = 60;
+      
+      canvas.width = cropW;
+      canvas.height = cropH;
+      
+      context?.translate(-(x * canvasScale - cropW/2), -(y * canvasScale - cropH/2));
+      await page.render({ canvasContext: context!, viewport }).promise;
+
+      const result = await Tesseract.recognize(canvas.toDataURL('image/png'), 'por');
+      const detectedText = result.data.text.trim();
+
+      if (detectedText && detectedText.length > 1) {
+        // Add whiteout and text
+        const newAnn: Annotation = {
+          id: Math.random().toString(36).substr(2, 9),
+          type: 'text',
+          x: x - (detectedText.length * 4), // Center roughly
+          y: y - 10,
+          page: pageNum,
+          text: detectedText
+        };
+        
+        const whiteout: Annotation = {
+          id: Math.random().toString(36).substr(2, 9),
+          type: 'whiteout',
+          x: x - (detectedText.length * 4) - 5,
+          y: y - 12,
+          width: detectedText.length * 9 + 10,
+          height: 24,
+          page: pageNum
+        };
+
+        setAnnotations([...annotations, whiteout, newAnn]);
+        toast.success("Texto extraído e pronto para editar!", { id: toastId });
+      } else {
+        addAnnotationAt('text', x, y, pageNum);
+        toast.dismiss(toastId);
+      }
+    } catch (err) {
+      console.error(err);
+      addAnnotationAt('text', x, y, pageNum);
+      toast.error("Não foi possível extrair o texto automaticamente.", { id: toastId });
+    } finally {
+      setIsProcessingOCR(false);
+    }
   };
 
   const addAnnotationAt = (type: 'text' | 'whiteout', x: number, y: number, page: number) => {
