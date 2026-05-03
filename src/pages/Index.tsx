@@ -1,11 +1,12 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import Draggable from "react-draggable";
+import { createWorker } from "tesseract.js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Loader2, Upload, FileDown, X, Type, Eraser } from "lucide-react";
+import { Loader2, Upload, FileDown, X, Type, Eraser, Languages } from "lucide-react";
 import { toast } from "sonner";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
@@ -26,7 +27,20 @@ const Index = () => {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfPages, setPdfPages] = useState<string[]>([]);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [isProcessingOCR, setIsProcessingOCR] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [ocrWorker, setOcrWorker] = useState<any>(null);
+
+  useEffect(() => {
+    const initOCR = async () => {
+      const worker = await createWorker('por');
+      setOcrWorker(worker);
+    };
+    initOCR();
+    return () => {
+      if (ocrWorker) ocrWorker.terminate();
+    };
+  }, []);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -60,54 +74,46 @@ const Index = () => {
     }
   };
 
-  const handlePageClick = async (e: React.MouseEvent<HTMLDivElement>, pageNum: number) => {
+  const runOCR = async () => {
+    if (!pdfFile || !ocrWorker) return;
+    setIsProcessingOCR(true);
+    toast.info("Processando páginas com OCR...");
+    try {
+      const pdf = await pdfjsLib.getDocument({ data: await pdfFile.arrayBuffer() }).promise;
+      const newAnns: Annotation[] = [];
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        await page.render({ canvasContext: context!, viewport }).promise;
+        const { data } = await ocrWorker.recognize(canvas.toDataURL());
+        data.lines.forEach((line: any) => {
+          if (line.confidence < 60) return;
+          const scale = 1.5 / 2;
+          const x = line.bbox.x0 * scale;
+          const y = line.bbox.y0 * scale;
+          const w = (line.bbox.x1 - line.bbox.x0) * scale;
+          const h = (line.bbox.y1 - line.bbox.y0) * scale;
+          newAnns.push({ id: Math.random().toString(36).substr(2, 9), type: 'whiteout', x, y, width: w, height: h, page: i });
+          newAnns.push({ id: Math.random().toString(36).substr(2, 9), type: 'text', x, y, page: i, text: line.text.trim() });
+        });
+      }
+      setAnnotations([...annotations, ...newAnns]);
+      toast.success("Textos de imagem agora são editáveis!");
+    } catch (err) {
+      toast.error("Erro no OCR.");
+    } finally {
+      setIsProcessingOCR(false);
+    }
+  };
+
+  const handlePageClick = (e: React.MouseEvent<HTMLDivElement>, pageNum: number) => {
     if ((e.target as HTMLElement).closest('.annotation-item')) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    if (!pdfFile) return;
-    try {
-      const arrayBuffer = await pdfFile.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      const page = await pdf.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      const viewport = page.getViewport({ scale: 1.5 });
-      let detectedText = "";
-      let bestDist = 40;
-      textContent.items.forEach((item: any) => {
-        if (!item.str) return;
-        const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
-        const itemX = tx[4];
-        const itemY = viewport.height - tx[5] - (item.height * 1.5);
-        const dist = Math.sqrt(Math.pow(x - itemX, 2) + Math.pow(y - itemY, 2));
-        if (dist < bestDist) {
-          bestDist = dist;
-          detectedText = item.str;
-        }
-      });
-      if (detectedText) {
-        const newAnn: Annotation = {
-          id: Math.random().toString(36).substr(2, 9),
-          type: 'text',
-          x, y, page: pageNum,
-          text: detectedText
-        };
-        const whiteout: Annotation = {
-          id: Math.random().toString(36).substr(2, 9),
-          type: 'whiteout',
-          x: x - 2, y: y - 2,
-          width: detectedText.length * 9,
-          height: 22,
-          page: pageNum
-        };
-        setAnnotations([...annotations, whiteout, newAnn]);
-        toast.success("Texto detectado!");
-      } else {
-        addAnnotationAt('text', x, y, pageNum);
-      }
-    } catch (err) {
-      addAnnotationAt('text', x, y, pageNum);
-    }
+    addAnnotationAt('text', e.clientX - rect.left, e.clientY - rect.top, pageNum);
   };
 
   const addAnnotationAt = (type: 'text' | 'whiteout', x: number, y: number, page: number) => {
@@ -147,11 +153,11 @@ const Index = () => {
       const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
       const pages = pdfDoc.getPages();
       
+      const allPages = pdfDoc.getPages();
+      const scale = 0.67;
       for (const ann of annotations) {
-        const page = pages[ann.page - 1];
+        const page = allPages[ann.page - 1];
         const { height } = page.getSize();
-        const scale = 0.67; // Compensation for 1.5 preview scale
-        
         if (ann.type === 'whiteout') {
           page.drawRectangle({
             x: ann.x * scale,
@@ -163,7 +169,7 @@ const Index = () => {
         } else {
           page.drawText(ann.text || "", {
             x: ann.x * scale,
-            y: height - (ann.y * scale) - 10,
+            y: height - (ann.y * scale) - 12,
             size: 11,
             font,
             color: rgb(0, 0, 0),
@@ -190,12 +196,19 @@ const Index = () => {
       <header className="bg-white border-b p-4 sticky top-0 z-50 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-bold mr-4">PDF Editor</h1>
+        <div className="flex items-center gap-2">
           {pdfFile && (
             <>
+              <Button variant="secondary" size="sm" onClick={runOCR} disabled={isProcessingOCR} className="bg-blue-50 text-blue-600 border-blue-100">
+                {isProcessingOCR ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Languages className="w-4 h-4 mr-2" />}
+                Liberar Textos (OCR)
+              </Button>
+              <div className="w-px h-6 bg-slate-200 mx-1" />
               <Button variant="ghost" size="sm" onClick={() => addAnnotation('whiteout')}><Eraser className="w-4 h-4 mr-2" /> Apagar</Button>
-              <Button variant="ghost" size="sm" onClick={() => addAnnotation('text')}><Type className="w-4 h-4 mr-2" /> Texto</Button>
+              <Button variant="ghost" size="sm" onClick={() => addAnnotation('text')}><Type className="w-4 h-4 mr-2" /> Novo Texto</Button>
             </>
           )}
+        </div>
         </div>
         <div className="flex gap-2">
           <input type="file" accept=".pdf" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
