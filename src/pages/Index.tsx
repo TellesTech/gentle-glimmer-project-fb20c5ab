@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Upload, FileDown, X, Type, Eraser } from "lucide-react";
 import { toast } from "sonner";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
 
 interface Annotation {
   id: string;
