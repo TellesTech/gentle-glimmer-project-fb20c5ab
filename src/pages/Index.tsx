@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import Draggable from "react-draggable";
@@ -27,6 +27,11 @@ const Index = () => {
   const [pdfPages, setPdfPages] = useState<string[]>([]);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    console.log("PDF.js version:", pdfjsLib.version);
+    console.log("Worker source:", pdfjsLib.GlobalWorkerOptions.workerSrc);
+  }, []);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
