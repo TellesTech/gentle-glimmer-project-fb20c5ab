@@ -1055,6 +1055,44 @@ export type Database = {
           },
         ]
       }
+      project_daily_workforce: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          notes: string | null
+          planned_count: number
+          project_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          id?: string
+          notes?: string | null
+          planned_count?: number
+          project_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          notes?: string | null
+          planned_count?: number
+          project_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_daily_workforce_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_equipment: {
         Row: {
           created_at: string
@@ -1138,6 +1176,47 @@ export type Database = {
           },
         ]
       }
+      project_milestones: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_start_date: boolean | null
+          project_id: string
+          target_date: string
+          target_percentage: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_start_date?: boolean | null
+          project_id: string
+          target_date: string
+          target_percentage?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_start_date?: boolean | null
+          project_id?: string
+          target_date?: string
+          target_percentage?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_milestones_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_stages: {
         Row: {
           actual_end: string | null
@@ -1153,7 +1232,10 @@ export type Database = {
           progress: number | null
           project_id: string
           status: Database["public"]["Enums"]["stage_status"]
+          total_quantity: number | null
+          unit: string | null
           updated_at: string
+          weight: number | null
         }
         Insert: {
           actual_end?: string | null
@@ -1169,7 +1251,10 @@ export type Database = {
           progress?: number | null
           project_id: string
           status?: Database["public"]["Enums"]["stage_status"]
+          total_quantity?: number | null
+          unit?: string | null
           updated_at?: string
+          weight?: number | null
         }
         Update: {
           actual_end?: string | null
@@ -1185,7 +1270,10 @@ export type Database = {
           progress?: number | null
           project_id?: string
           status?: Database["public"]["Enums"]["stage_status"]
+          total_quantity?: number | null
+          unit?: string | null
           updated_at?: string
+          weight?: number | null
         }
         Relationships: [
           {
@@ -1732,6 +1820,7 @@ export type Database = {
           finalized_at: string | null
           id: string
           location: string | null
+          maintenance_order_number: string | null
           maintenance_order_title: string | null
           no_activity: boolean | null
           operational_deviation_hours: number | null
@@ -1772,6 +1861,7 @@ export type Database = {
           finalized_at?: string | null
           id?: string
           location?: string | null
+          maintenance_order_number?: string | null
           maintenance_order_title?: string | null
           no_activity?: boolean | null
           operational_deviation_hours?: number | null
@@ -1812,6 +1902,7 @@ export type Database = {
           finalized_at?: string | null
           id?: string
           location?: string | null
+          maintenance_order_number?: string | null
           maintenance_order_title?: string | null
           no_activity?: boolean | null
           operational_deviation_hours?: number | null
