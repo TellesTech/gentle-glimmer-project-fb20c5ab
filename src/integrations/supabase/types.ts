@@ -14,16 +14,1601 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clicksign_documents: {
+        Row: {
+          cancelled_at: string | null
+          created_at: string
+          created_by: string | null
+          document_hash: string | null
+          document_key: string | null
+          document_url: string | null
+          expires_at: string | null
+          id: string
+          metadata: Json | null
+          report_id: string
+          signed_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_hash?: string | null
+          document_key?: string | null
+          document_url?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          report_id: string
+          signed_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_hash?: string | null
+          document_key?: string | null
+          document_url?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          report_id?: string
+          signed_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clicksign_documents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clicksign_documents_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clicksign_signers: {
+        Row: {
+          auth_method: string | null
+          client_id: string | null
+          created_at: string
+          document_id: string
+          email: string
+          geolocation: Json | null
+          id: string
+          ip_address: string | null
+          name: string
+          phone: string | null
+          role: string | null
+          sign_as: string | null
+          signature_url: string | null
+          signed_at: string | null
+          signer_key: string | null
+          status: string
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          auth_method?: string | null
+          client_id?: string | null
+          created_at?: string
+          document_id: string
+          email: string
+          geolocation?: Json | null
+          id?: string
+          ip_address?: string | null
+          name: string
+          phone?: string | null
+          role?: string | null
+          sign_as?: string | null
+          signature_url?: string | null
+          signed_at?: string | null
+          signer_key?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          auth_method?: string | null
+          client_id?: string | null
+          created_at?: string
+          document_id?: string
+          email?: string
+          geolocation?: Json | null
+          id?: string
+          ip_address?: string | null
+          name?: string
+          phone?: string | null
+          role?: string | null
+          sign_as?: string | null
+          signature_url?: string | null
+          signed_at?: string | null
+          signer_key?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clicksign_signers_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clicksign_signers_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "clicksign_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clicksign_webhooks: {
+        Row: {
+          created_at: string
+          document_key: string | null
+          error_message: string | null
+          event_type: string
+          id: string
+          payload: Json
+          processed: boolean | null
+          processed_at: string | null
+          signer_key: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_key?: string | null
+          error_message?: string | null
+          event_type: string
+          id?: string
+          payload: Json
+          processed?: boolean | null
+          processed_at?: string | null
+          signer_key?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_key?: string | null
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed?: boolean | null
+          processed_at?: string | null
+          signer_key?: string | null
+        }
+        Relationships: []
+      }
+      client_profiles: {
+        Row: {
+          can_approve: boolean | null
+          company: string | null
+          company_id: string | null
+          created_at: string | null
+          email: string
+          id: string
+          is_active: boolean | null
+          name: string
+          phone: string | null
+          role: string | null
+          signature_data: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          can_approve?: boolean | null
+          company?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          phone?: string | null
+          role?: string | null
+          signature_data?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          can_approve?: boolean | null
+          company?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          phone?: string | null
+          role?: string | null
+          signature_data?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_report_access: {
+        Row: {
+          access_token: string
+          client_company: string | null
+          client_email: string | null
+          client_name: string
+          created_at: string | null
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          report_id: string
+        }
+        Insert: {
+          access_token?: string
+          client_company?: string | null
+          client_email?: string | null
+          client_name: string
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          report_id: string
+        }
+        Update: {
+          access_token?: string
+          client_company?: string | null
+          client_email?: string | null
+          client_name?: string
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          report_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_report_access_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_report_access_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_user_roles: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["client_role"]
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["client_role"]
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["client_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_user_roles_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      companies: {
+        Row: {
+          address: string | null
+          city: string | null
+          cnpj: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          phone: string | null
+          photo_url: string | null
+          state: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          phone?: string | null
+          photo_url?: string | null
+          state?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          phone?: string | null
+          photo_url?: string | null
+          state?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      feature_suggestions: {
+        Row: {
+          author_id: string | null
+          author_name: string
+          category: Database["public"]["Enums"]["suggestion_category"] | null
+          company_id: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          priority: Database["public"]["Enums"]["suggestion_priority"] | null
+          status: Database["public"]["Enums"]["suggestion_status"] | null
+          title: string
+          updated_at: string | null
+          votes_count: number | null
+        }
+        Insert: {
+          author_id?: string | null
+          author_name: string
+          category?: Database["public"]["Enums"]["suggestion_category"] | null
+          company_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["suggestion_priority"] | null
+          status?: Database["public"]["Enums"]["suggestion_status"] | null
+          title: string
+          updated_at?: string | null
+          votes_count?: number | null
+        }
+        Update: {
+          author_id?: string | null
+          author_name?: string
+          category?: Database["public"]["Enums"]["suggestion_category"] | null
+          company_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["suggestion_priority"] | null
+          status?: Database["public"]["Enums"]["suggestion_status"] | null
+          title?: string
+          updated_at?: string | null
+          votes_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_suggestions_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_suggestions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          company: string | null
+          converted_company_id: string | null
+          created_at: string | null
+          email: string
+          id: string
+          message: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company?: string | null
+          converted_company_id?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          message?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company?: string | null
+          converted_company_id?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          message?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_converted_company_id_fkey"
+            columns: ["converted_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          company_id: string | null
+          created_at: string | null
+          email: string
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          email: string
+          id: string
+          name: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_equipment: {
+        Row: {
+          created_at: string
+          daily_rate: number | null
+          id: string
+          model: string | null
+          name: string
+          notes: string | null
+          project_id: string
+          quantity: number | null
+          type: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          daily_rate?: number | null
+          id?: string
+          model?: string | null
+          name: string
+          notes?: string | null
+          project_id: string
+          quantity?: number | null
+          type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          daily_rate?: number | null
+          id?: string
+          model?: string | null
+          name?: string
+          notes?: string | null
+          project_id?: string
+          quantity?: number | null
+          type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_equipment_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_stages: {
+        Row: {
+          actual_end: string | null
+          actual_start: string | null
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          order_index: number
+          planned_end: string | null
+          planned_start: string | null
+          progress: number | null
+          project_id: string
+          status: Database["public"]["Enums"]["stage_status"]
+          updated_at: string
+        }
+        Insert: {
+          actual_end?: string | null
+          actual_start?: string | null
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          order_index?: number
+          planned_end?: string | null
+          planned_start?: string | null
+          progress?: number | null
+          project_id: string
+          status?: Database["public"]["Enums"]["stage_status"]
+          updated_at?: string
+        }
+        Update: {
+          actual_end?: string | null
+          actual_start?: string | null
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          order_index?: number
+          planned_end?: string | null
+          planned_start?: string | null
+          progress?: number | null
+          project_id?: string
+          status?: Database["public"]["Enums"]["stage_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_stages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_tasks: {
+        Row: {
+          actual_end: string | null
+          actual_hours: number | null
+          actual_start: string | null
+          assigned_to: string | null
+          created_at: string
+          description: string | null
+          estimated_hours: number | null
+          id: string
+          name: string
+          order_index: number
+          planned_end: string | null
+          planned_start: string | null
+          priority: Database["public"]["Enums"]["task_priority"] | null
+          progress: number | null
+          project_id: string
+          stage_id: string
+          status: Database["public"]["Enums"]["task_status"]
+          updated_at: string
+        }
+        Insert: {
+          actual_end?: string | null
+          actual_hours?: number | null
+          actual_start?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          name: string
+          order_index?: number
+          planned_end?: string | null
+          planned_start?: string | null
+          priority?: Database["public"]["Enums"]["task_priority"] | null
+          progress?: number | null
+          project_id: string
+          stage_id: string
+          status?: Database["public"]["Enums"]["task_status"]
+          updated_at?: string
+        }
+        Update: {
+          actual_end?: string | null
+          actual_hours?: number | null
+          actual_start?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          name?: string
+          order_index?: number
+          planned_end?: string | null
+          planned_start?: string | null
+          priority?: Database["public"]["Enums"]["task_priority"] | null
+          progress?: number | null
+          project_id?: string
+          stage_id?: string
+          status?: Database["public"]["Enums"]["task_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "project_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          code: string | null
+          company_id: string
+          created_at: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          photo_url: string | null
+          site_id: string
+          start_date: string | null
+          status: Database["public"]["Enums"]["project_status"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          code?: string | null
+          company_id: string
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          photo_url?: string | null
+          site_id: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["project_status"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string | null
+          company_id?: string
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          photo_url?: string | null
+          site_id?: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["project_status"] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_activities: {
+        Row: {
+          completed: boolean | null
+          created_at: string | null
+          description: string
+          id: string
+          notes: string | null
+          progress: number | null
+          report_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string | null
+          description: string
+          id?: string
+          notes?: string | null
+          progress?: number | null
+          report_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          notes?: string | null
+          progress?: number | null
+          report_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_activities_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_attendance: {
+        Row: {
+          arrival_time: string | null
+          created_at: string | null
+          departure_time: string | null
+          id: string
+          notes: string | null
+          present: boolean | null
+          report_id: string
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          arrival_time?: string | null
+          created_at?: string | null
+          departure_time?: string | null
+          id?: string
+          notes?: string | null
+          present?: boolean | null
+          report_id: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          arrival_time?: string | null
+          created_at?: string | null
+          departure_time?: string | null
+          id?: string
+          notes?: string | null
+          present?: boolean | null
+          report_id?: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_attendance_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_attendance_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_client_approvers: {
+        Row: {
+          approved_at: string | null
+          client_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          report_id: string
+          status: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          client_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          report_id: string
+          status?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          client_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          report_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_client_approvers_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_client_approvers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_client_approvers_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_deviations: {
+        Row: {
+          action_taken: string | null
+          created_at: string | null
+          description: string
+          id: string
+          impact: Database["public"]["Enums"]["impact_level"] | null
+          report_id: string
+          type: Database["public"]["Enums"]["deviation_type"]
+        }
+        Insert: {
+          action_taken?: string | null
+          created_at?: string | null
+          description: string
+          id?: string
+          impact?: Database["public"]["Enums"]["impact_level"] | null
+          report_id: string
+          type: Database["public"]["Enums"]["deviation_type"]
+        }
+        Update: {
+          action_taken?: string | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          impact?: Database["public"]["Enums"]["impact_level"] | null
+          report_id?: string
+          type?: Database["public"]["Enums"]["deviation_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_deviations_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_equipment: {
+        Row: {
+          created_at: string
+          equipment_id: string | null
+          equipment_name: string
+          hours_used: number | null
+          id: string
+          observations: string | null
+          quantity_used: number | null
+          report_id: string
+          status: string | null
+        }
+        Insert: {
+          created_at?: string
+          equipment_id?: string | null
+          equipment_name: string
+          hours_used?: number | null
+          id?: string
+          observations?: string | null
+          quantity_used?: number | null
+          report_id: string
+          status?: string | null
+        }
+        Update: {
+          created_at?: string
+          equipment_id?: string | null
+          equipment_name?: string
+          hours_used?: number | null
+          id?: string
+          observations?: string | null
+          quantity_used?: number | null
+          report_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_equipment_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "project_equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_equipment_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_photos: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          report_id: string
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          report_id: string
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          report_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_photos_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_signatures: {
+        Row: {
+          access_id: string | null
+          id: string
+          ip_address: string | null
+          report_id: string
+          signature_data: string
+          signed_at: string | null
+          signer_name: string
+          signer_role: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          access_id?: string | null
+          id?: string
+          ip_address?: string | null
+          report_id: string
+          signature_data: string
+          signed_at?: string | null
+          signer_name: string
+          signer_role?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          access_id?: string | null
+          id?: string
+          ip_address?: string | null
+          report_id?: string
+          signature_data?: string
+          signed_at?: string | null
+          signer_name?: string
+          signer_role?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_signatures_access_id_fkey"
+            columns: ["access_id"]
+            isOneToOne: false
+            referencedRelation: "client_report_access"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_signatures_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports: {
+        Row: {
+          actual_workforce: number | null
+          approved_at: string | null
+          approved_by: string | null
+          archived_at: string | null
+          comments: string | null
+          contract_number: string | null
+          created_at: string | null
+          created_by: string | null
+          date: string
+          end_time: string | null
+          finalized_at: string | null
+          id: string
+          location: string | null
+          planned_workforce: number | null
+          project_id: string
+          real_percentage: number | null
+          rejected_reason: string | null
+          sent_at: string | null
+          shift: Database["public"]["Enums"]["shift_type"]
+          start_time: string | null
+          status: Database["public"]["Enums"]["report_status"] | null
+          supervisor_name: string | null
+          supervisor_role: string | null
+          team_id: string | null
+          technical_responsible_name: string | null
+          technical_responsible_role: string | null
+          temperature: number | null
+          updated_at: string | null
+          weather: string | null
+        }
+        Insert: {
+          actual_workforce?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          archived_at?: string | null
+          comments?: string | null
+          contract_number?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          date: string
+          end_time?: string | null
+          finalized_at?: string | null
+          id?: string
+          location?: string | null
+          planned_workforce?: number | null
+          project_id: string
+          real_percentage?: number | null
+          rejected_reason?: string | null
+          sent_at?: string | null
+          shift?: Database["public"]["Enums"]["shift_type"]
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["report_status"] | null
+          supervisor_name?: string | null
+          supervisor_role?: string | null
+          team_id?: string | null
+          technical_responsible_name?: string | null
+          technical_responsible_role?: string | null
+          temperature?: number | null
+          updated_at?: string | null
+          weather?: string | null
+        }
+        Update: {
+          actual_workforce?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          archived_at?: string | null
+          comments?: string | null
+          contract_number?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          date?: string
+          end_time?: string | null
+          finalized_at?: string | null
+          id?: string
+          location?: string | null
+          planned_workforce?: number | null
+          project_id?: string
+          real_percentage?: number | null
+          rejected_reason?: string | null
+          sent_at?: string | null
+          shift?: Database["public"]["Enums"]["shift_type"]
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["report_status"] | null
+          supervisor_name?: string | null
+          supervisor_role?: string | null
+          team_id?: string | null
+          technical_responsible_name?: string | null
+          technical_responsible_role?: string | null
+          temperature?: number | null
+          updated_at?: string | null
+          weather?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sites: {
+        Row: {
+          address: string | null
+          city: string | null
+          company_id: string
+          created_at: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          name: string
+          photo_url: string | null
+          state: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          company_id: string
+          created_at?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          photo_url?: string | null
+          state?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          photo_url?: string | null
+          state?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sites_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          max_companies: number | null
+          max_projects: number | null
+          max_reports_per_month: number | null
+          max_users: number | null
+          plan: string
+          status: string
+          trial_ends_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          max_companies?: number | null
+          max_projects?: number | null
+          max_reports_per_month?: number | null
+          max_users?: number | null
+          plan?: string
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          max_companies?: number | null
+          max_projects?: number | null
+          max_reports_per_month?: number | null
+          max_users?: number | null
+          plan?: string
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suggestion_votes: {
+        Row: {
+          created_at: string | null
+          id: string
+          suggestion_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          suggestion_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          suggestion_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suggestion_votes_suggestion_id_fkey"
+            columns: ["suggestion_id"]
+            isOneToOne: false
+            referencedRelation: "feature_suggestions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggestion_votes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_members: {
+        Row: {
+          id: string
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string | null
+          id: string
+          leader_id: string | null
+          name: string
+          project_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          leader_id?: string | null
+          name: string
+          project_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          leader_id?: string | null
+          name?: string
+          project_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_settings: {
+        Row: {
+          accent_color: string | null
+          company_id: string
+          created_at: string | null
+          favicon_url: string | null
+          id: string
+          logo_url: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          sidebar_theme: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          company_id: string
+          created_at?: string | null
+          favicon_url?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          sidebar_theme?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          company_id?: string
+          created_at?: string | null
+          favicon_url?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          sidebar_theme?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_companies: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          id: string
+          is_owner: boolean | null
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          id?: string
+          is_owner?: boolean | null
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          is_owner?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_companies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      can_create_company: { Args: { _user_id: string }; Returns: boolean }
+      client_has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["client_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      get_client_profile_id: { Args: { _user_id: string }; Returns: string }
+      get_user_companies_count: { Args: { _user_id: string }; Returns: number }
+      get_user_company_id: { Args: { _user_id: string }; Returns: string }
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
+      get_user_team_ids: { Args: { _user_id: string }; Returns: string[] }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["user_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_client: { Args: { _user_id: string }; Returns: boolean }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      client_role: "viewer" | "approver" | "admin"
+      deviation_type:
+        | "delay"
+        | "equipment"
+        | "safety"
+        | "other"
+        | "weather"
+        | "materials"
+        | "labor"
+        | "stoppage"
+        | "contractor"
+        | "supplier"
+        | "project_design"
+        | "planning"
+        | "execution"
+      impact_level: "low" | "medium" | "high"
+      project_status: "planning" | "in_progress" | "completed" | "suspended"
+      report_status: "draft" | "completed"
+      shift_type: "morning" | "afternoon" | "night"
+      stage_status:
+        | "planned"
+        | "in_progress"
+        | "paused"
+        | "completed"
+        | "cancelled"
+      suggestion_category:
+        | "melhoria"
+        | "bug"
+        | "nova_funcionalidade"
+        | "integracao"
+      suggestion_priority: "baixa" | "media" | "alta" | "critica"
+      suggestion_status:
+        | "backlog"
+        | "em_analise"
+        | "em_desenvolvimento"
+        | "concluido"
+      task_priority: "low" | "medium" | "high" | "critical"
+      task_status:
+        | "planned"
+        | "in_progress"
+        | "paused"
+        | "completed"
+        | "cancelled"
+      user_role:
+        | "admin"
+        | "director"
+        | "supervisor"
+        | "leader"
+        | "collaborator"
+        | "hr"
+        | "super_admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +1735,64 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      client_role: ["viewer", "approver", "admin"],
+      deviation_type: [
+        "delay",
+        "equipment",
+        "safety",
+        "other",
+        "weather",
+        "materials",
+        "labor",
+        "stoppage",
+        "contractor",
+        "supplier",
+        "project_design",
+        "planning",
+        "execution",
+      ],
+      impact_level: ["low", "medium", "high"],
+      project_status: ["planning", "in_progress", "completed", "suspended"],
+      report_status: ["draft", "completed"],
+      shift_type: ["morning", "afternoon", "night"],
+      stage_status: [
+        "planned",
+        "in_progress",
+        "paused",
+        "completed",
+        "cancelled",
+      ],
+      suggestion_category: [
+        "melhoria",
+        "bug",
+        "nova_funcionalidade",
+        "integracao",
+      ],
+      suggestion_priority: ["baixa", "media", "alta", "critica"],
+      suggestion_status: [
+        "backlog",
+        "em_analise",
+        "em_desenvolvimento",
+        "concluido",
+      ],
+      task_priority: ["low", "medium", "high", "critical"],
+      task_status: [
+        "planned",
+        "in_progress",
+        "paused",
+        "completed",
+        "cancelled",
+      ],
+      user_role: [
+        "admin",
+        "director",
+        "supervisor",
+        "leader",
+        "collaborator",
+        "hr",
+        "super_admin",
+      ],
+    },
   },
 } as const
