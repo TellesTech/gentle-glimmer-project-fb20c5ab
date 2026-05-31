@@ -936,6 +936,39 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          link: string | null
+          message: string
+          read: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          message: string
+          read?: boolean
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          message?: string
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -946,6 +979,7 @@ export type Database = {
           name: string
           phone: string | null
           pin_hash: string | null
+          signature_data: string | null
           state: string | null
           updated_at: string | null
         }
@@ -958,6 +992,7 @@ export type Database = {
           name: string
           phone?: string | null
           pin_hash?: string | null
+          signature_data?: string | null
           state?: string | null
           updated_at?: string | null
         }
@@ -970,6 +1005,7 @@ export type Database = {
           name?: string
           phone?: string | null
           pin_hash?: string | null
+          signature_data?: string | null
           state?: string | null
           updated_at?: string | null
         }
@@ -1658,8 +1694,10 @@ export type Database = {
           finalized_at: string | null
           id: string
           location: string | null
+          no_activity: boolean | null
           planned_workforce: number | null
           project_id: string
+          rdo_number: number | null
           real_percentage: number | null
           rejected_reason: string | null
           sent_at: string | null
@@ -1692,8 +1730,10 @@ export type Database = {
           finalized_at?: string | null
           id?: string
           location?: string | null
+          no_activity?: boolean | null
           planned_workforce?: number | null
           project_id: string
+          rdo_number?: number | null
           real_percentage?: number | null
           rejected_reason?: string | null
           sent_at?: string | null
@@ -1726,8 +1766,10 @@ export type Database = {
           finalized_at?: string | null
           id?: string
           location?: string | null
+          no_activity?: boolean | null
           planned_workforce?: number | null
           project_id?: string
+          rdo_number?: number | null
           real_percentage?: number | null
           rejected_reason?: string | null
           sent_at?: string | null
