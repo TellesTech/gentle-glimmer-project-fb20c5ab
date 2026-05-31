@@ -975,7 +975,9 @@ export type Database = {
           company_id: string | null
           created_at: string | null
           email: string
+          employment_type: string | null
           id: string
+          job_title: string | null
           name: string
           phone: string | null
           pin_hash: string | null
@@ -988,7 +990,9 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           email: string
+          employment_type?: string | null
           id: string
+          job_title?: string | null
           name: string
           phone?: string | null
           pin_hash?: string | null
@@ -1001,7 +1005,9 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           email?: string
+          employment_type?: string | null
           id?: string
+          job_title?: string | null
           name?: string
           phone?: string | null
           pin_hash?: string | null
