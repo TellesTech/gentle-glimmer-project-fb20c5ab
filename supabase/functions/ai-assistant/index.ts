@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 const AI_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
-const MODEL = 'google/gemini-2.5-flash';
+const MODEL = 'google/gemini-2.0-flash-001';
 const MAX_TOOL_ROUNDS = 5;
 const HARD_ROW_LIMIT = 200;
 const DEFAULT_ROW_LIMIT = 50;
