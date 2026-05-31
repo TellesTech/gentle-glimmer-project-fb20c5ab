@@ -775,42 +775,54 @@ export type Database = {
       }
       company_contacts: {
         Row: {
+          avatar_url: string | null
           can_approve: boolean | null
           company_id: string
           created_at: string | null
           email: string
           id: string
+          invitation_count: number | null
+          invitation_sent_at: string | null
           is_active: boolean | null
           name: string
           phone: string | null
+          pin_hash: string | null
           role: string | null
           signature_data: string | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
+          avatar_url?: string | null
           can_approve?: boolean | null
           company_id: string
           created_at?: string | null
           email: string
           id?: string
+          invitation_count?: number | null
+          invitation_sent_at?: string | null
           is_active?: boolean | null
           name: string
           phone?: string | null
+          pin_hash?: string | null
           role?: string | null
           signature_data?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
+          avatar_url?: string | null
           can_approve?: boolean | null
           company_id?: string
           created_at?: string | null
           email?: string
           id?: string
+          invitation_count?: number | null
+          invitation_sent_at?: string | null
           is_active?: boolean | null
           name?: string
           phone?: string | null
+          pin_hash?: string | null
           role?: string | null
           signature_data?: string | null
           updated_at?: string | null
@@ -965,6 +977,24 @@ export type Database = {
           read?: boolean
           title?: string
           type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      portal_admin_access: {
+        Row: {
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
           user_id?: string
         }
         Relationships: []
@@ -1685,11 +1715,13 @@ export type Database = {
       reports: {
         Row: {
           actual_workforce: number | null
+          amt_deviation_hours: number | null
           approved_at: string | null
           approved_by: string | null
           archived_at: string | null
           client_company: string | null
           client_name: string | null
+          climatic_deviation_hours: number | null
           comments: string | null
           contract_number: string | null
           created_at: string | null
@@ -1700,7 +1732,9 @@ export type Database = {
           finalized_at: string | null
           id: string
           location: string | null
+          maintenance_order_title: string | null
           no_activity: boolean | null
+          operational_deviation_hours: number | null
           planned_workforce: number | null
           project_id: string
           rdo_number: number | null
@@ -1721,11 +1755,13 @@ export type Database = {
         }
         Insert: {
           actual_workforce?: number | null
+          amt_deviation_hours?: number | null
           approved_at?: string | null
           approved_by?: string | null
           archived_at?: string | null
           client_company?: string | null
           client_name?: string | null
+          climatic_deviation_hours?: number | null
           comments?: string | null
           contract_number?: string | null
           created_at?: string | null
@@ -1736,7 +1772,9 @@ export type Database = {
           finalized_at?: string | null
           id?: string
           location?: string | null
+          maintenance_order_title?: string | null
           no_activity?: boolean | null
+          operational_deviation_hours?: number | null
           planned_workforce?: number | null
           project_id: string
           rdo_number?: number | null
@@ -1757,11 +1795,13 @@ export type Database = {
         }
         Update: {
           actual_workforce?: number | null
+          amt_deviation_hours?: number | null
           approved_at?: string | null
           approved_by?: string | null
           archived_at?: string | null
           client_company?: string | null
           client_name?: string | null
+          climatic_deviation_hours?: number | null
           comments?: string | null
           contract_number?: string | null
           created_at?: string | null
@@ -1772,7 +1812,9 @@ export type Database = {
           finalized_at?: string | null
           id?: string
           location?: string | null
+          maintenance_order_title?: string | null
           no_activity?: boolean | null
+          operational_deviation_hours?: number | null
           planned_workforce?: number | null
           project_id?: string
           rdo_number?: number | null
@@ -1818,6 +1860,182 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_report_photos: {
+        Row: {
+          annotations: Json | null
+          caption: string | null
+          created_at: string
+          id: string
+          layout: Database["public"]["Enums"]["service_photo_layout"]
+          order_index: number
+          section_id: string
+          url: string
+        }
+        Insert: {
+          annotations?: Json | null
+          caption?: string | null
+          created_at?: string
+          id?: string
+          layout?: Database["public"]["Enums"]["service_photo_layout"]
+          order_index?: number
+          section_id: string
+          url: string
+        }
+        Update: {
+          annotations?: Json | null
+          caption?: string | null
+          created_at?: string
+          id?: string
+          layout?: Database["public"]["Enums"]["service_photo_layout"]
+          order_index?: number
+          section_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_report_photos_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "service_report_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_report_sections: {
+        Row: {
+          content: Json | null
+          created_at: string
+          id: string
+          order_index: number
+          report_id: string
+          section_type: Database["public"]["Enums"]["service_section_type"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string
+          id?: string
+          order_index?: number
+          report_id: string
+          section_type?: Database["public"]["Enums"]["service_section_type"]
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string
+          id?: string
+          order_index?: number
+          report_id?: string
+          section_type?: Database["public"]["Enums"]["service_section_type"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_report_sections_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "service_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_reports: {
+        Row: {
+          client_contact: string | null
+          client_name: string | null
+          client_unit: string | null
+          code: string | null
+          company_id: string | null
+          conclusion: string | null
+          cover_image_url: string | null
+          created_at: string
+          created_by: string
+          end_date: string | null
+          id: string
+          project_id: string | null
+          revision: number
+          safety_notes: string | null
+          scope_description: string | null
+          site_id: string | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["service_report_status"]
+          subject: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          client_contact?: string | null
+          client_name?: string | null
+          client_unit?: string | null
+          code?: string | null
+          company_id?: string | null
+          conclusion?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by: string
+          end_date?: string | null
+          id?: string
+          project_id?: string | null
+          revision?: number
+          safety_notes?: string | null
+          scope_description?: string | null
+          site_id?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["service_report_status"]
+          subject?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          client_contact?: string | null
+          client_name?: string | null
+          client_unit?: string | null
+          code?: string | null
+          company_id?: string | null
+          conclusion?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string
+          end_date?: string | null
+          id?: string
+          project_id?: string | null
+          revision?: number
+          safety_notes?: string | null
+          scope_description?: string | null
+          site_id?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["service_report_status"]
+          subject?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_reports_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_reports_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
             referencedColumns: ["id"]
           },
         ]
@@ -2341,6 +2559,14 @@ export type Database = {
       impact_level: "low" | "medium" | "high"
       project_status: "planning" | "in_progress" | "completed" | "suspended"
       report_status: "draft" | "completed" | "sent" | "signed" | "finalized"
+      service_photo_layout: "full" | "half" | "third"
+      service_report_status: "draft" | "completed" | "published"
+      service_section_type:
+        | "execution"
+        | "safety"
+        | "scope"
+        | "conclusion"
+        | "custom"
       shift_type: "morning" | "afternoon" | "night"
       stage_status:
         | "planned"
@@ -2520,6 +2746,15 @@ export const Constants = {
       impact_level: ["low", "medium", "high"],
       project_status: ["planning", "in_progress", "completed", "suspended"],
       report_status: ["draft", "completed", "sent", "signed", "finalized"],
+      service_photo_layout: ["full", "half", "third"],
+      service_report_status: ["draft", "completed", "published"],
+      service_section_type: [
+        "execution",
+        "safety",
+        "scope",
+        "conclusion",
+        "custom",
+      ],
       shift_type: ["morning", "afternoon", "night"],
       stage_status: [
         "planned",
