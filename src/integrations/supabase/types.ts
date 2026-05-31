@@ -14,6 +14,278 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_conversations: {
+        Row: {
+          created_at: string | null
+          id: string
+          title: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          title?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string | null
+          id: string
+          role: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string | null
+          id?: string
+          role: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string | null
+          id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_client_errors: {
+        Row: {
+          created_at: string
+          extra: Json | null
+          id: string
+          message: string
+          path: string
+          stack: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          extra?: Json | null
+          id?: string
+          message: string
+          path: string
+          stack?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          extra?: Json | null
+          id?: string
+          message?: string
+          path?: string
+          stack?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      autentique_documents: {
+        Row: {
+          archived_at: string | null
+          archived_by: string | null
+          cancelled_at: string | null
+          created_at: string
+          created_by: string | null
+          document_id: string
+          document_name: string | null
+          id: string
+          metadata: Json | null
+          report_id: string
+          sandbox: boolean | null
+          signed_at: string | null
+          signed_file_url: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_id: string
+          document_name?: string | null
+          id?: string
+          metadata?: Json | null
+          report_id: string
+          sandbox?: boolean | null
+          signed_at?: string | null
+          signed_file_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_id?: string
+          document_name?: string | null
+          id?: string
+          metadata?: Json | null
+          report_id?: string
+          sandbox?: boolean | null
+          signed_at?: string | null
+          signed_file_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "autentique_documents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "autentique_documents_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      autentique_signers: {
+        Row: {
+          action: string | null
+          client_id: string | null
+          created_at: string
+          delivery_method: string | null
+          document_id: string
+          email: string
+          geolocation: Json | null
+          id: string
+          ip_address: string | null
+          name: string
+          phone: string | null
+          sign_link: string | null
+          signed_at: string | null
+          signer_id: string | null
+          signer_type: string | null
+          status: string
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          action?: string | null
+          client_id?: string | null
+          created_at?: string
+          delivery_method?: string | null
+          document_id: string
+          email: string
+          geolocation?: Json | null
+          id?: string
+          ip_address?: string | null
+          name: string
+          phone?: string | null
+          sign_link?: string | null
+          signed_at?: string | null
+          signer_id?: string | null
+          signer_type?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string | null
+          client_id?: string | null
+          created_at?: string
+          delivery_method?: string | null
+          document_id?: string
+          email?: string
+          geolocation?: Json | null
+          id?: string
+          ip_address?: string | null
+          name?: string
+          phone?: string | null
+          sign_link?: string | null
+          signed_at?: string | null
+          signer_id?: string | null
+          signer_type?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "autentique_signers_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "autentique_signers_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "autentique_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      autentique_webhooks: {
+        Row: {
+          created_at: string
+          document_id: string | null
+          error_message: string | null
+          event_type: string
+          id: string
+          payload: Json
+          processed: boolean | null
+          processed_at: string | null
+          signer_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_id?: string | null
+          error_message?: string | null
+          event_type: string
+          id?: string
+          payload: Json
+          processed?: boolean | null
+          processed_at?: string | null
+          signer_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_id?: string | null
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed?: boolean | null
+          processed_at?: string | null
+          signer_id?: string | null
+        }
+        Relationships: []
+      }
       clicksign_documents: {
         Row: {
           cancelled_at: string | null
@@ -191,51 +463,120 @@ export type Database = {
         }
         Relationships: []
       }
+      client_companies: {
+        Row: {
+          client_id: string
+          company_id: string
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          client_id: string
+          company_id: string
+          created_at?: string | null
+          id?: string
+        }
+        Update: {
+          client_id?: string
+          company_id?: string
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_companies_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_companies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_profiles: {
         Row: {
+          address: string | null
           can_approve: boolean | null
+          city: string | null
+          cnpj: string | null
           company: string | null
           company_id: string | null
+          contract_number: string | null
           created_at: string | null
           email: string
           id: string
           is_active: boolean | null
           name: string
+          notes: string | null
           phone: string | null
+          responsible_email: string | null
+          responsible_name: string | null
+          responsible_phone: string | null
+          responsible_role: string | null
           role: string | null
           signature_data: string | null
+          state: string | null
           updated_at: string | null
           user_id: string | null
+          zip_code: string | null
         }
         Insert: {
+          address?: string | null
           can_approve?: boolean | null
+          city?: string | null
+          cnpj?: string | null
           company?: string | null
           company_id?: string | null
+          contract_number?: string | null
           created_at?: string | null
           email: string
           id?: string
           is_active?: boolean | null
           name: string
+          notes?: string | null
           phone?: string | null
+          responsible_email?: string | null
+          responsible_name?: string | null
+          responsible_phone?: string | null
+          responsible_role?: string | null
           role?: string | null
           signature_data?: string | null
+          state?: string | null
           updated_at?: string | null
           user_id?: string | null
+          zip_code?: string | null
         }
         Update: {
+          address?: string | null
           can_approve?: boolean | null
+          city?: string | null
+          cnpj?: string | null
           company?: string | null
           company_id?: string | null
+          contract_number?: string | null
           created_at?: string | null
           email?: string
           id?: string
           is_active?: boolean | null
           name?: string
+          notes?: string | null
           phone?: string | null
+          responsible_email?: string | null
+          responsible_name?: string | null
+          responsible_phone?: string | null
+          responsible_role?: string | null
           role?: string | null
           signature_data?: string | null
+          state?: string | null
           updated_at?: string | null
           user_id?: string | null
+          zip_code?: string | null
         }
         Relationships: [
           {
@@ -298,6 +639,42 @@ export type Database = {
           },
         ]
       }
+      client_sites: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          id: string
+          site_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          id?: string
+          site_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          site_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_sites_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_sites_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_user_roles: {
         Row: {
           client_id: string
@@ -331,46 +708,123 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
+          client_notes: string | null
           cnpj: string | null
+          contract_number: string | null
           created_at: string | null
           email: string | null
           id: string
+          is_client_active: boolean | null
           logo_url: string | null
           name: string
           phone: string | null
           photo_url: string | null
+          responsible_email: string | null
+          responsible_name: string | null
+          responsible_phone: string | null
+          responsible_role: string | null
           state: string | null
           updated_at: string | null
+          zip_code: string | null
         }
         Insert: {
           address?: string | null
           city?: string | null
+          client_notes?: string | null
           cnpj?: string | null
+          contract_number?: string | null
           created_at?: string | null
           email?: string | null
           id?: string
+          is_client_active?: boolean | null
           logo_url?: string | null
           name: string
           phone?: string | null
           photo_url?: string | null
+          responsible_email?: string | null
+          responsible_name?: string | null
+          responsible_phone?: string | null
+          responsible_role?: string | null
           state?: string | null
           updated_at?: string | null
+          zip_code?: string | null
         }
         Update: {
           address?: string | null
           city?: string | null
+          client_notes?: string | null
           cnpj?: string | null
+          contract_number?: string | null
           created_at?: string | null
           email?: string | null
           id?: string
+          is_client_active?: boolean | null
           logo_url?: string | null
           name?: string
           phone?: string | null
           photo_url?: string | null
+          responsible_email?: string | null
+          responsible_name?: string | null
+          responsible_phone?: string | null
+          responsible_role?: string | null
           state?: string | null
           updated_at?: string | null
+          zip_code?: string | null
         }
         Relationships: []
+      }
+      company_contacts: {
+        Row: {
+          can_approve: boolean | null
+          company_id: string
+          created_at: string | null
+          email: string
+          id: string
+          is_active: boolean | null
+          name: string
+          phone: string | null
+          role: string | null
+          signature_data: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          can_approve?: boolean | null
+          company_id: string
+          created_at?: string | null
+          email: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          phone?: string | null
+          role?: string | null
+          signature_data?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          can_approve?: boolean | null
+          company_id?: string
+          created_at?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          phone?: string | null
+          role?: string | null
+          signature_data?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       feature_suggestions: {
         Row: {
@@ -491,6 +945,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          state: string | null
           updated_at: string | null
         }
         Insert: {
@@ -501,6 +956,7 @@ export type Database = {
           id: string
           name: string
           phone?: string | null
+          state?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -511,6 +967,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          state?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -563,6 +1020,42 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "project_equipment_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_members: {
+        Row: {
+          created_at: string | null
+          id: string
+          profile_id: string
+          project_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          profile_id: string
+          project_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          profile_id?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_members_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -716,45 +1209,57 @@ export type Database = {
       }
       projects: {
         Row: {
+          client_responsible_name: string | null
           code: string | null
           company_id: string
+          contract_number: string | null
           created_at: string | null
           description: string | null
           end_date: string | null
           id: string
           name: string
           photo_url: string | null
+          progress: number | null
           site_id: string
           start_date: string | null
           status: Database["public"]["Enums"]["project_status"] | null
+          supervisor_name: string | null
           updated_at: string | null
         }
         Insert: {
+          client_responsible_name?: string | null
           code?: string | null
           company_id: string
+          contract_number?: string | null
           created_at?: string | null
           description?: string | null
           end_date?: string | null
           id?: string
           name: string
           photo_url?: string | null
+          progress?: number | null
           site_id: string
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"] | null
+          supervisor_name?: string | null
           updated_at?: string | null
         }
         Update: {
+          client_responsible_name?: string | null
           code?: string | null
           company_id?: string
+          contract_number?: string | null
           created_at?: string | null
           description?: string | null
           end_date?: string | null
           id?: string
           name?: string
           photo_url?: string | null
+          progress?: number | null
           site_id?: string
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"] | null
+          supervisor_name?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -908,6 +1413,51 @@ export type Database = {
           },
           {
             foreignKeyName: "report_client_approvers_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_company_approvers: {
+        Row: {
+          approved_at: string | null
+          contact_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          report_id: string
+          status: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          contact_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          report_id: string
+          status?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          contact_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          report_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_company_approvers_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "company_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_company_approvers_report_id_fkey"
             columns: ["report_id"]
             isOneToOne: false
             referencedRelation: "reports"
@@ -1093,10 +1643,13 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           archived_at: string | null
+          client_company: string | null
+          client_name: string | null
           comments: string | null
           contract_number: string | null
           created_at: string | null
           created_by: string | null
+          daily_progress: number | null
           date: string
           end_time: string | null
           finalized_at: string | null
@@ -1124,10 +1677,13 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           archived_at?: string | null
+          client_company?: string | null
+          client_name?: string | null
           comments?: string | null
           contract_number?: string | null
           created_at?: string | null
           created_by?: string | null
+          daily_progress?: number | null
           date: string
           end_time?: string | null
           finalized_at?: string | null
@@ -1155,10 +1711,13 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           archived_at?: string | null
+          client_company?: string | null
+          client_name?: string | null
           comments?: string | null
           contract_number?: string | null
           created_at?: string | null
           created_by?: string | null
+          daily_progress?: number | null
           date?: string
           end_time?: string | null
           finalized_at?: string | null
@@ -1208,6 +1767,51 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      signature_notifications: {
+        Row: {
+          created_at: string | null
+          document_id: string | null
+          id: string
+          notification_type: string
+          recipient_email: string
+          sent_at: string | null
+          signer_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          document_id?: string | null
+          id?: string
+          notification_type: string
+          recipient_email: string
+          sent_at?: string | null
+          signer_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          document_id?: string | null
+          id?: string
+          notification_type?: string
+          recipient_email?: string
+          sent_at?: string | null
+          signer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signature_notifications_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "autentique_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signature_notifications_signer_id_fkey"
+            columns: ["signer_id"]
+            isOneToOne: false
+            referencedRelation: "autentique_signers"
             referencedColumns: ["id"]
           },
         ]
@@ -1354,19 +1958,79 @@ export type Database = {
           },
         ]
       }
+      system_settings: {
+        Row: {
+          accent_color: string | null
+          ai_avatar_url: string | null
+          created_at: string | null
+          favicon_url: string | null
+          id: string
+          login_logo_url: string | null
+          logo_url: string | null
+          owner_email: string | null
+          owner_name: string | null
+          owner_phone: string | null
+          owner_role: string | null
+          pdf_logo_url: string | null
+          primary_color: string | null
+          system_name: string | null
+          system_subtitle: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          ai_avatar_url?: string | null
+          created_at?: string | null
+          favicon_url?: string | null
+          id?: string
+          login_logo_url?: string | null
+          logo_url?: string | null
+          owner_email?: string | null
+          owner_name?: string | null
+          owner_phone?: string | null
+          owner_role?: string | null
+          pdf_logo_url?: string | null
+          primary_color?: string | null
+          system_name?: string | null
+          system_subtitle?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          ai_avatar_url?: string | null
+          created_at?: string | null
+          favicon_url?: string | null
+          id?: string
+          login_logo_url?: string | null
+          logo_url?: string | null
+          owner_email?: string | null
+          owner_name?: string | null
+          owner_phone?: string | null
+          owner_role?: string | null
+          pdf_logo_url?: string | null
+          primary_color?: string | null
+          system_name?: string | null
+          system_subtitle?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       team_members: {
         Row: {
           id: string
+          order_index: number | null
           team_id: string
           user_id: string
         }
         Insert: {
           id?: string
+          order_index?: number | null
           team_id: string
           user_id: string
         }
         Update: {
           id?: string
+          order_index?: number | null
           team_id?: string
           user_id?: string
         }
@@ -1540,6 +2204,9 @@ export type Database = {
         Returns: boolean
       }
       get_client_profile_id: { Args: { _user_id: string }; Returns: string }
+      get_client_project_ids: { Args: { _user_id: string }; Returns: string[] }
+      get_company_contact_id: { Args: { _user_id: string }; Returns: string }
+      get_contact_project_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_companies_count: { Args: { _user_id: string }; Returns: number }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
@@ -1555,6 +2222,7 @@ export type Database = {
         Returns: boolean
       }
       is_client: { Args: { _user_id: string }; Returns: boolean }
+      is_company_contact: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
@@ -1575,7 +2243,7 @@ export type Database = {
         | "execution"
       impact_level: "low" | "medium" | "high"
       project_status: "planning" | "in_progress" | "completed" | "suspended"
-      report_status: "draft" | "completed"
+      report_status: "draft" | "completed" | "sent" | "signed" | "finalized"
       shift_type: "morning" | "afternoon" | "night"
       stage_status:
         | "planned"
@@ -1754,7 +2422,7 @@ export const Constants = {
       ],
       impact_level: ["low", "medium", "high"],
       project_status: ["planning", "in_progress", "completed", "suspended"],
-      report_status: ["draft", "completed"],
+      report_status: ["draft", "completed", "sent", "signed", "finalized"],
       shift_type: ["morning", "afternoon", "night"],
       stage_status: [
         "planned",
