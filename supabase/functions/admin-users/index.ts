@@ -205,7 +205,7 @@ serve(async (req) => {
 
         // Determine which company to assign
         // super_admin can specify any company, others use their own
-        const targetCompanyId = isSuperAdmin ? (companyId || null) : userCompanyId;
+        const targetCompanyId = companyId || userCompanyId || null;
 
         // Create auth user
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
