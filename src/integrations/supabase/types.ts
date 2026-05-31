@@ -521,6 +521,7 @@ export type Database = {
           dashboard_title: string | null
           footer_text: string | null
           id: string
+          login_welcome_text: string | null
           no_signature_alert_message: string | null
           no_signature_alert_title: string | null
           pending_message: string | null
@@ -549,6 +550,7 @@ export type Database = {
           dashboard_title?: string | null
           footer_text?: string | null
           id?: string
+          login_welcome_text?: string | null
           no_signature_alert_message?: string | null
           no_signature_alert_title?: string | null
           pending_message?: string | null
@@ -577,6 +579,7 @@ export type Database = {
           dashboard_title?: string | null
           footer_text?: string | null
           id?: string
+          login_welcome_text?: string | null
           no_signature_alert_message?: string | null
           no_signature_alert_title?: string | null
           pending_message?: string | null
@@ -982,6 +985,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      delay_reason_options: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          label: string
+          order_index: number | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          label: string
+          order_index?: number | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          order_index?: number | null
+        }
+        Relationships: []
       }
       feature_suggestions: {
         Row: {
@@ -1968,13 +1998,17 @@ export type Database = {
       reports: {
         Row: {
           actual_workforce: number | null
+          amt_deviation_details: string | null
           amt_deviation_hours: number | null
+          amt_deviation_reason: string | null
           approved_at: string | null
           approved_by: string | null
           archived_at: string | null
           client_company: string | null
           client_name: string | null
+          climatic_deviation_details: string | null
           climatic_deviation_hours: number | null
+          climatic_deviation_reason: string | null
           comments: string | null
           contract_number: string | null
           created_at: string | null
@@ -1990,6 +2024,7 @@ export type Database = {
           no_activity: boolean | null
           operational_deviation_details: string | null
           operational_deviation_hours: number | null
+          operational_deviation_reason: string | null
           planned_workforce: number | null
           project_id: string
           rdo_number: number | null
@@ -2011,13 +2046,17 @@ export type Database = {
         }
         Insert: {
           actual_workforce?: number | null
+          amt_deviation_details?: string | null
           amt_deviation_hours?: number | null
+          amt_deviation_reason?: string | null
           approved_at?: string | null
           approved_by?: string | null
           archived_at?: string | null
           client_company?: string | null
           client_name?: string | null
+          climatic_deviation_details?: string | null
           climatic_deviation_hours?: number | null
+          climatic_deviation_reason?: string | null
           comments?: string | null
           contract_number?: string | null
           created_at?: string | null
@@ -2033,6 +2072,7 @@ export type Database = {
           no_activity?: boolean | null
           operational_deviation_details?: string | null
           operational_deviation_hours?: number | null
+          operational_deviation_reason?: string | null
           planned_workforce?: number | null
           project_id: string
           rdo_number?: number | null
@@ -2054,13 +2094,17 @@ export type Database = {
         }
         Update: {
           actual_workforce?: number | null
+          amt_deviation_details?: string | null
           amt_deviation_hours?: number | null
+          amt_deviation_reason?: string | null
           approved_at?: string | null
           approved_by?: string | null
           archived_at?: string | null
           client_company?: string | null
           client_name?: string | null
+          climatic_deviation_details?: string | null
           climatic_deviation_hours?: number | null
+          climatic_deviation_reason?: string | null
           comments?: string | null
           contract_number?: string | null
           created_at?: string | null
@@ -2076,6 +2120,7 @@ export type Database = {
           no_activity?: boolean | null
           operational_deviation_details?: string | null
           operational_deviation_hours?: number | null
+          operational_deviation_reason?: string | null
           planned_workforce?: number | null
           project_id?: string
           rdo_number?: number | null
@@ -2394,6 +2439,7 @@ export type Database = {
           longitude: number | null
           name: string
           photo_url: string | null
+          slug: string | null
           state: string | null
           updated_at: string | null
         }
@@ -2407,6 +2453,7 @@ export type Database = {
           longitude?: number | null
           name: string
           photo_url?: string | null
+          slug?: string | null
           state?: string | null
           updated_at?: string | null
         }
@@ -2420,6 +2467,7 @@ export type Database = {
           longitude?: number | null
           name?: string
           photo_url?: string | null
+          slug?: string | null
           state?: string | null
           updated_at?: string | null
         }
