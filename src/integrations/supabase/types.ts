@@ -734,6 +734,7 @@ export type Database = {
           responsible_name: string | null
           responsible_phone: string | null
           responsible_role: string | null
+          slug: string | null
           state: string | null
           updated_at: string | null
           zip_code: string | null
@@ -756,6 +757,7 @@ export type Database = {
           responsible_name?: string | null
           responsible_phone?: string | null
           responsible_role?: string | null
+          slug?: string | null
           state?: string | null
           updated_at?: string | null
           zip_code?: string | null
@@ -778,6 +780,7 @@ export type Database = {
           responsible_name?: string | null
           responsible_phone?: string | null
           responsible_role?: string | null
+          slug?: string | null
           state?: string | null
           updated_at?: string | null
           zip_code?: string | null
@@ -2655,6 +2658,94 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      whatsapp_group_projects: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          group_id: string
+          group_name: string | null
+          id: string
+          is_active: boolean | null
+          project_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          group_id: string
+          group_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          project_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          group_id?: string
+          group_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_group_projects_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_rdo_logs: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          group_id: string | null
+          id: string
+          message_id: string | null
+          raw_payload: Json | null
+          report_date: string | null
+          report_id: string | null
+          sender_name: string | null
+          sender_phone: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          group_id?: string | null
+          id?: string
+          message_id?: string | null
+          raw_payload?: Json | null
+          report_date?: string | null
+          report_id?: string | null
+          sender_name?: string | null
+          sender_phone?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          group_id?: string | null
+          id?: string
+          message_id?: string | null
+          raw_payload?: Json | null
+          report_date?: string | null
+          report_id?: string | null
+          sender_name?: string | null
+          sender_phone?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_rdo_logs_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
