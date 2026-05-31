@@ -332,7 +332,7 @@ Aplique as mesmas regras de título (sem numeração) e conteúdo (sem repetir o
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "google/gemini-2.0-flash-001",
           messages: [
             { role: "system", content: "Você é um engenheiro técnico sênior especializado em relatórios de serviço industrial. Produza relatórios profissionais com linguagem técnica formal, dados quantitativos reais e formatação HTML para negrito, listas e tabelas. Siga rigorosamente a estrutura solicitada." },
             { role: "user", content: prompt },
