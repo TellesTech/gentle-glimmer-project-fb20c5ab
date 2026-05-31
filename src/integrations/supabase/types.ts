@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       ai_conversations: {
         Row: {
+          contact_id: string | null
           created_at: string | null
           id: string
           title: string | null
@@ -23,6 +24,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          contact_id?: string | null
           created_at?: string | null
           id?: string
           title?: string | null
@@ -30,13 +32,22 @@ export type Database = {
           user_id: string
         }
         Update: {
+          contact_id?: string | null
           created_at?: string | null
           id?: string
           title?: string | null
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_conversations_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "company_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_messages: {
         Row: {
@@ -838,6 +849,42 @@ export type Database = {
           },
         ]
       }
+      contact_sites: {
+        Row: {
+          contact_id: string
+          created_at: string | null
+          id: string
+          site_id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string | null
+          id?: string
+          site_id: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string | null
+          id?: string
+          site_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_sites_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "company_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_sites_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feature_suggestions: {
         Row: {
           author_id: string | null
@@ -985,19 +1032,30 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          site_id: string | null
           user_id: string
         }
         Insert: {
           created_at?: string | null
           id?: string
+          site_id?: string | null
           user_id: string
         }
         Update: {
           created_at?: string | null
           id?: string
+          site_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "portal_admin_access_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1377,12 +1435,14 @@ export type Database = {
           company_id: string
           contract_number: string | null
           created_at: string | null
+          default_planned_workforce: number | null
           description: string | null
           end_date: string | null
           id: string
           name: string
           photo_url: string | null
           progress: number | null
+          progress_target: number | null
           site_id: string
           start_date: string | null
           status: Database["public"]["Enums"]["project_status"] | null
@@ -1395,12 +1455,14 @@ export type Database = {
           company_id: string
           contract_number?: string | null
           created_at?: string | null
+          default_planned_workforce?: number | null
           description?: string | null
           end_date?: string | null
           id?: string
           name: string
           photo_url?: string | null
           progress?: number | null
+          progress_target?: number | null
           site_id: string
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"] | null
@@ -1413,12 +1475,14 @@ export type Database = {
           company_id?: string
           contract_number?: string | null
           created_at?: string | null
+          default_planned_workforce?: number | null
           description?: string | null
           end_date?: string | null
           id?: string
           name?: string
           photo_url?: string | null
           progress?: number | null
+          progress_target?: number | null
           site_id?: string
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"] | null
@@ -1759,6 +1823,7 @@ export type Database = {
           signed_at: string | null
           signer_name: string
           signer_role: string | null
+          signer_user_id: string | null
           user_agent: string | null
         }
         Insert: {
@@ -1770,6 +1835,7 @@ export type Database = {
           signed_at?: string | null
           signer_name: string
           signer_role?: string | null
+          signer_user_id?: string | null
           user_agent?: string | null
         }
         Update: {
@@ -1781,6 +1847,7 @@ export type Database = {
           signed_at?: string | null
           signer_name?: string
           signer_role?: string | null
+          signer_user_id?: string | null
           user_agent?: string | null
         }
         Relationships: [
@@ -1831,6 +1898,7 @@ export type Database = {
           rejected_reason: string | null
           sent_at: string | null
           shift: Database["public"]["Enums"]["shift_type"]
+          signed_pdf_url: string | null
           start_time: string | null
           status: Database["public"]["Enums"]["report_status"] | null
           supervisor_name: string | null
@@ -1872,6 +1940,7 @@ export type Database = {
           rejected_reason?: string | null
           sent_at?: string | null
           shift?: Database["public"]["Enums"]["shift_type"]
+          signed_pdf_url?: string | null
           start_time?: string | null
           status?: Database["public"]["Enums"]["report_status"] | null
           supervisor_name?: string | null
@@ -1913,6 +1982,7 @@ export type Database = {
           rejected_reason?: string | null
           sent_at?: string | null
           shift?: Database["public"]["Enums"]["shift_type"]
+          signed_pdf_url?: string | null
           start_time?: string | null
           status?: Database["public"]["Enums"]["report_status"] | null
           supervisor_name?: string | null
