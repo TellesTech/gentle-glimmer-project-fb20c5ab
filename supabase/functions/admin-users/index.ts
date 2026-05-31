@@ -97,12 +97,14 @@ serve(async (req) => {
     // Hierarquia de roles (menor número = mais poderoso)
     const roleHierarchy: Record<string, number> = {
       'super_admin': 0,
-      'director': 1,
-      'admin': 2,
-      'hr': 3,
-      'supervisor': 4,
-      'leader': 5,
-      'collaborator': 6
+      'master': 1,
+      'director': 2,
+      'admin': 3,
+      'hr': 4,
+      'supervisor': 5,
+      'leader': 6,
+      'client': 7,
+      'collaborator': 8
     };
 
     // Função auxiliar para validar hierarquia de roles
