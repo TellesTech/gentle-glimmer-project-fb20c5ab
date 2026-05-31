@@ -945,6 +945,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          pin_hash: string | null
           state: string | null
           updated_at: string | null
         }
@@ -956,6 +957,7 @@ export type Database = {
           id: string
           name: string
           phone?: string | null
+          pin_hash?: string | null
           state?: string | null
           updated_at?: string | null
         }
@@ -967,6 +969,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          pin_hash?: string | null
           state?: string | null
           updated_at?: string | null
         }
@@ -2207,6 +2210,15 @@ export type Database = {
       get_client_project_ids: { Args: { _user_id: string }; Returns: string[] }
       get_company_contact_id: { Args: { _user_id: string }; Returns: string }
       get_contact_project_ids: { Args: { _user_id: string }; Returns: string[] }
+      get_quick_access_users: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          has_pin: boolean
+          id: string
+          name: string
+        }[]
+      }
       get_user_companies_count: { Args: { _user_id: string }; Returns: number }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
