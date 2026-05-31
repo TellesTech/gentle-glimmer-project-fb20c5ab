@@ -301,7 +301,7 @@ serve(async (req) => {
           });
         }
 
-        const targetCompanyId = isSuperAdmin ? (companyId || null) : userCompanyId;
+        const targetCompanyId = companyId || userCompanyId || null;
 
         // Generate unique email and random password for disabled account
         const collaboratorId = crypto.randomUUID();
