@@ -2512,6 +2512,13 @@ export type Database = {
       get_client_project_ids: { Args: { _user_id: string }; Returns: string[] }
       get_company_contact_id: { Args: { _user_id: string }; Returns: string }
       get_contact_project_ids: { Args: { _user_id: string }; Returns: string[] }
+      get_eligible_supervisors: {
+        Args: never
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
       get_quick_access_users: {
         Args: never
         Returns: {
