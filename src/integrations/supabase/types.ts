@@ -510,6 +510,101 @@ export type Database = {
           },
         ]
       }
+      client_portal_settings: {
+        Row: {
+          all_clear_message: string | null
+          client_accent_color: string | null
+          client_logo_url: string | null
+          client_primary_color: string | null
+          company_id: string | null
+          created_at: string | null
+          dashboard_title: string | null
+          footer_text: string | null
+          id: string
+          no_signature_alert_message: string | null
+          no_signature_alert_title: string | null
+          pending_message: string | null
+          profile_title: string | null
+          reports_title: string | null
+          show_approval_rate: boolean | null
+          show_autentique_widget: boolean | null
+          show_project_filter: boolean | null
+          show_rejection_stats: boolean | null
+          show_stats_cards: boolean | null
+          show_supersign_alert: boolean | null
+          signatures_title: string | null
+          support_email: string | null
+          support_phone: string | null
+          updated_at: string | null
+          welcome_subtitle: string | null
+          welcome_title: string | null
+        }
+        Insert: {
+          all_clear_message?: string | null
+          client_accent_color?: string | null
+          client_logo_url?: string | null
+          client_primary_color?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          dashboard_title?: string | null
+          footer_text?: string | null
+          id?: string
+          no_signature_alert_message?: string | null
+          no_signature_alert_title?: string | null
+          pending_message?: string | null
+          profile_title?: string | null
+          reports_title?: string | null
+          show_approval_rate?: boolean | null
+          show_autentique_widget?: boolean | null
+          show_project_filter?: boolean | null
+          show_rejection_stats?: boolean | null
+          show_stats_cards?: boolean | null
+          show_supersign_alert?: boolean | null
+          signatures_title?: string | null
+          support_email?: string | null
+          support_phone?: string | null
+          updated_at?: string | null
+          welcome_subtitle?: string | null
+          welcome_title?: string | null
+        }
+        Update: {
+          all_clear_message?: string | null
+          client_accent_color?: string | null
+          client_logo_url?: string | null
+          client_primary_color?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          dashboard_title?: string | null
+          footer_text?: string | null
+          id?: string
+          no_signature_alert_message?: string | null
+          no_signature_alert_title?: string | null
+          pending_message?: string | null
+          profile_title?: string | null
+          reports_title?: string | null
+          show_approval_rate?: boolean | null
+          show_autentique_widget?: boolean | null
+          show_project_filter?: boolean | null
+          show_rejection_stats?: boolean | null
+          show_stats_cards?: boolean | null
+          show_supersign_alert?: boolean | null
+          signatures_title?: string | null
+          support_email?: string | null
+          support_phone?: string | null
+          updated_at?: string | null
+          welcome_subtitle?: string | null
+          welcome_title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_profiles: {
         Row: {
           address: string | null
@@ -1893,6 +1988,7 @@ export type Database = {
           maintenance_order_number: string | null
           maintenance_order_title: string | null
           no_activity: boolean | null
+          operational_deviation_details: string | null
           operational_deviation_hours: number | null
           planned_workforce: number | null
           project_id: string
@@ -1935,6 +2031,7 @@ export type Database = {
           maintenance_order_number?: string | null
           maintenance_order_title?: string | null
           no_activity?: boolean | null
+          operational_deviation_details?: string | null
           operational_deviation_hours?: number | null
           planned_workforce?: number | null
           project_id: string
@@ -1977,6 +2074,7 @@ export type Database = {
           maintenance_order_number?: string | null
           maintenance_order_title?: string | null
           no_activity?: boolean | null
+          operational_deviation_details?: string | null
           operational_deviation_hours?: number | null
           planned_workforce?: number | null
           project_id?: string
@@ -2747,6 +2845,152 @@ export type Database = {
           },
         ]
       }
+      workforce_database: {
+        Row: {
+          activity_name: string
+          attendance_id: string | null
+          company_id: string | null
+          compensation_hours: number | null
+          created_at: string
+          date: string
+          end_time: string | null
+          function_role: string | null
+          id: string
+          night_bonus: number | null
+          normal_hours: number | null
+          overtime_100: number | null
+          overtime_75: number | null
+          processed_by_ai: boolean | null
+          project_id: string | null
+          report_id: string | null
+          start_time: string | null
+          worker_name: string
+        }
+        Insert: {
+          activity_name: string
+          attendance_id?: string | null
+          company_id?: string | null
+          compensation_hours?: number | null
+          created_at?: string
+          date: string
+          end_time?: string | null
+          function_role?: string | null
+          id?: string
+          night_bonus?: number | null
+          normal_hours?: number | null
+          overtime_100?: number | null
+          overtime_75?: number | null
+          processed_by_ai?: boolean | null
+          project_id?: string | null
+          report_id?: string | null
+          start_time?: string | null
+          worker_name: string
+        }
+        Update: {
+          activity_name?: string
+          attendance_id?: string | null
+          company_id?: string | null
+          compensation_hours?: number | null
+          created_at?: string
+          date?: string
+          end_time?: string | null
+          function_role?: string | null
+          id?: string
+          night_bonus?: number | null
+          normal_hours?: number | null
+          overtime_100?: number | null
+          overtime_75?: number | null
+          processed_by_ai?: boolean | null
+          project_id?: string | null
+          report_id?: string | null
+          start_time?: string | null
+          worker_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workforce_database_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "report_attendance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workforce_database_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workforce_database_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workforce_database_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workforce_delays: {
+        Row: {
+          activity_name: string
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          date: string
+          delay_hours: number
+          delay_type: Database["public"]["Enums"]["delay_type"]
+          description: string | null
+          id: string
+          project_id: string | null
+        }
+        Insert: {
+          activity_name: string
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          date: string
+          delay_hours?: number
+          delay_type?: Database["public"]["Enums"]["delay_type"]
+          description?: string | null
+          id?: string
+          project_id?: string | null
+        }
+        Update: {
+          activity_name?: string
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          delay_hours?: number
+          delay_type?: Database["public"]["Enums"]["delay_type"]
+          description?: string | null
+          id?: string
+          project_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workforce_delays_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workforce_delays_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -2769,6 +3013,25 @@ export type Database = {
         Returns: {
           id: string
           name: string
+        }[]
+      }
+      get_project_predictions: {
+        Args: never
+        Returns: {
+          avg_daily_progress: number
+          company_name: string
+          days_since_last_report: number
+          days_until_deadline: number
+          end_date: string
+          predicted_completion_days: number
+          progress: number
+          project_id: string
+          project_name: string
+          risk_level: string
+          site_name: string
+          start_date: string
+          status: string
+          total_reports: number
         }[]
       }
       get_quick_access_users: {
@@ -2801,6 +3064,13 @@ export type Database = {
     }
     Enums: {
       client_role: "viewer" | "approver" | "admin"
+      delay_type:
+        | "clima"
+        | "material"
+        | "equipamento"
+        | "mao_de_obra"
+        | "logistica"
+        | "outro"
       deviation_type:
         | "delay"
         | "equipment"
@@ -2987,6 +3257,14 @@ export const Constants = {
   public: {
     Enums: {
       client_role: ["viewer", "approver", "admin"],
+      delay_type: [
+        "clima",
+        "material",
+        "equipamento",
+        "mao_de_obra",
+        "logistica",
+        "outro",
+      ],
       deviation_type: [
         "delay",
         "equipment",
