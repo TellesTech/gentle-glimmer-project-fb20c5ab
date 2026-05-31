@@ -1,0 +1,1 @@
+ALTER TABLE public.backup_schedules ADD COLUMN preferred_time TIME DEFAULT '02:00';

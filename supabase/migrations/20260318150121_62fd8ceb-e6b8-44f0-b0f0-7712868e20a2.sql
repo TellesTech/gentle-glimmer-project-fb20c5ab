@@ -1,0 +1,1 @@
+ALTER TABLE public.impact_settings ADD COLUMN IF NOT EXISTS document_search_time INTEGER NOT NULL DEFAULT 60;

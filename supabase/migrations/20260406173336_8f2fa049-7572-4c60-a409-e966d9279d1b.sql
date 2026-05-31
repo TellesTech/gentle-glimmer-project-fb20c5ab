@@ -1,0 +1,1 @@
+ALTER TABLE public.sites ADD COLUMN portal_collaborator_id uuid REFERENCES profiles(id) ON DELETE SET NULL;

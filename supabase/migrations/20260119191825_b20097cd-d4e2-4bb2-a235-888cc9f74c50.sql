@@ -1,0 +1,2 @@
+ALTER TABLE report_activity_steps 
+ADD COLUMN IF NOT EXISTS quantity_done NUMERIC DEFAULT NULL;

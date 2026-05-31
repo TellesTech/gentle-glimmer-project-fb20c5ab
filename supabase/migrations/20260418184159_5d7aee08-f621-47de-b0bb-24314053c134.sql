@@ -1,0 +1,2 @@
+ALTER TABLE public.impact_settings ADD COLUMN IF NOT EXISTS hh_calculation_time integer NOT NULL DEFAULT 30;
+UPDATE public.impact_settings SET hh_calculation_time = 30 WHERE hh_calculation_time IS NULL;

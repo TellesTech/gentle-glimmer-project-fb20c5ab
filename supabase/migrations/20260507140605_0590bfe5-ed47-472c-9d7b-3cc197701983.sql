@@ -1,0 +1,2 @@
+UPDATE report_attendance SET user_id='8a924fdb-8eeb-488d-b187-c74263706452', user_name='João Guilherme Vieira Da Silva', function_role='PINTOR ESCALADOR N1' WHERE id='887f0d87-5e8e-4f6c-be78-73c4fe955c72';
+UPDATE report_attendance SET user_id='eb2dc9db-8296-4d6c-98d4-c593199e4d84', user_name='Maxsuel Da Vitoria Rodrigues', function_role='MECÂNICO ESCALADOR N2' WHERE id='9f9a1c83-1974-4524-8e39-a0e102d18c13';

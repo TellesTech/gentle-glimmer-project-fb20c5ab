@@ -1,0 +1,1 @@
+ALTER TABLE public.service_report_sections ADD COLUMN IF NOT EXISTS annotations jsonb DEFAULT '[]'::jsonb;
