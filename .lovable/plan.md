@@ -1,36 +1,55 @@
-## Objetivo
+## Problema
 
-Permitir restaurar backup selecionando **arquivos avulsos** (sem precisar de ZIP nem de pasta única com `webkitdirectory`), incluindo casos em que o usuário envia apenas `manifest.json` + JSONs da pasta `data/` (e opcionalmente mídias).
+No card "Importar Backup por Arquivos Avulsos", após selecionar os arquivos, não há nenhuma análise/prévia — o sistema só pede para clicar em "Iniciar Restauração". No print, foi selecionado apenas 1 arquivo (provavelmente `manifest.json`) e nenhum JSON de tabela, então a restauração não importa nada e o usuário não tem feedback do que será feito.
 
-## Mudanças em `src/pages/AdminBackup.tsx`
+Além disso há um bug menor: o texto diz "1 arquivos selecionados" (plural errado) e "0.00 MB" quando o arquivo é muito pequeno.
 
-1. **Novo card "Importar Backup por Arquivos Avulsos"** abaixo dos dois cards existentes (ZIP e Pasta), na mesma aba de restauração.
+## Solução: adicionar prévia antes de confirmar
 
-2. **Novo input file** com `multiple` (sem `webkitdirectory`) que aceita qualquer combinação de:
-   - `manifest.json` (obrigatório — pode estar em qualquer lugar da seleção, identificado pelo nome final)
-   - Arquivos `*.json` correspondentes a tabelas (companies.json, reports.json, etc.) — nome do arquivo (sem extensão) é usado como nome da tabela
-   - Arquivos de mídia (jpg/png/webp/pdf) — opcionais; quando presentes, o usuário escolhe em qual bucket entrar via prefixo do nome (`report-photos__arquivo.jpg`) **ou** simplesmente ignorados se não houver prefixo reconhecido
+Tudo dentro de `src/pages/AdminBackup.tsx`, sem mudar backend/edge function.
 
-3. **Novo handler `handleLooseFilesSelect`**: valida que existe `manifest.json` na seleção; em caso negativo, mostra toast claro ("Inclua o manifest.json na seleção").
+### 1. Ao selecionar arquivos, ler e analisar imediatamente
 
-4. **Novo handler `handleRestoreLooseFiles`**: reaproveita a lógica de `handleRestoreFolder`, mas indexa arquivos por `file.name` em vez de `webkitRelativePath`:
-   - Para cada tabela em `TABLE_ORDER`, procura `${tableName}.json` entre os arquivos selecionados.
-   - Faz o mesmo loop de batches chamando a edge function `restore-backup` com `action: 'batch'`.
-   - Pula a fase de mídia/PDFs quando nenhum arquivo binário foi enviado.
-   - Reaproveita `setProgress`/`setProgressMessage`/toasts existentes.
+No `handleLooseFilesSelect`:
+- Validar que `manifest.json` está presente (já existe).
+- Ler `manifest.json` (`await file.text()` + `JSON.parse`) e guardar em novo estado `looseManifest`.
+- Para cada chave em `manifest.tables` (ou no `TABLE_ORDER`), verificar se existe `<tabela>.json` na seleção. Montar estado `looseAnalysis` com:
+  - Data/hora do backup (`manifest.exportedAt` / `manifest.createdAt`)
+  - Versão / origem (se houver no manifest)
+  - Lista de tabelas: nome, registros esperados (do manifest), JSON presente sim/não, tamanho do arquivo
+  - Lista de arquivos de mídia presentes (jpg/png/webp/pdf), contagem
+  - Lista de arquivos ignorados (que não batem com nenhuma tabela conhecida nem são mídia)
 
-5. **UX**: dropzone com mesmo estilo dos outros (borda tracejada, ícone, contagem de arquivos selecionados, tamanho total, botão "Iniciar Restauração dos Arquivos").
+### 2. Renderizar painel de prévia no card
+
+Logo abaixo do dropzone, quando `looseManifest` estiver populado:
+- Resumo: "Backup de DD/MM/AAAA HH:MM • N tabelas no manifest • X arquivos JSON encontrados • Y mídias"
+- Tabela compacta (Table do shadcn): coluna Tabela | Registros (manifest) | Arquivo encontrado (✓/—) | Tamanho
+  - Linhas com arquivo ausente em destaque (text-muted-foreground ou ícone de aviso)
+- Bloco de alertas:
+  - Se nenhum `<tabela>.json` for encontrado → alerta destrutivo "Nenhuma tabela será restaurada — você selecionou apenas o manifest.json. Selecione também os arquivos JSON da pasta `data/`."
+  - Se faltarem tabelas que o manifest declarou → alerta amarelo listando até 5 nomes
+  - Se houver arquivos ignorados → alerta informativo
+- Botão "Iniciar Restauração dos Arquivos" fica **desabilitado** quando não houver nenhum JSON de tabela presente.
+
+### 3. Correções de UI
+
+- Pluralizar: `${n} arquivo${n === 1 ? '' : 's'} selecionado${n === 1 ? '' : 's'}`
+- Mostrar tamanho em KB quando < 1 MB: `size < 1MB ? `${(size/1024).toFixed(1)} KB` : `${(size/1024/1024).toFixed(2)} MB``
+- Adicionar botão "Limpar seleção" ao lado do botão de restaurar.
+
+### 4. Reset
+
+Ao concluir (sucesso ou erro), limpar também `looseManifest` e `looseAnalysis` junto com `selectedLooseFiles`.
 
 ## Detalhes técnicos
 
-- Sem mudanças no backend nem em migrations.
-- Sem alterações na edge function `restore-backup` (continua recebendo `{ action: 'batch', table, records }`).
-- Reaproveitar estado novo: `selectedLooseFiles: File[] | null`.
-- Reutilizar a mesma constante `TABLE_ORDER` já existente (extrair para fora dos handlers ou duplicar inline — preferir extrair para uma const no topo do arquivo).
-- O `relatorio-backup.txt` é ignorado se vier junto (não é necessário para restauração).
+- Novos estados: `looseManifest: any | null`, `looseAnalysis: { tables: Array<{name:string; expected:number; present:boolean; size:number}>; mediaCount:number; ignored:string[] } | null`.
+- Mídias são contadas mas **não** enviadas (a edge function `restore-backup` no modo `action: 'batch'` só lida com registros; uploads de mídia avulsa ficam fora do escopo, como já estava no plano original).
+- Sem mudanças em migrations, edge functions ou outros arquivos.
 
 ## Fora do escopo
 
-- Não muda os fluxos atuais de ZIP e Pasta.
-- Não adiciona prévia/inspeção do manifest (pode virar follow-up).
-- Não trata upload de mídias avulsas em buckets (a menos que prefixo do nome do arquivo identifique o bucket; caso contrário, mídias são ignoradas com aviso no toast final).
+- Upload de mídias avulsas para os buckets.
+- Mudanças nos fluxos de ZIP e Pasta.
+- Salvar/cachear o manifest entre sessões.

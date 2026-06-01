@@ -23,6 +23,32 @@ import { format, parseISO, subMonths, startOfMonth, endOfMonth, subDays } from '
 import { ptBR } from 'date-fns/locale';
 import { formatRdoNumber } from '@/lib/formatters';
 import { generateReportPdfAsBlob, TenantColors } from '@/lib/generateReportPdf';
+
+const LOOSE_TABLE_ORDER = [
+  'system_settings','tenant_settings','client_portal_settings',
+  'companies','company_contacts','contact_sites','sites','site_responsibles',
+  'portal_admin_access','profiles','user_roles',
+  'client_profiles','client_companies','client_sites','client_user_roles',
+  'client_wallet','client_wallet_transactions',
+  'rewards_catalog','reward_redemptions',
+  'teams','team_members',
+  'projects','project_stages','project_tasks','project_equipment','project_milestones','project_members',
+  'reports','report_activities','report_activity_steps','report_attendance','report_deviations',
+  'report_equipment','report_photos','report_signatures','report_history',
+  'report_company_approvers','report_client_approvers',
+  'autentique_documents','autentique_signatures','clicksign_documents',
+  'service_reports','service_report_sections','service_report_photos',
+  'notifications','feature_suggestions','suggestion_votes','delay_reasons',
+  'backup_schedules','backup_history',
+];
+
+function formatBytes(size: number): string {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / 1024 / 1024).toFixed(2)} MB`;
+}
+
+const MEDIA_EXT_RE = /\.(jpg|jpeg|png|webp|gif|pdf|mp4|mov|heic)$/i;
 import { 
   Download, 
   Upload, 
@@ -525,6 +551,13 @@ export default function AdminBackup() {
   const [isRestoring, setIsRestoring] = useState(false);
   const [selectedFolderFiles, setSelectedFolderFiles] = useState<File[] | null>(null);
   const [selectedLooseFiles, setSelectedLooseFiles] = useState<File[] | null>(null);
+  const [looseManifest, setLooseManifest] = useState<any | null>(null);
+  const [looseAnalysis, setLooseAnalysis] = useState<{
+    tables: Array<{ name: string; expected: number; present: boolean; size: number }>;
+    mediaCount: number;
+    ignored: string[];
+    presentJsonCount: number;
+  } | null>(null);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
   const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
@@ -1493,12 +1526,12 @@ export default function AdminBackup() {
     }
   };
 
-  const handleLooseFilesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLooseFilesSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = e.target.files;
     if (!list || list.length === 0) return;
     const files = Array.from(list);
-    const hasManifest = files.some(f => f.name === 'manifest.json');
-    if (!hasManifest) {
+    const manifestFile = files.find(f => f.name === 'manifest.json');
+    if (!manifestFile) {
       toast({
         title: 'Seleção inválida',
         description: 'Inclua o manifest.json na seleção de arquivos.',
@@ -1506,7 +1539,70 @@ export default function AdminBackup() {
       });
       return;
     }
+
+    let manifest: any = null;
+    try {
+      manifest = JSON.parse(await manifestFile.text());
+    } catch {
+      toast({
+        title: 'manifest.json inválido',
+        description: 'Não foi possível ler o JSON do manifest.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Build per-table analysis
+    const byName = new Map<string, File>();
+    for (const f of files) byName.set(f.name, f);
+
+    // manifest.tables may be: { tableName: count } or array of { name, count }
+    const manifestCounts: Record<string, number> = {};
+    if (manifest?.tables && typeof manifest.tables === 'object') {
+      if (Array.isArray(manifest.tables)) {
+        for (const t of manifest.tables) {
+          if (t?.name) manifestCounts[t.name] = Number(t.count ?? t.records ?? 0);
+        }
+      } else {
+        for (const [k, v] of Object.entries(manifest.tables)) {
+          const n = typeof v === 'number' ? v : Number((v as any)?.count ?? (v as any)?.records ?? 0);
+          manifestCounts[k] = isNaN(n) ? 0 : n;
+        }
+      }
+    }
+
+    const allTableNames = Array.from(new Set([...LOOSE_TABLE_ORDER, ...Object.keys(manifestCounts)]));
+    const tables = allTableNames
+      .map(name => {
+        const file = byName.get(`${name}.json`);
+        return {
+          name,
+          expected: manifestCounts[name] ?? 0,
+          present: !!file,
+          size: file?.size ?? 0,
+        };
+      })
+      .filter(t => t.present || t.expected > 0)
+      .sort((a, b) => Number(b.present) - Number(a.present) || a.name.localeCompare(b.name));
+
+    const presentJsonCount = tables.filter(t => t.present).length;
+    const knownNames = new Set<string>([
+      'manifest.json',
+      'relatorio-backup.txt',
+      ...LOOSE_TABLE_ORDER.map(t => `${t}.json`),
+      ...Object.keys(manifestCounts).map(t => `${t}.json`),
+    ]);
+    let mediaCount = 0;
+    const ignored: string[] = [];
+    for (const f of files) {
+      if (knownNames.has(f.name)) continue;
+      if (MEDIA_EXT_RE.test(f.name)) mediaCount++;
+      else ignored.push(f.name);
+    }
+
     setSelectedLooseFiles(files);
+    setLooseManifest(manifest);
+    setLooseAnalysis({ tables, mediaCount, ignored, presentJsonCount });
   };
 
   const handleRestoreLooseFiles = async () => {
@@ -1520,23 +1616,7 @@ export default function AdminBackup() {
     setProgressMessage('Lendo arquivos...');
 
     try {
-      const TABLE_ORDER = [
-        'system_settings','tenant_settings','client_portal_settings',
-        'companies','company_contacts','contact_sites','sites','site_responsibles',
-        'portal_admin_access','profiles','user_roles',
-        'client_profiles','client_companies','client_sites','client_user_roles',
-        'client_wallet','client_wallet_transactions',
-        'rewards_catalog','reward_redemptions',
-        'teams','team_members',
-        'projects','project_stages','project_tasks','project_equipment','project_milestones','project_members',
-        'reports','report_activities','report_activity_steps','report_attendance','report_deviations',
-        'report_equipment','report_photos','report_signatures','report_history',
-        'report_company_approvers','report_client_approvers',
-        'autentique_documents','autentique_signatures','clicksign_documents',
-        'service_reports','service_report_sections','service_report_photos',
-        'notifications','feature_suggestions','suggestion_votes','delay_reasons',
-        'backup_schedules','backup_history'
-      ];
+      const TABLE_ORDER = LOOSE_TABLE_ORDER;
 
       const byName = new Map<string, File>();
       for (const f of selectedLooseFiles) byName.set(f.name, f);
@@ -1598,6 +1678,8 @@ export default function AdminBackup() {
 
       if (errors.length > 0) console.error('Erros de importação:', errors);
       setSelectedLooseFiles(null);
+      setLooseManifest(null);
+      setLooseAnalysis(null);
     } catch (error: any) {
       console.error('Restore loose files error:', error);
       toast({
@@ -2802,10 +2884,10 @@ export default function AdminBackup() {
                     <div className="flex flex-col items-center gap-2">
                       <CheckCircle2 className="h-10 w-10 text-primary" />
                       <p className="font-medium">
-                        {selectedLooseFiles.length} arquivos selecionados
+                        {selectedLooseFiles.length} arquivo{selectedLooseFiles.length === 1 ? '' : 's'} selecionado{selectedLooseFiles.length === 1 ? '' : 's'}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {(selectedLooseFiles.reduce((s, f) => s + f.size, 0) / 1024 / 1024).toFixed(2)} MB no total
+                        {formatBytes(selectedLooseFiles.reduce((s, f) => s + f.size, 0))} no total
                       </p>
                       <p className="text-xs text-muted-foreground">Clique novamente para trocar a seleção</p>
                     </div>
@@ -2821,6 +2903,86 @@ export default function AdminBackup() {
                 </label>
               </div>
 
+              {looseManifest && looseAnalysis && (
+                <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="space-y-1">
+                      <h4 className="font-semibold text-sm">Prévia do backup</h4>
+                      <p className="text-xs text-muted-foreground">
+                        {(() => {
+                          const dt = looseManifest.exportedAt || looseManifest.createdAt || looseManifest.generated_at || looseManifest.timestamp;
+                          if (!dt) return 'Data do backup não informada no manifest';
+                          try { return `Gerado em ${format(new Date(dt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`; }
+                          catch { return `Gerado em ${String(dt)}`; }
+                        })()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {looseAnalysis.presentJsonCount} JSON{looseAnalysis.presentJsonCount === 1 ? '' : 's'} de tabela encontrado{looseAnalysis.presentJsonCount === 1 ? '' : 's'}
+                        {looseAnalysis.mediaCount > 0 && ` • ${looseAnalysis.mediaCount} mídia(s) ignorada(s) nesta etapa`}
+                        {looseAnalysis.ignored.length > 0 && ` • ${looseAnalysis.ignored.length} arquivo(s) não reconhecido(s)`}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedLooseFiles(null);
+                        setLooseManifest(null);
+                        setLooseAnalysis(null);
+                      }}
+                    >
+                      Limpar seleção
+                    </Button>
+                  </div>
+
+                  {looseAnalysis.presentJsonCount === 0 && (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        Nenhuma tabela será restaurada — você selecionou apenas o <code>manifest.json</code>.
+                        Selecione também os arquivos JSON da pasta <code>data/</code> (ex.: <code>companies.json</code>, <code>reports.json</code>).
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {looseAnalysis.presentJsonCount > 0 && looseAnalysis.tables.some(t => !t.present && t.expected > 0) && (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        Faltando JSONs de:{' '}
+                        {looseAnalysis.tables.filter(t => !t.present && t.expected > 0).slice(0, 5).map(t => t.name).join(', ')}
+                        {looseAnalysis.tables.filter(t => !t.present && t.expected > 0).length > 5 && ` (+${looseAnalysis.tables.filter(t => !t.present && t.expected > 0).length - 5})`}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <div className="max-h-72 overflow-auto rounded border bg-background">
+                    <table className="w-full text-xs">
+                      <thead className="sticky top-0 bg-muted text-muted-foreground">
+                        <tr>
+                          <th className="text-left px-3 py-2 font-medium">Tabela</th>
+                          <th className="text-right px-3 py-2 font-medium">Registros (manifest)</th>
+                          <th className="text-center px-3 py-2 font-medium">JSON</th>
+                          <th className="text-right px-3 py-2 font-medium">Tamanho</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {looseAnalysis.tables.map(t => (
+                          <tr key={t.name} className={`border-t ${!t.present ? 'text-muted-foreground' : ''}`}>
+                            <td className="px-3 py-1.5 font-mono">{t.name}</td>
+                            <td className="px-3 py-1.5 text-right">{t.expected.toLocaleString('pt-BR')}</td>
+                            <td className="px-3 py-1.5 text-center">
+                              {t.present ? <CheckCircle2 className="inline h-3.5 w-3.5 text-primary" /> : '—'}
+                            </td>
+                            <td className="px-3 py-1.5 text-right">{t.present ? formatBytes(t.size) : '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               {isRestoring && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -2833,7 +2995,7 @@ export default function AdminBackup() {
 
               <Button
                 onClick={handleRestoreLooseFiles}
-                disabled={isRestoring || !selectedLooseFiles}
+                disabled={isRestoring || !selectedLooseFiles || !looseAnalysis || looseAnalysis.presentJsonCount === 0}
                 className="w-full"
                 size="lg"
               >
