@@ -1436,6 +1436,18 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
                 title="Nenhuma fábrica encontrada"
                 description="Cadastre uma fábrica para começar."
               />
+              {isAdmin && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mt-4">
+                  <CreateCard
+                    label="Nova Fábrica"
+                    onClick={() => {
+                      setEditingCompany(null);
+                      setCompanyFormData(initialCompanyFormData);
+                      setCreateCompanyOpen(true);
+                    }}
+                  />
+                </div>
+              )}
             </div>
           ) : (
             <>
