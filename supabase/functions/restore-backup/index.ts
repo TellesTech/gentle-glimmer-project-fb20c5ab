@@ -142,15 +142,45 @@ serve(async (req) => {
       throw new Error('Sem permissão para restaurar backup');
     }
 
-    const { fileContent, mode, phase, bucket, offset } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { fileContent, storagePath, mode, phase, bucket } = body || {};
 
-    console.log(`Starting restore, mode: ${mode}, phase: ${phase || 'full'}`);
+    console.log(`Starting restore, mode: ${mode}, phase: ${phase || 'full'}, storagePath: ${storagePath || 'inline'}`);
 
-    // Decode base64 and load ZIP
-    const binaryString = atob(fileContent);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
+    // Load ZIP bytes either from Storage (preferred) or from inline base64
+    let bytes: Uint8Array;
+    if (storagePath && typeof storagePath === 'string') {
+      const { data: fileBlob, error: dlErr } = await supabase.storage
+        .from('temp-backups')
+        .download(storagePath);
+      if (dlErr || !fileBlob) {
+        return new Response(
+          JSON.stringify({ error: `Não foi possível baixar o backup do storage: ${dlErr?.message || 'arquivo não encontrado'}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      bytes = new Uint8Array(await fileBlob.arrayBuffer());
+    } else {
+      if (!fileContent || typeof fileContent !== 'string') {
+        return new Response(
+          JSON.stringify({ error: 'Arquivo de backup não enviado (fileContent/storagePath ausente)' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      // Accept either raw base64 or a data URL
+      const base64 = fileContent.includes(',') ? fileContent.split(',')[1] : fileContent;
+      try {
+        const binaryString = atob(base64);
+        bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+      } catch (e: any) {
+        return new Response(
+          JSON.stringify({ error: `Conteúdo do backup inválido (base64): ${e.message}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     const zip = await JSZip.loadAsync(bytes);
