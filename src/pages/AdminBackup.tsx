@@ -1660,11 +1660,19 @@ export default function AdminBackup() {
     try {
       const TABLE_ORDER = LOOSE_TABLE_ORDER;
 
-      const byName = new Map<string, File>();
-      for (const f of selectedLooseFiles) byName.set(f.name, f);
+      const findTableFile = (name: string): File | undefined => {
+        const target = `${name}.json`;
+        for (const f of selectedLooseFiles) {
+          if (f.name === target) return f;
+          const rel = (f as any).webkitRelativePath as string | undefined;
+          if (rel && (rel.endsWith(`/data/${target}`) || rel.endsWith(`/${target}`))) return f;
+        }
+        return undefined;
+      };
 
       const BATCH_SIZE = 200;
       let totalRecords = 0;
+      let tablesImported = 0;
       const errors: string[] = [];
 
       setProgress(5);
@@ -1672,7 +1680,7 @@ export default function AdminBackup() {
 
       for (let t = 0; t < TABLE_ORDER.length; t++) {
         const tableName = TABLE_ORDER[t];
-        const file = byName.get(`${tableName}.json`);
+        const file = findTableFile(tableName);
         if (!file) continue;
 
         let records: any[] = [];
@@ -1684,6 +1692,7 @@ export default function AdminBackup() {
         }
         if (!Array.isArray(records) || records.length === 0) continue;
 
+        let tableHadSuccess = false;
         const totalBatches = Math.ceil(records.length / BATCH_SIZE);
         for (let i = 0; i < records.length; i += BATCH_SIZE) {
           const batch = records.slice(i, i + BATCH_SIZE);
@@ -1700,8 +1709,10 @@ export default function AdminBackup() {
             console.error(`Erro ${tableName}:`, msg);
           } else {
             totalRecords += (res as any)?.recordsImported || batch.length;
+            tableHadSuccess = true;
           }
         }
+        if (tableHadSuccess) tablesImported++;
 
         setProgress(5 + Math.round(((t + 1) / TABLE_ORDER.length) * 90));
       }
@@ -1709,19 +1720,30 @@ export default function AdminBackup() {
       setProgress(100);
       setProgressMessage('Restauração concluída!');
 
-      const errSummary = errors.length > 0
-        ? ` (${errors.length} erro(s) — veja o console)`
-        : '';
-
-      toast({
-        title: 'Backup restaurado!',
-        description: `${totalRecords} registros importados.${errSummary}`,
-      });
-
       if (errors.length > 0) console.error('Erros de importação:', errors);
-      setSelectedLooseFiles(null);
-      setLooseManifest(null);
-      setLooseAnalysis(null);
+
+      if (totalRecords === 0) {
+        toast({
+          title: 'Nenhum dado foi importado',
+          description: errors.length > 0
+            ? `Falhas: ${errors.slice(0, 3).join(' | ')}${errors.length > 3 ? ` (+${errors.length - 3})` : ''}`
+            : 'Os arquivos selecionados não continham registros válidos.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: errors.length > 0 ? 'Restauração parcial' : 'Backup restaurado!',
+          description: `${totalRecords} registro(s) em ${tablesImported} tabela(s).${
+            errors.length > 0
+              ? ` ${errors.length} erro(s): ${errors.slice(0, 2).join(' | ')}${errors.length > 2 ? '…' : ''}`
+              : ''
+          }`,
+          variant: errors.length > 0 ? 'destructive' : 'default',
+        });
+        setSelectedLooseFiles(null);
+        setLooseManifest(null);
+        setLooseAnalysis(null);
+      }
     } catch (error: any) {
       console.error('Restore loose files error:', error);
       toast({
