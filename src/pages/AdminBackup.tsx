@@ -2773,6 +2773,84 @@ export default function AdminBackup() {
               </Button>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Importar Backup por Arquivos Avulsos</CardTitle>
+              <CardDescription>
+                Selecione vários arquivos soltos (sem precisar de pasta ou ZIP).
+                A seleção <strong>precisa incluir</strong> <code>manifest.json</code> e os
+                JSONs das tabelas (ex.: <code>companies.json</code>, <code>reports.json</code>).
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  selectedLooseFiles ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground'
+                }`}
+              >
+                <input
+                  type="file"
+                  multiple
+                  accept=".json"
+                  onChange={handleLooseFilesSelect}
+                  className="hidden"
+                  id="backup-loose"
+                />
+                <label htmlFor="backup-loose" className="cursor-pointer">
+                  {selectedLooseFiles ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <CheckCircle2 className="h-10 w-10 text-primary" />
+                      <p className="font-medium">
+                        {selectedLooseFiles.length} arquivos selecionados
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {(selectedLooseFiles.reduce((s, f) => s + f.size, 0) / 1024 / 1024).toFixed(2)} MB no total
+                      </p>
+                      <p className="text-xs text-muted-foreground">Clique novamente para trocar a seleção</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <CloudUpload className="h-10 w-10 text-muted-foreground" />
+                      <p className="font-medium">Clique para selecionar os arquivos</p>
+                      <p className="text-sm text-muted-foreground">
+                        Inclua <code>manifest.json</code> + JSONs de tabelas
+                      </p>
+                    </div>
+                  )}
+                </label>
+              </div>
+
+              {isRestoring && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {progressMessage}
+                  </div>
+                  <Progress value={progress} />
+                </div>
+              )}
+
+              <Button
+                onClick={handleRestoreLooseFiles}
+                disabled={isRestoring || !selectedLooseFiles}
+                className="w-full"
+                size="lg"
+              >
+                {isRestoring ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Restaurando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Iniciar Restauração dos Arquivos
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
