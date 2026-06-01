@@ -549,7 +549,7 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
             ),
             signed_pdf_url
           `)
-          .in('status', ['completed', 'draft', 'sent', 'signed'])
+          .in('status', ['completed', 'draft', 'sent', 'signed', 'finalized'])
           .is('archived_at', null)
           .order('date', { ascending: false })
           .range(from, from + pageSize - 1);
