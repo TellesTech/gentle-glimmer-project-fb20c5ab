@@ -712,15 +712,13 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
       }
     });
 
-    // Surface activities created in the current month even when they have no RDOs yet
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
+    // Surface TODAS as atividades (mesmo sem RDOs), agrupadas pelo ano/mês de criação.
+    const nowFallback = new Date();
     const sitesById = new Map(allSites.map(s => [s.id, s]));
     allProjects.forEach((p: any) => {
-      if (!p.created_at) return;
-      const created = parseISO(p.created_at);
-      if (getYear(created) !== currentYear || getMonth(created) !== currentMonth) return;
+      const created = p.created_at ? parseISO(p.created_at) : nowFallback;
+      const pYear = getYear(created);
+      const pMonth = getMonth(created);
       const site = sitesById.get(p.site_id);
       if (!site) return;
       const folder = map.get(site.company_id);
@@ -739,17 +737,17 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
         folder.sites.push(siteFolder);
       }
 
-      let yearFolder = siteFolder.years.find(y => y.year === currentYear);
+      let yearFolder = siteFolder.years.find(y => y.year === pYear);
       if (!yearFolder) {
-        yearFolder = { year: currentYear, reports: [], count: 0, months: [] };
+        yearFolder = { year: pYear, reports: [], count: 0, months: [] };
         siteFolder.years.push(yearFolder);
       }
 
-      let monthFolder = yearFolder.months.find(m => m.month === currentMonth);
+      let monthFolder = yearFolder.months.find(m => m.month === pMonth);
       if (!monthFolder) {
         monthFolder = {
-          month: currentMonth,
-          monthName: monthNames[currentMonth],
+          month: pMonth,
+          monthName: monthNames[pMonth],
           reports: [],
           count: 0,
           projects: [],
