@@ -95,9 +95,15 @@ export function AvatarUpload({
       const response = await fetch(editedImage);
       const blob = await response.blob();
 
-      // Generate unique filename
+      // Generate unique filename scoped to the current user's folder so
+      // storage RLS prevents users from overwriting each other's avatars.
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id;
+      if (!userId) {
+        throw new Error('Usuário não autenticado');
+      }
       const fileName = `${crypto.randomUUID()}.jpg`;
-      const filePath = `avatars/${fileName}`;
+      const filePath = `${userId}/${fileName}`;
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
