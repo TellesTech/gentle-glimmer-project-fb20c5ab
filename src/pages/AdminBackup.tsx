@@ -23,6 +23,32 @@ import { format, parseISO, subMonths, startOfMonth, endOfMonth, subDays } from '
 import { ptBR } from 'date-fns/locale';
 import { formatRdoNumber } from '@/lib/formatters';
 import { generateReportPdfAsBlob, TenantColors } from '@/lib/generateReportPdf';
+
+const LOOSE_TABLE_ORDER = [
+  'system_settings','tenant_settings','client_portal_settings',
+  'companies','company_contacts','contact_sites','sites','site_responsibles',
+  'portal_admin_access','profiles','user_roles',
+  'client_profiles','client_companies','client_sites','client_user_roles',
+  'client_wallet','client_wallet_transactions',
+  'rewards_catalog','reward_redemptions',
+  'teams','team_members',
+  'projects','project_stages','project_tasks','project_equipment','project_milestones','project_members',
+  'reports','report_activities','report_activity_steps','report_attendance','report_deviations',
+  'report_equipment','report_photos','report_signatures','report_history',
+  'report_company_approvers','report_client_approvers',
+  'autentique_documents','autentique_signatures','clicksign_documents',
+  'service_reports','service_report_sections','service_report_photos',
+  'notifications','feature_suggestions','suggestion_votes','delay_reasons',
+  'backup_schedules','backup_history',
+];
+
+function formatBytes(size: number): string {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / 1024 / 1024).toFixed(2)} MB`;
+}
+
+const MEDIA_EXT_RE = /\.(jpg|jpeg|png|webp|gif|pdf|mp4|mov|heic)$/i;
 import { 
   Download, 
   Upload, 
