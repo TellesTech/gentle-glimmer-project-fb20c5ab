@@ -1616,23 +1616,7 @@ export default function AdminBackup() {
     setProgressMessage('Lendo arquivos...');
 
     try {
-      const TABLE_ORDER = [
-        'system_settings','tenant_settings','client_portal_settings',
-        'companies','company_contacts','contact_sites','sites','site_responsibles',
-        'portal_admin_access','profiles','user_roles',
-        'client_profiles','client_companies','client_sites','client_user_roles',
-        'client_wallet','client_wallet_transactions',
-        'rewards_catalog','reward_redemptions',
-        'teams','team_members',
-        'projects','project_stages','project_tasks','project_equipment','project_milestones','project_members',
-        'reports','report_activities','report_activity_steps','report_attendance','report_deviations',
-        'report_equipment','report_photos','report_signatures','report_history',
-        'report_company_approvers','report_client_approvers',
-        'autentique_documents','autentique_signatures','clicksign_documents',
-        'service_reports','service_report_sections','service_report_photos',
-        'notifications','feature_suggestions','suggestion_votes','delay_reasons',
-        'backup_schedules','backup_history'
-      ];
+      const TABLE_ORDER = LOOSE_TABLE_ORDER;
 
       const byName = new Map<string, File>();
       for (const f of selectedLooseFiles) byName.set(f.name, f);
@@ -1694,6 +1678,8 @@ export default function AdminBackup() {
 
       if (errors.length > 0) console.error('Erros de importação:', errors);
       setSelectedLooseFiles(null);
+      setLooseManifest(null);
+      setLooseAnalysis(null);
     } catch (error: any) {
       console.error('Restore loose files error:', error);
       toast({
