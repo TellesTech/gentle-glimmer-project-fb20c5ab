@@ -2146,9 +2146,11 @@ export default function AdminBackup() {
         <TabsContent value="import" className="space-y-4 mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Restaurar Backup</CardTitle>
+              <CardTitle>Importar Backup Completo (.zip)</CardTitle>
               <CardDescription>
-                Carregue um arquivo de backup para restaurar os dados
+                Restaura o pacote ZIP gerado na aba Exportar com <strong>todos os conteúdos e dados</strong>:
+                tabelas (<code>data/*.json</code>), fotos e arquivos de mídia (<code>files/&lt;bucket&gt;/</code>),
+                RDOs em PDF (<code>RDOs/</code>), RDOs assinados (<code>RDOs_Assinados/</code>) e o <code>manifest.json</code>.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -2180,12 +2182,15 @@ export default function AdminBackup() {
                       <p className="text-sm text-muted-foreground">
                         {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                       </p>
+                      <p className="text-xs text-muted-foreground">Clique novamente para trocar de arquivo</p>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-2">
-                      <Download className="h-10 w-10 text-muted-foreground" />
-                      <p className="font-medium">Clique para selecionar</p>
-                      <p className="text-sm text-muted-foreground">ou arraste o arquivo .zip aqui</p>
+                      <CloudUpload className="h-10 w-10 text-muted-foreground" />
+                      <p className="font-medium">Clique para selecionar o arquivo .zip</p>
+                      <p className="text-sm text-muted-foreground">
+                        Backup completo com tabelas, fotos e PDFs (gerado na aba Exportar)
+                      </p>
                     </div>
                   )}
                 </label>
