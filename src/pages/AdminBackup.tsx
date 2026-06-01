@@ -1104,24 +1104,37 @@ export default function AdminBackup() {
       
       const manifest = JSON.parse(await manifestFile.async('string'));
       
-      // Step 1: Restore DATA
-      setProgress(10);
+      // Step 1: Upload ZIP para storage temporário (evita limite de body JSON/base64)
+      setProgress(5);
+      setProgressMessage('Enviando arquivo para o servidor...');
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Sessão expirada. Faça login novamente.');
+
+      const storagePath = `${user.id}/${crypto.randomUUID()}.zip`;
+      const { error: uploadErr } = await supabase.storage
+        .from('temp-backups')
+        .upload(storagePath, selectedFile, {
+          contentType: 'application/zip',
+          upsert: true,
+        });
+      if (uploadErr) throw new Error(`Falha ao enviar arquivo: ${uploadErr.message}`);
+
+      // Step 2: Restore DATA
+      setProgress(15);
       setProgressMessage('Restaurando dados do sistema...');
-      
-      const fileContent = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve((reader.result as string).split(',')[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(selectedFile);
-      });
 
       const { data: dataRes, error: dataErr } = await supabase.functions.invoke('restore-backup', {
-        body: { fileContent, mode: 'full', phase: 'data' },
+        body: { storagePath, mode: 'full', phase: 'data' },
       });
 
-      if (dataErr) throw dataErr;
+      if (dataErr) {
+        const msg = (dataRes as any)?.error || dataErr.message || 'Erro ao restaurar dados';
+        throw new Error(msg);
+      }
+      if ((dataRes as any)?.error) throw new Error((dataRes as any).error);
 
-      // Step 2: Restore FILES (one bucket at a time if many files)
+      // Step 3: Restore FILES (one bucket at a time if many files)
       const bucketsToRestore = [
         'report-photos', 'company-photos', 'project-photos',
         'avatars', 'suggestion-screenshots', 'service-report-photos',
@@ -1135,12 +1148,19 @@ export default function AdminBackup() {
         setProgressMessage(`Restaurando arquivos: ${bucket}...`);
 
         const { data: fileRes, error: fileErr } = await supabase.functions.invoke('restore-backup', {
-          body: { fileContent, mode: 'full', phase: 'files', bucket },
+          body: { storagePath, mode: 'full', phase: 'files', bucket },
         });
 
-        if (!fileErr && fileRes.filesRestored) {
+        if (!fileErr && fileRes?.filesRestored) {
           totalFilesRestored += fileRes.filesRestored;
         }
+      }
+
+      // Cleanup do arquivo temporário
+      try {
+        await supabase.storage.from('temp-backups').remove([storagePath]);
+      } catch (cleanupErr) {
+        console.warn('Falha ao limpar ZIP temporário:', cleanupErr);
       }
 
       setProgress(100);
@@ -1148,7 +1168,7 @@ export default function AdminBackup() {
 
       toast({
         title: 'Backup restaurado com sucesso!',
-        description: `${dataRes.recordsImported} registros e ${totalFilesRestored} arquivos restaurados.`,
+        description: `${(dataRes as any)?.recordsImported || 0} registros e ${totalFilesRestored} arquivos restaurados.`,
       });
 
       setSelectedFile(null);
