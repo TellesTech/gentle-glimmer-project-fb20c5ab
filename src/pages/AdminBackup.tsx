@@ -29,17 +29,14 @@ const LOOSE_TABLE_ORDER = [
   'companies','company_contacts','contact_sites','sites','site_responsibles',
   'portal_admin_access','profiles','user_roles',
   'client_profiles','client_companies','client_sites','client_user_roles',
-  'client_wallet','client_wallet_transactions',
-  'rewards_catalog','reward_redemptions',
   'teams','team_members',
   'projects','project_stages','project_tasks','project_equipment','project_milestones','project_members',
-  'reports','report_activities','report_activity_steps','report_attendance','report_deviations',
-  'report_equipment','report_photos','report_signatures','report_history',
+  'reports','report_activities','report_attendance','report_deviations',
+  'report_equipment','report_photos','report_signatures',
   'report_company_approvers','report_client_approvers',
-  'autentique_documents','autentique_signatures','clicksign_documents',
+  'autentique_documents','clicksign_documents',
   'service_reports','service_report_sections','service_report_photos',
-  'notifications','feature_suggestions','suggestion_votes','delay_reasons',
-  'backup_schedules','backup_history',
+  'notifications','feature_suggestions','suggestion_votes',
 ];
 
 function formatBytes(size: number): string {
