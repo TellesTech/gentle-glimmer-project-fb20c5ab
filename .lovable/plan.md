@@ -1,32 +1,25 @@
-## Problema
-1. Você está em `/super-admin` e não consegue acessar a área de Backup. Hoje o link só existe na sidebar lateral (item "Backup", apenas para `super_admin`) e não há atalho dentro do próprio painel `SuperAdminPanel`. Se a sidebar estiver colapsada ou o item estiver passando despercebido, fica parecendo que a página "não existe".
-2. A aba **Importar** já aceita um `.zip`, mas a comunicação está fraca — não fica claro que se trata da restauração completa (dados + fotos + PDFs + assinados) do backup gerado pela aba **Exportar**.
+## Diagnóstico
 
-## Plano
+A importação está falhando porque o frontend envia o arquivo ZIP como Base64 no campo `fileContent`, mas em algumas execuções esse campo chega ausente ou inválido na Edge Function. O log atual confirma isso: a requisição para `restore-backup` foi enviada com apenas `{"mode":"full","phase":"data"}`, e a função tentou executar `atob(fileContent)`, gerando `Failed to decode base64` e retornando 400.
 
-### 1. Garantir acesso à área de Backup
-- Em `src/pages/SuperAdminPanel.tsx`: adicionar um card/atalho "Backup do Sistema" que leva para `/admin/backup` (mesmo estilo dos demais atalhos do painel, usando o ícone `HardDrive`).
-- Em `src/components/layout/Sidebar.tsx`: manter o item Backup também visível para `admin` (hoje só aparece para `super_admin`), alinhando com `MobileSidebar` e com a permissão real da página (`admin` + `super_admin`).
-- Conferir que `/admin/backup` continua respondendo para `super_admin` (já está OK em `App.tsx` + `AdminBackup.tsx`).
+## Plano de correção
 
-### 2. Reforçar a opção de importar ZIP completo
-Na aba **Importar** de `src/pages/AdminBackup.tsx`:
-- Trocar o título para "Importar Backup Completo (.zip)" e a descrição para deixar explícito que aceita o pacote ZIP gerado na aba Exportar, contendo:
-  - `data/*.json` (todas as tabelas)
-  - `files/<bucket>/...` (fotos e arquivos de mídia)
-  - `RDOs/` e `RDOs_Assinados/` (PDFs)
-  - `manifest.json`
-- Após selecionar o arquivo, abrir o ZIP no cliente (com `JSZip`, já importado) e mostrar um resumo antes de restaurar: nº de tabelas detectadas, total de registros do `manifest.json`, nº de arquivos em `files/` e nº de PDFs. Assim o usuário confirma que o pacote é íntegro.
-- Trocar o ícone de upload (hoje usa `Download`) por `Upload`/`CloudUpload` para coerência visual.
-- Manter os modos **Mesclar** / **Substituir** já existentes (a função edge `restore-backup` já processa data + files).
-- Exibir, no fim, os totais retornados (`recordsImported`, `filesRestored`) num bloco de sucesso.
+1. **Corrigir o envio do ZIP no frontend**
+   - Garantir que `AdminBackup.tsx` só chame `restore-backup` depois de converter o arquivo selecionado para Base64 válido.
+   - Validar explicitamente se o conteúdo Base64 foi gerado antes de invocar a função.
+   - Enviar `fileContent` em todas as chamadas, incluindo a fase de dados e cada bucket de arquivos.
 
-### 3. Sem mudanças de backend
-A função `restore-backup` já lê `data/*.json` e `files/<bucket>/...` do ZIP e restaura tudo via UPSERT + upload no Storage. Nenhuma migration ou alteração de edge function é necessária.
+2. **Fortalecer a Edge Function `restore-backup`**
+   - Validar o corpo da requisição antes de tentar decodificar o ZIP.
+   - Retornar erro claro quando `fileContent` estiver ausente, vazio ou malformado, em vez de quebrar com erro genérico.
+   - Aceitar tanto Base64 puro quanto Data URL (`data:application/zip;base64,...`) para evitar incompatibilidade entre navegadores/implementações.
 
-## Arquivos afetados
-- `src/pages/SuperAdminPanel.tsx` — novo atalho para Backup.
-- `src/components/layout/Sidebar.tsx` — liberar item Backup para `admin`.
-- `src/pages/AdminBackup.tsx` — melhorar a aba Importar (textos, ícone, pré-visualização do conteúdo do ZIP, resumo pós-restauração).
+3. **Melhorar o feedback visual da importação**
+   - Exibir no toast a mensagem real retornada pela Edge Function, não apenas “non-2xx status code”.
+   - Manter a tela sem “blank screen” quando a restauração falhar.
+   - Ajustar o progresso para indicar em qual fase a falha ocorreu.
 
-Confirma que posso seguir?
+4. **Verificação**
+   - Revisar os pontos de chamada para confirmar que o payload contém `fileContent`.
+   - Reimplantar a Edge Function `restore-backup`.
+   - Conferir logs/requisição para validar que o erro de Base64 não ocorre mais.
