@@ -3082,6 +3082,21 @@ export type Database = {
           total_reports: number
         }[]
       }
+      get_public_branding: {
+        Args: never
+        Returns: {
+          accent_color: string
+          ai_avatar_url: string
+          favicon_url: string
+          id: string
+          login_logo_url: string
+          logo_url: string
+          pdf_logo_url: string
+          primary_color: string
+          system_name: string
+          system_subtitle: string
+        }[]
+      }
       get_quick_access_users: {
         Args: never
         Returns: {
