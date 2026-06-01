@@ -153,7 +153,7 @@ export function WorkforceAITab({ records, delays, startDate, endDate, projectId,
       const { data: attendanceData } = await supabase
         .from('report_attendance')
         .select(`
-          id, user_name, function_role, arrival_time, departure_time, present, user_id, report_id,
+          id, user_name, arrival_time, departure_time, present, user_id, report_id,
           reports!inner(id, date, project_id, projects(name))
         `)
         .eq('present', true);
@@ -185,7 +185,7 @@ export function WorkforceAITab({ records, delays, startDate, endDate, projectId,
         const report = first.reports as any;
         const projectName = report?.projects?.name || 'Sem projeto';
         const functionRole = resolveWorkerFunction(
-          first.user_name, first.user_id, first.function_role, profilesById, allProfiles
+          first.user_name, first.user_id, null, profilesById, allProfiles
         );
         const shifts = group
           .filter((a: any) => a.arrival_time && a.departure_time)

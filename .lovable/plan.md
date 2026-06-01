@@ -1,29 +1,32 @@
-## Problema
+## Diagnóstico
 
-Todas as fotos do RDO retornam "Erro ao carregar". As URLs guardadas em `report_photos.url` apontam para um Supabase **diferente** (`knubzymetllizsgeoikh`), provavelmente o projeto antigo de origem dos dados. O bucket `report-photos` não existe neste projeto.
+A tela **Base de Dados HH** não está puxando as informações por dois motivos encontrados:
 
-O hook `useStorageUpload.getViewUrl` vê o substring "supabase" na URL e tenta re-assinar contra o bucket `report-photos` **do projeto atual**, que não tem o arquivo — todas as chamadas para `/storage/v1/object/sign/report-photos/...` voltam 404, e a galeria mostra o ícone de erro.
+1. A consulta de mão de obra tenta buscar a coluna `report_attendance.function_role`, mas essa coluna não existe no banco atual. Isso gera erro 400 e interrompe a carga automática dos dados dos RDOs.
+2. O período selecionado na tela está em junho/2026, mas o último RDO existente no banco é de **15/05/2026**. Então, mesmo corrigindo a consulta, junho continuará vazio até existir RDO nesse período.
 
-Mas as URLs salvas já são **públicas** (`/storage/v1/object/public/report-photos/...`). Não precisam ser assinadas: basta usá-las direto no `<img src>` para que o navegador as carregue do projeto antigo, que mantém o bucket público.
+Também confirmei que a tabela `report_attendance` está vazia no banco atual. Para RDOs antigos, a tela só conseguirá exibir mão de obra detalhada se houver registros de presença salvos; caso contrário, só poderá exibir os totais existentes no próprio RDO (`planned_workforce` e `actual_workforce`).
 
-## Correção (apenas frontend)
+## Plano de correção
 
-Em `src/hooks/useStorageUpload.ts`, dentro de `getViewUrl`:
+1. **Corrigir a consulta da Base de Dados HH**
+   - Remover `function_role` da seleção em `src/pages/WorkforceDatabase.tsx`.
+   - Manter a resolução de função usando `profiles.job_title`, `user_id` e nome do trabalhador.
+   - Usar função padrão quando a função não existir no RDO.
 
-- Se `storedUrl` for um link `http(s)` que contenha `/storage/v1/object/public/`, retornar a URL como está. Não tentar assinar.
-- Mantém o comportamento atual para:
-  - Caminhos relativos (sem `http`) → assinar no bucket atual
-  - URLs `/storage/v1/object/sign/...` ou outras URLs Supabase não públicas → continuar tentando extrair path e re-assinar
+2. **Corrigir outras consultas quebradas que também usam `report_attendance.function_role`**
+   - Ajustar `src/components/workforce/WorkforceAITab.tsx` para não depender dessa coluna inexistente.
+   - Revisar pontos relacionados para evitar novos erros 400 na aba de IA/previsões.
 
-Mesma checagem em `src/components/reports/PhotoGallery.tsx` no cálculo `needsSignedUrl` para evitar entrar no fluxo desnecessariamente: tratar URLs `/object/public/` como já-prontas.
+3. **Melhorar o estado vazio da tela**
+   - Quando não houver registros no período, manter o alerta com o último RDO encontrado.
+   - Deixar mais claro que o período atual não tem RDOs e que o botão “Ir ao último RDO” deve carregar o mês correto.
 
-## Validação
+4. **Validar o resultado**
+   - Verificar se a tela deixa de fazer requisição com `function_role` em `report_attendance`.
+   - Confirmar que a Base de Dados HH não quebra mais com erro 400.
+   - Confirmar que, ao ir para maio/2026 ou para o mês do último RDO, os dados disponíveis são carregados corretamente.
 
-Após o ajuste, recarregar `/reports/7b8acda6-...`:
-- As 7 fotos devem aparecer na grade
-- O lightbox abre normalmente
-- Sem chamadas 400/404 a `/storage/v1/object/sign/report-photos/...` na aba Network
+## Observação importante
 
-## Observação para o usuário
-
-Os arquivos permanecem hospedados no projeto Supabase antigo (`knubzymetllizsgeoikh`). Se aquele projeto for desligado ou o bucket virar privado, as fotos antigas vão sumir. Quando quiser, posso preparar uma migração de mídia (baixar do projeto antigo e subir para um bucket `report-photos` neste projeto, atualizando `report_photos.url`) — não está incluso nesta correção.
+Se a expectativa é aparecer a lista detalhada de colaboradores por RDO, será necessário existir dado em `report_attendance`. Hoje essa tabela está com **0 registros** no banco atual. Essa correção resolve o erro de carregamento; recuperar mão de obra detalhada antiga depende de migração/importação desses registros ou de extrair novamente dos RDOs originais.

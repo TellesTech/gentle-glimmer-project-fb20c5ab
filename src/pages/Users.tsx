@@ -258,13 +258,7 @@ export default function UsersPage() {
         const editErrorMsg = response.data?.error || response.error?.message;
         if (editErrorMsg) throw new Error(translateAuthError(editErrorMsg));
 
-        // Propagar atualização de função para todos os RDOs do colaborador
-        if (formData.job_title) {
-          await supabase
-            .from('report_attendance')
-            .update({ function_role: formData.job_title })
-            .ilike('user_name', formData.name.trim());
-        }
+        // Função do colaborador é resolvida via profiles.job_title em tempo de leitura
 
         toast({ title: 'Usuário atualizado com sucesso' });
 
