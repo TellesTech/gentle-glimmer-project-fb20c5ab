@@ -724,7 +724,7 @@ export default function SiteDashboard() {
                   Cadastre a primeira atividade desta unidade para começar.
                 </p>
                 <Button 
-                  onClick={() => navigate(`/sites/${siteId}`)}
+                  onClick={() => navigate('/reports/new')}
                   className="rounded-xl gap-2"
                 >
                   <FolderKanban className="h-4 w-4" />
