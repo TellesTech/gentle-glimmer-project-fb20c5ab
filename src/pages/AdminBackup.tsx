@@ -1494,6 +1494,12 @@ export default function AdminBackup() {
   };
 
   const handleSaveSchedule = async () => {
+    // placeholder anchor - replaced below
+    void 0;
+    return await _handleSaveScheduleImpl();
+  };
+
+  const _handleSaveScheduleImpl = async () => {
     setIsSavingSchedule(true);
     try {
       const { data: profile } = await supabase
