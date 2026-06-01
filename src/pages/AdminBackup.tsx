@@ -2571,6 +2571,86 @@ export default function AdminBackup() {
               </Button>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Importar Backup por Pasta</CardTitle>
+              <CardDescription>
+                Alternativa ao ZIP: selecione a <strong>pasta raiz do backup já descompactada</strong>
+                contendo <code>manifest.json</code>, <code>data/</code>, <code>files/</code> e <code>RDOs/</code>.
+                Recomendado para backups grandes (centenas de MB ou GB).
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  selectedFolderFiles ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground'
+                }`}
+              >
+                <input
+                  type="file"
+                  // @ts-ignore - atributos não tipados padrão do React
+                  webkitdirectory=""
+                  directory=""
+                  multiple
+                  onChange={handleFolderSelect}
+                  className="hidden"
+                  id="backup-folder"
+                />
+                <label htmlFor="backup-folder" className="cursor-pointer">
+                  {selectedFolderFiles ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <CheckCircle2 className="h-10 w-10 text-primary" />
+                      <p className="font-medium">
+                        {selectedFolderFiles.length} arquivos selecionados
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {(selectedFolderFiles.reduce((s, f) => s + f.size, 0) / 1024 / 1024).toFixed(2)} MB no total
+                      </p>
+                      <p className="text-xs text-muted-foreground">Clique novamente para trocar de pasta</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <CloudUpload className="h-10 w-10 text-muted-foreground" />
+                      <p className="font-medium">Clique para selecionar a pasta do backup</p>
+                      <p className="text-sm text-muted-foreground">
+                        Selecione a pasta que contém o <code>manifest.json</code>
+                      </p>
+                    </div>
+                  )}
+                </label>
+              </div>
+
+              {isRestoring && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {progressMessage}
+                  </div>
+                  <Progress value={progress} />
+                </div>
+              )}
+
+              <Button
+                onClick={handleRestoreFolder}
+                disabled={isRestoring || !selectedFolderFiles}
+                className="w-full"
+                size="lg"
+              >
+                {isRestoring ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Restaurando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Iniciar Restauração da Pasta
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
