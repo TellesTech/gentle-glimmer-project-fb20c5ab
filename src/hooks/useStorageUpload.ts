@@ -95,6 +95,13 @@ export function useStorageUpload(bucketName: string = 'report-photos') {
       if (!storedUrl.includes('supabase') && !storedUrl.includes('/storage/')) {
         return storedUrl;
       }
+
+      // Already a public Supabase storage URL — use as-is.
+      // Re-signing would fail for objects hosted in a different Supabase project
+      // (e.g. data migrated from another project).
+      if (storedUrl.includes('/storage/v1/object/public/')) {
+        return storedUrl;
+      }
       
       // Extract path from the URL (removes expired tokens)
       const path = extractPathFromUrl(storedUrl);
