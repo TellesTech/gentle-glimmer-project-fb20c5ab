@@ -511,47 +511,61 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['reports-cabinet-all-v2', isRestrictedAdmin ? adminProjectIds : null],
     queryFn: async () => {
-      let query = supabase
-        .from('reports')
-        .select(`
-          id,
-          date,
-          shift,
-          location,
-          status,
-          rdo_number,
-          actual_workforce,
-          daily_progress,
-          maintenance_order_title,
-          maintenance_order_number,
-          project:projects(
-            id, 
-            name,
-            code,
-            status,
-            progress,
-            site:sites(
-              id,
-              name,
-              photo_url,
-              company:companies(id, name, logo_url, photo_url)
-            )
-          ),
-          signed_pdf_url
-        `)
-        .in('status', ['completed', 'draft', 'sent', 'signed'])
-        .is('archived_at', null)
-        .order('date', { ascending: false });
-
-      if (isRestrictedAdmin && adminProjectIds && adminProjectIds.length > 0) {
-        query = query.in('project_id', adminProjectIds);
-      } else if (isRestrictedAdmin) {
+      if (isRestrictedAdmin && (!adminProjectIds || adminProjectIds.length === 0)) {
         return [] as Report[];
       }
-      
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data || []) as Report[];
+
+      // Pagina em chunks de 1000 para evitar o teto padrão do PostgREST.
+      const pageSize = 1000;
+      const all: Report[] = [];
+      let from = 0;
+      // Loop até esgotar; segurança extra com hard cap.
+      for (let i = 0; i < 50; i++) {
+        let query = supabase
+          .from('reports')
+          .select(`
+            id,
+            date,
+            shift,
+            location,
+            status,
+            rdo_number,
+            actual_workforce,
+            daily_progress,
+            maintenance_order_title,
+            maintenance_order_number,
+            project:projects(
+              id, 
+              name,
+              code,
+              status,
+              progress,
+              site:sites(
+                id,
+                name,
+                photo_url,
+                company:companies(id, name, logo_url, photo_url)
+              )
+            ),
+            signed_pdf_url
+          `)
+          .in('status', ['completed', 'draft', 'sent', 'signed'])
+          .is('archived_at', null)
+          .order('date', { ascending: false })
+          .range(from, from + pageSize - 1);
+
+        if (isRestrictedAdmin && adminProjectIds && adminProjectIds.length > 0) {
+          query = query.in('project_id', adminProjectIds);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        const batch = (data || []) as Report[];
+        all.push(...batch);
+        if (batch.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
     },
     enabled: !isRestrictedAdmin || (adminProjectIds !== undefined),
   });
