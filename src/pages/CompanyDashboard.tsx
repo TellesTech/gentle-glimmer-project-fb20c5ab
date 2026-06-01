@@ -1092,7 +1092,7 @@ export default function CompanyDashboard() {
               </p>
               {!searchTerm && (
                 <Button 
-                  onClick={() => navigate(`/companies/${companyId}/sites?create=true`)}
+                  onClick={() => navigate('/reports/new')}
                   className="rounded-xl gap-2"
                 >
                   <Plus className="h-4 w-4" />
