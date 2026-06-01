@@ -40,7 +40,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/loose-client';
 import type { Database } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';

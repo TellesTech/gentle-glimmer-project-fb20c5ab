@@ -17,7 +17,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/loose-client';
 import JSZip from 'jszip';
 import { format, parseISO, subMonths, startOfMonth, endOfMonth, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -574,7 +574,7 @@ export default function AdminBackup() {
     setIsLoadingSchedule(true);
     try {
       // Fetch schedule
-      const { data: schedules } = await supabase
+      const { data: schedules } = await (supabase as any)
         .from('backup_schedules')
         .select('*')
         .order('created_at', { ascending: false })
@@ -597,7 +597,7 @@ export default function AdminBackup() {
       }
 
       // Fetch history
-      const { data: historyData } = await supabase
+      const { data: historyData } = await (supabase as any)
         .from('backup_history')
         .select('*')
         .order('started_at', { ascending: false })
@@ -1518,13 +1518,13 @@ export default function AdminBackup() {
       };
 
       if (schedule?.id) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('backup_schedules')
           .update(scheduleData)
           .eq('id', schedule.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('backup_schedules')
           .insert(scheduleData);
         if (error) throw error;

@@ -23,7 +23,7 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/loose-client';
 import { useNavigate } from 'react-router-dom';
 
 export default function ClientProfile() {

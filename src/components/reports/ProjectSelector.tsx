@@ -528,9 +528,9 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
         const uniquePeople = new Set(projectAttendance.map(a => a.user_id || a.user_name));
         const totalDelayMinutes = projectReports.reduce((sum, r) => {
           return sum + 
-            parseIntervalToMinutes(r.operational_deviation_hours as string | null) +
-            parseIntervalToMinutes(r.climatic_deviation_hours as string | null) +
-            parseIntervalToMinutes(r.amt_deviation_hours as string | null);
+            parseIntervalToMinutes(r.operational_deviation_hours as unknown as string | null) +
+            parseIntervalToMinutes(r.climatic_deviation_hours as unknown as string | null) +
+            parseIntervalToMinutes(r.amt_deviation_hours as unknown as string | null);
         }, 0);
         return {
           ...p,
@@ -1182,7 +1182,7 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
 
       if (editingProject) {
         // Modo edição
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('projects')
           .update(projectData)
           .eq('id', editingProject.id);
@@ -1191,7 +1191,7 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
         toast({ title: 'Atividade atualizada com sucesso!' });
       } else {
         // Modo criação
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('projects')
           .insert({ 
             ...projectData,

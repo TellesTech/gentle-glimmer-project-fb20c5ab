@@ -13,7 +13,7 @@ import { StepDeviations } from '@/components/reports/StepDeviations';
 import { StepAttendance } from '@/components/reports/StepAttendance';
 import { StepPhotosReview } from '@/components/reports/StepPhotosReview';
 import { ParseReportModal } from '@/components/reports/ParseReportModal';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/loose-client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Activity, Deviation, Attendance, Shift } from '@/types';

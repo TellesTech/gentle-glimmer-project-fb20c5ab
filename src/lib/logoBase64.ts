@@ -1,5 +1,5 @@
 // Logo do sistema para uso no PDF — busca dinamicamente da configuração
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/loose-client';
 
 // Cache para armazenar a logo convertida
 let cachedLogoBase64: string | null = null;

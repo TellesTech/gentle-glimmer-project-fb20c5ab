@@ -1,7 +1,7 @@
 import JSZip from 'jszip';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/loose-client';
 import { formatRdoNumber } from './formatters';
 import { generateReportPdfAsBlob, TenantColors, PdfOptions } from './generateReportPdf';
 
