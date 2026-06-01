@@ -24,10 +24,6 @@ const TABLE_ORDER = [
   'client_companies',
   'client_sites',
   'client_user_roles',
-  'client_wallet',
-  'client_wallet_transactions',
-  'rewards_catalog',
-  'reward_redemptions',
   'teams',
   'team_members',
   'projects',
@@ -38,17 +34,14 @@ const TABLE_ORDER = [
   'project_members',
   'reports',
   'report_activities',
-  'report_activity_steps',
   'report_attendance',
   'report_deviations',
   'report_equipment',
   'report_photos',
   'report_signatures',
-  'report_history',
   'report_company_approvers',
   'report_client_approvers',
   'autentique_documents',
-  'autentique_signatures',
   'clicksign_documents',
   'service_reports',
   'service_report_sections',
@@ -56,10 +49,9 @@ const TABLE_ORDER = [
   'notifications',
   'feature_suggestions',
   'suggestion_votes',
-  'delay_reasons',
-  'backup_schedules',
-  'backup_history'
 ];
+
+const ALLOWED_TABLES = new Set(TABLE_ORDER);
 
 // Map old IDs to new IDs
 const idMapping: Record<string, Record<string, string>> = {};
@@ -153,9 +145,15 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+      if (!ALLOWED_TABLES.has(table)) {
+        return new Response(
+          JSON.stringify({ error: `Tabela "${table}" não é restaurável (não existe ou não está na allowlist)` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       if (!Array.isArray(records) || records.length === 0) {
         return new Response(
-          JSON.stringify({ success: true, recordsImported: 0 }),
+          JSON.stringify({ success: true, recordsImported: 0, table }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -167,7 +165,7 @@ serve(async (req) => {
 
       if (sanitized.length === 0) {
         return new Response(
-          JSON.stringify({ success: true, recordsImported: 0 }),
+          JSON.stringify({ success: true, recordsImported: 0, table, skipped: 'all records filtered (self-protection)' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -178,14 +176,17 @@ serve(async (req) => {
 
       if (error) {
         console.error(`Batch upsert error on ${table}:`, error);
+        const detail = [error.message, (error as any).hint, (error as any).details]
+          .filter(Boolean)
+          .join(' — ');
         return new Response(
-          JSON.stringify({ error: `Erro na tabela ${table}: ${error.message}` }),
+          JSON.stringify({ error: `Erro na tabela ${table}: ${detail}`, table, code: (error as any).code }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       return new Response(
-        JSON.stringify({ success: true, recordsImported: sanitized.length }),
+        JSON.stringify({ success: true, recordsImported: sanitized.length, table }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
