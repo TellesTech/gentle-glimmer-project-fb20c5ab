@@ -1,25 +1,52 @@
-## Diagnóstico
+## Problema identificado
 
-A importação está falhando porque o frontend envia o arquivo ZIP como Base64 no campo `fileContent`, mas em algumas execuções esse campo chega ausente ou inválido na Edge Function. O log atual confirma isso: a requisição para `restore-backup` foi enviada com apenas `{"mode":"full","phase":"data"}`, e a função tentou executar `atob(fileContent)`, gerando `Failed to decode base64` e retornando 400.
+O erro atual não está mais no Base64 nem no `restore-backup`: ele acontece antes, no upload do ZIP para o Supabase Storage.
+
+O arquivo selecionado tem cerca de **690 MB**, e o Supabase Storage está recusando o upload direto pelo navegador com:
+
+```text
+413 Payload too large
+The object exceeded the maximum allowed size
+```
+
+Pelos arquivos enviados, o backup completo contém:
+- 14.966 registros em JSON
+- 1.026 arquivos de mídia
+- 918 PDFs de RDO
+- cerca de 903,9 MB no relatório original
+
+Ou seja, tentar importar tudo como um ZIP único pelo upload padrão do Storage não é viável nesse fluxo.
 
 ## Plano de correção
 
-1. **Corrigir o envio do ZIP no frontend**
-   - Garantir que `AdminBackup.tsx` só chame `restore-backup` depois de converter o arquivo selecionado para Base64 válido.
-   - Validar explicitamente se o conteúdo Base64 foi gerado antes de invocar a função.
-   - Enviar `fileContent` em todas as chamadas, incluindo a fase de dados e cada bucket de arquivos.
+1. **Parar de enviar o ZIP inteiro para o Storage antes da restauração**
+   - Remover o passo atual que faz `supabase.storage.from('temp-backups').upload(...)` com o ZIP completo.
+   - Isso elimina o erro `Payload too large` no upload do arquivo de 690 MB.
 
-2. **Fortalecer a Edge Function `restore-backup`**
-   - Validar o corpo da requisição antes de tentar decodificar o ZIP.
-   - Retornar erro claro quando `fileContent` estiver ausente, vazio ou malformado, em vez de quebrar com erro genérico.
-   - Aceitar tanto Base64 puro quanto Data URL (`data:application/zip;base64,...`) para evitar incompatibilidade entre navegadores/implementações.
+2. **Processar o ZIP no navegador e importar por partes**
+   - Abrir o ZIP localmente com `JSZip`, como a tela já faz para ler o `manifest.json`.
+   - Para a fase de dados, ler os arquivos `data/*.json` no navegador e enviar lotes pequenos para a Edge Function.
+   - Cada chamada enviará somente uma tabela e um lote limitado de registros, evitando limite de payload.
 
-3. **Melhorar o feedback visual da importação**
-   - Exibir no toast a mensagem real retornada pela Edge Function, não apenas “non-2xx status code”.
-   - Manter a tela sem “blank screen” quando a restauração falhar.
-   - Ajustar o progresso para indicar em qual fase a falha ocorreu.
+3. **Criar modo de importação por lote na Edge Function**
+   - Adicionar suporte a uma ação como `action: "import-table-batch"` em `restore-backup`.
+   - A função validará permissão do usuário e fará `upsert` apenas do lote recebido.
+   - Manter o modo antigo por `storagePath`/`fileContent` como fallback, mas o frontend passará a usar o modo por lotes para backups grandes.
 
-4. **Verificação**
-   - Revisar os pontos de chamada para confirmar que o payload contém `fileContent`.
-   - Reimplantar a Edge Function `restore-backup`.
-   - Conferir logs/requisição para validar que o erro de Base64 não ocorre mais.
+4. **Importar arquivos de mídia e PDFs em partes pequenas**
+   - Em vez de subir o ZIP completo, extrair cada arquivo do ZIP no navegador e subir individualmente ao bucket correto.
+   - Corrigir a lista de buckets para bater com o backup real: `report-photos`, `company-photos`, `site-photos`, `project-photos`, `avatars`.
+   - Para `RDOs/`, criar/restaurar destino apropriado em Storage, provavelmente `report-pdfs`, respeitando o caminho interno do ZIP.
+
+5. **Melhorar feedback e resiliência**
+   - Mostrar progresso por fase: dados, mídias e PDFs.
+   - Se um arquivo individual falhar, registrar o erro e continuar quando possível.
+   - Ao final, exibir quantos registros, mídias e PDFs foram importados, e listar falhas parciais.
+
+6. **Ajuste de banco/storage se necessário**
+   - Verificar/criar buckets ausentes usados pelo backup, como `report-photos`, `company-photos`, `site-photos`, `project-photos` e `report-pdfs`.
+   - Criar políticas RLS adequadas para admins/directors/super_admins quando algum bucket ainda não existir.
+
+## Resultado esperado
+
+A importação deixará de depender de um upload único de centenas de MB e passará a restaurar o backup completo de forma fracionada, compatível com backups grandes como o arquivo enviado.
