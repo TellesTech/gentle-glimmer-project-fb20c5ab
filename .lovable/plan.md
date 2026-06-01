@@ -1,40 +1,36 @@
-## Resposta curta
+## Objetivo
 
-Sim, dá pra enviar por pasta — e nesse seu caso (backup de ~900 MB já descompactado em `data/`, `files/`, `RDOs/` + `manifest.json`) é o **melhor caminho**, porque:
+Permitir restaurar backup selecionando **arquivos avulsos** (sem precisar de ZIP nem de pasta única com `webkitdirectory`), incluindo casos em que o usuário envia apenas `manifest.json` + JSONs da pasta `data/` (e opcionalmente mídias).
 
-- Evita gerar/enviar um ZIP gigante de novo
-- Cada arquivo é enviado individualmente direto do navegador para o destino
-- Funciona mesmo se algum arquivo individual falhar (continua os demais)
+## Mudanças em `src/pages/AdminBackup.tsx`
 
-## Plano: adicionar opção "Importar pasta de backup"
+1. **Novo card "Importar Backup por Arquivos Avulsos"** abaixo dos dois cards existentes (ZIP e Pasta), na mesma aba de restauração.
 
-1. **Nova opção na aba Importar** (`AdminBackup.tsx`)
-   - Manter o upload de `.zip` atual.
-   - Adicionar um segundo botão: **"Importar pasta de backup"**, usando `<input type="file" webkitdirectory directory multiple>` para selecionar a pasta inteira.
-   - Aceitar a estrutura exata da imagem: `manifest.json`, `data/*.json`, `files/<bucket>/...`, `RDOs/...`, opcional `RDOs_Assinados/...`.
+2. **Novo input file** com `multiple` (sem `webkitdirectory`) que aceita qualquer combinação de:
+   - `manifest.json` (obrigatório — pode estar em qualquer lugar da seleção, identificado pelo nome final)
+   - Arquivos `*.json` correspondentes a tabelas (companies.json, reports.json, etc.) — nome do arquivo (sem extensão) é usado como nome da tabela
+   - Arquivos de mídia (jpg/png/webp/pdf) — opcionais; quando presentes, o usuário escolhe em qual bucket entrar via prefixo do nome (`report-photos__arquivo.jpg`) **ou** simplesmente ignorados se não houver prefixo reconhecido
 
-2. **Validação da pasta**
-   - Procurar `manifest.json` no nível raiz; se não existir, mostrar erro claro.
-   - Listar quantos arquivos por categoria (dados, mídia, PDFs) antes de começar, para o usuário confirmar.
+3. **Novo handler `handleLooseFilesSelect`**: valida que existe `manifest.json` na seleção; em caso negativo, mostra toast claro ("Inclua o manifest.json na seleção").
 
-3. **Restauração por partes (mesma lógica já implementada para ZIP)**
-   - **Dados**: ler cada `data/*.json`, dividir em lotes de 200 registros e enviar à edge function `restore-backup` com `action: 'batch'`.
-   - **Mídia**: para cada arquivo em `files/<bucket>/...`, fazer upload direto ao bucket correspondente (`report-photos`, `company-photos`, `site-photos`, `project-photos`, `avatars`, etc.) via `supabase.storage.upload` no navegador.
-   - **PDFs**: arquivos em `RDOs/...` e `RDOs_Assinados/...` vão para o bucket `report-pdfs` mantendo o caminho relativo.
+4. **Novo handler `handleRestoreLooseFiles`**: reaproveita a lógica de `handleRestoreFolder`, mas indexa arquivos por `file.name` em vez de `webkitRelativePath`:
+   - Para cada tabela em `TABLE_ORDER`, procura `${tableName}.json` entre os arquivos selecionados.
+   - Faz o mesmo loop de batches chamando a edge function `restore-backup` com `action: 'batch'`.
+   - Pula a fase de mídia/PDFs quando nenhum arquivo binário foi enviado.
+   - Reaproveita `setProgress`/`setProgressMessage`/toasts existentes.
 
-4. **Progresso e resiliência**
-   - Mostrar progresso por fase (dados → mídia → PDFs) e quantidade de arquivos processados.
-   - Logar erros individuais no console e exibir resumo final no toast (`X registros, Y mídias, Z PDFs, N falhas`).
-   - Botão para cancelar a importação no meio do processo.
+5. **UX**: dropzone com mesmo estilo dos outros (borda tracejada, ícone, contagem de arquivos selecionados, tamanho total, botão "Iniciar Restauração dos Arquivos").
 
-5. **Sem mudanças no banco**
-   - A edge function `restore-backup` já aceita `action: 'batch'` da última correção, então não precisa nova migration.
-   - Reaproveita as políticas de storage existentes nos buckets de destino.
+## Detalhes técnicos
 
-## Por que isso é melhor que recompactar em ZIP
+- Sem mudanças no backend nem em migrations.
+- Sem alterações na edge function `restore-backup` (continua recebendo `{ action: 'batch', table, records }`).
+- Reaproveitar estado novo: `selectedLooseFiles: File[] | null`.
+- Reutilizar a mesma constante `TABLE_ORDER` já existente (extrair para fora dos handlers ou duplicar inline — preferir extrair para uma const no topo do arquivo).
+- O `relatorio-backup.txt` é ignorado se vier junto (não é necessário para restauração).
 
-- ZIP de 900 MB no navegador consome muita memória e cai facilmente.
-- Upload direto por arquivo respeita o limite de tamanho do Storage (≈ 50 MB por arquivo individual, suficiente para fotos e PDFs).
-- Se cair a conexão, dá pra reiniciar do ponto onde parou (futuro), porque cada arquivo é independente.
+## Fora do escopo
 
-Se aprovar, eu implemento essa opção de "Importar pasta" na aba Importar mantendo a opção de ZIP como alternativa.
+- Não muda os fluxos atuais de ZIP e Pasta.
+- Não adiciona prévia/inspeção do manifest (pode virar follow-up).
+- Não trata upload de mídias avulsas em buckets (a menos que prefixo do nome do arquivo identifique o bucket; caso contrário, mídias são ignoradas com aviso no toast final).

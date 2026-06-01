@@ -524,6 +524,7 @@ export default function AdminBackup() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [selectedFolderFiles, setSelectedFolderFiles] = useState<File[] | null>(null);
+  const [selectedLooseFiles, setSelectedLooseFiles] = useState<File[] | null>(null);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
   const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
@@ -1481,6 +1482,127 @@ export default function AdminBackup() {
       toast({
         title: 'Erro ao restaurar pasta',
         description: error.message || 'Verifique se a pasta é válida',
+        variant: 'destructive',
+      });
+    } finally {
+      setTimeout(() => {
+        setIsRestoring(false);
+        setProgress(0);
+        setProgressMessage('');
+      }, 3000);
+    }
+  };
+
+  const handleLooseFilesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list = e.target.files;
+    if (!list || list.length === 0) return;
+    const files = Array.from(list);
+    const hasManifest = files.some(f => f.name === 'manifest.json');
+    if (!hasManifest) {
+      toast({
+        title: 'Seleção inválida',
+        description: 'Inclua o manifest.json na seleção de arquivos.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setSelectedLooseFiles(files);
+  };
+
+  const handleRestoreLooseFiles = async () => {
+    if (!selectedLooseFiles || selectedLooseFiles.length === 0) {
+      toast({ title: 'Selecione arquivos', variant: 'destructive' });
+      return;
+    }
+
+    setIsRestoring(true);
+    setProgress(0);
+    setProgressMessage('Lendo arquivos...');
+
+    try {
+      const TABLE_ORDER = [
+        'system_settings','tenant_settings','client_portal_settings',
+        'companies','company_contacts','contact_sites','sites','site_responsibles',
+        'portal_admin_access','profiles','user_roles',
+        'client_profiles','client_companies','client_sites','client_user_roles',
+        'client_wallet','client_wallet_transactions',
+        'rewards_catalog','reward_redemptions',
+        'teams','team_members',
+        'projects','project_stages','project_tasks','project_equipment','project_milestones','project_members',
+        'reports','report_activities','report_activity_steps','report_attendance','report_deviations',
+        'report_equipment','report_photos','report_signatures','report_history',
+        'report_company_approvers','report_client_approvers',
+        'autentique_documents','autentique_signatures','clicksign_documents',
+        'service_reports','service_report_sections','service_report_photos',
+        'notifications','feature_suggestions','suggestion_votes','delay_reasons',
+        'backup_schedules','backup_history'
+      ];
+
+      const byName = new Map<string, File>();
+      for (const f of selectedLooseFiles) byName.set(f.name, f);
+
+      const BATCH_SIZE = 200;
+      let totalRecords = 0;
+      const errors: string[] = [];
+
+      setProgress(5);
+      setProgressMessage('Restaurando dados...');
+
+      for (let t = 0; t < TABLE_ORDER.length; t++) {
+        const tableName = TABLE_ORDER[t];
+        const file = byName.get(`${tableName}.json`);
+        if (!file) continue;
+
+        let records: any[] = [];
+        try {
+          records = JSON.parse(await file.text());
+        } catch {
+          errors.push(`Falha ao ler ${tableName}.json`);
+          continue;
+        }
+        if (!Array.isArray(records) || records.length === 0) continue;
+
+        const totalBatches = Math.ceil(records.length / BATCH_SIZE);
+        for (let i = 0; i < records.length; i += BATCH_SIZE) {
+          const batch = records.slice(i, i + BATCH_SIZE);
+          const currentBatch = Math.floor(i / BATCH_SIZE) + 1;
+          setProgressMessage(`Dados: ${tableName} (${currentBatch}/${totalBatches})`);
+
+          const { data: res, error: err } = await supabase.functions.invoke('restore-backup', {
+            body: { action: 'batch', table: tableName, records: batch },
+          });
+
+          if (err || (res as any)?.error) {
+            const msg = (res as any)?.error || err?.message || 'erro';
+            errors.push(`${tableName}: ${msg}`);
+            console.error(`Erro ${tableName}:`, msg);
+          } else {
+            totalRecords += (res as any)?.recordsImported || batch.length;
+          }
+        }
+
+        setProgress(5 + Math.round(((t + 1) / TABLE_ORDER.length) * 90));
+      }
+
+      setProgress(100);
+      setProgressMessage('Restauração concluída!');
+
+      const errSummary = errors.length > 0
+        ? ` (${errors.length} erro(s) — veja o console)`
+        : '';
+
+      toast({
+        title: 'Backup restaurado!',
+        description: `${totalRecords} registros importados.${errSummary}`,
+      });
+
+      if (errors.length > 0) console.error('Erros de importação:', errors);
+      setSelectedLooseFiles(null);
+    } catch (error: any) {
+      console.error('Restore loose files error:', error);
+      toast({
+        title: 'Erro ao restaurar arquivos',
+        description: error.message || 'Verifique os arquivos selecionados',
         variant: 'destructive',
       });
     } finally {
@@ -2646,6 +2768,84 @@ export default function AdminBackup() {
                   <>
                     <Download className="h-4 w-4 mr-2" />
                     Iniciar Restauração da Pasta
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Importar Backup por Arquivos Avulsos</CardTitle>
+              <CardDescription>
+                Selecione vários arquivos soltos (sem precisar de pasta ou ZIP).
+                A seleção <strong>precisa incluir</strong> <code>manifest.json</code> e os
+                JSONs das tabelas (ex.: <code>companies.json</code>, <code>reports.json</code>).
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  selectedLooseFiles ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground'
+                }`}
+              >
+                <input
+                  type="file"
+                  multiple
+                  accept=".json"
+                  onChange={handleLooseFilesSelect}
+                  className="hidden"
+                  id="backup-loose"
+                />
+                <label htmlFor="backup-loose" className="cursor-pointer">
+                  {selectedLooseFiles ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <CheckCircle2 className="h-10 w-10 text-primary" />
+                      <p className="font-medium">
+                        {selectedLooseFiles.length} arquivos selecionados
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {(selectedLooseFiles.reduce((s, f) => s + f.size, 0) / 1024 / 1024).toFixed(2)} MB no total
+                      </p>
+                      <p className="text-xs text-muted-foreground">Clique novamente para trocar a seleção</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <CloudUpload className="h-10 w-10 text-muted-foreground" />
+                      <p className="font-medium">Clique para selecionar os arquivos</p>
+                      <p className="text-sm text-muted-foreground">
+                        Inclua <code>manifest.json</code> + JSONs de tabelas
+                      </p>
+                    </div>
+                  )}
+                </label>
+              </div>
+
+              {isRestoring && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {progressMessage}
+                  </div>
+                  <Progress value={progress} />
+                </div>
+              )}
+
+              <Button
+                onClick={handleRestoreLooseFiles}
+                disabled={isRestoring || !selectedLooseFiles}
+                className="w-full"
+                size="lg"
+              >
+                {isRestoring ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Restaurando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Iniciar Restauração dos Arquivos
                   </>
                 )}
               </Button>
