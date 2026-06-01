@@ -20,7 +20,7 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { 
   Crown, Plus, Search, Edit, Trash2, Users, Loader2, Building2, 
   FileText, UserPlus,
-  PenTool, CheckCircle2, AlertCircle, Pencil
+  PenTool, CheckCircle2, AlertCircle, Pencil, HardDrive
 } from 'lucide-react';
 
 // =============== TYPES ===============
