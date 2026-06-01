@@ -1291,6 +1291,207 @@ export default function AdminBackup() {
     }
   };
 
+  // ============ Importar a partir de uma PASTA descompactada ============
+  const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list = e.target.files;
+    if (!list || list.length === 0) return;
+    const files = Array.from(list);
+    // Confere se tem manifest.json em algum lugar (normalmente na raiz)
+    const hasManifest = files.some(f => {
+      const rel = (f as any).webkitRelativePath || f.name;
+      return rel.endsWith('manifest.json');
+    });
+    if (!hasManifest) {
+      toast({
+        title: 'Pasta inválida',
+        description: 'A pasta selecionada não contém manifest.json. Selecione a pasta raiz do backup.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setSelectedFolderFiles(files);
+  };
+
+  const handleRestoreFolder = async () => {
+    if (!selectedFolderFiles || selectedFolderFiles.length === 0) {
+      toast({ title: 'Selecione uma pasta', variant: 'destructive' });
+      return;
+    }
+
+    setIsRestoring(true);
+    setProgress(0);
+    setProgressMessage('Lendo pasta...');
+
+    try {
+      // Indexar arquivos pelo caminho relativo dentro da pasta raiz
+      // webkitRelativePath = "raiz/data/foo.json", "raiz/files/bucket/x.jpg", etc.
+      const entries = selectedFolderFiles.map(f => {
+        const rel = ((f as any).webkitRelativePath as string) || f.name;
+        const parts = rel.split('/');
+        // remove a primeira pasta (raiz escolhida pelo usuário)
+        const innerPath = parts.slice(1).join('/');
+        return { file: f, innerPath };
+      });
+
+      const TABLE_ORDER = [
+        'system_settings','tenant_settings','client_portal_settings',
+        'companies','company_contacts','contact_sites','sites','site_responsibles',
+        'portal_admin_access','profiles','user_roles',
+        'client_profiles','client_companies','client_sites','client_user_roles',
+        'client_wallet','client_wallet_transactions',
+        'rewards_catalog','reward_redemptions',
+        'teams','team_members',
+        'projects','project_stages','project_tasks','project_equipment','project_milestones','project_members',
+        'reports','report_activities','report_activity_steps','report_attendance','report_deviations',
+        'report_equipment','report_photos','report_signatures','report_history',
+        'report_company_approvers','report_client_approvers',
+        'autentique_documents','autentique_signatures','clicksign_documents',
+        'service_reports','service_report_sections','service_report_photos',
+        'notifications','feature_suggestions','suggestion_votes','delay_reasons',
+        'backup_schedules','backup_history'
+      ];
+
+      const BATCH_SIZE = 200;
+      let totalRecords = 0;
+      const errors: string[] = [];
+
+      // ============ FASE 1: DADOS ============
+      setProgress(5);
+      setProgressMessage('Restaurando dados...');
+
+      for (let t = 0; t < TABLE_ORDER.length; t++) {
+        const tableName = TABLE_ORDER[t];
+        const entry = entries.find(e => e.innerPath === `data/${tableName}.json`);
+        if (!entry) continue;
+
+        let records: any[] = [];
+        try {
+          const txt = await entry.file.text();
+          records = JSON.parse(txt);
+        } catch (e) {
+          errors.push(`Falha ao ler ${tableName}.json`);
+          continue;
+        }
+        if (!Array.isArray(records) || records.length === 0) continue;
+
+        const totalBatches = Math.ceil(records.length / BATCH_SIZE);
+        for (let i = 0; i < records.length; i += BATCH_SIZE) {
+          const batch = records.slice(i, i + BATCH_SIZE);
+          const currentBatch = Math.floor(i / BATCH_SIZE) + 1;
+          setProgressMessage(`Dados: ${tableName} (${currentBatch}/${totalBatches})`);
+
+          const { data: res, error: err } = await supabase.functions.invoke('restore-backup', {
+            body: { action: 'batch', table: tableName, records: batch },
+          });
+
+          if (err || (res as any)?.error) {
+            const msg = (res as any)?.error || err?.message || 'erro';
+            errors.push(`${tableName}: ${msg}`);
+            console.error(`Erro ${tableName}:`, msg);
+          } else {
+            totalRecords += (res as any)?.recordsImported || batch.length;
+          }
+        }
+
+        setProgress(5 + Math.round(((t + 1) / TABLE_ORDER.length) * 40));
+      }
+
+      // ============ FASE 2: MÍDIA (files/<bucket>/...) ============
+      setProgress(45);
+      setProgressMessage('Restaurando arquivos de mídia...');
+
+      let filesRestored = 0;
+      let filesFailed = 0;
+
+      const mediaEntries = entries.filter(e => e.innerPath.startsWith('files/'));
+      for (let i = 0; i < mediaEntries.length; i++) {
+        const { file, innerPath } = mediaEntries[i];
+        const rest = innerPath.substring('files/'.length); // "bucket/path/file.jpg"
+        const slash = rest.indexOf('/');
+        if (slash < 0) continue;
+        const bucket = rest.substring(0, slash);
+        const objectPath = rest.substring(slash + 1);
+
+        try {
+          const { error: upErr } = await supabase.storage
+            .from(bucket)
+            .upload(objectPath, file, {
+              upsert: true,
+              contentType: file.type || undefined,
+            });
+          if (upErr) {
+            filesFailed++;
+            console.warn(`Falha ${bucket}/${objectPath}:`, upErr.message);
+          } else {
+            filesRestored++;
+          }
+        } catch (e: any) {
+          filesFailed++;
+          console.warn(`Erro ${bucket}/${objectPath}:`, e.message);
+        }
+
+        if (i % 10 === 0 || i === mediaEntries.length - 1) {
+          setProgress(45 + Math.round(((i + 1) / Math.max(mediaEntries.length, 1)) * 35));
+          setProgressMessage(`Mídia: ${i + 1}/${mediaEntries.length} (${filesRestored} ok, ${filesFailed} falhas)`);
+        }
+      }
+
+      // ============ FASE 3: PDFs (RDOs e RDOs_Assinados → report-pdfs) ============
+      setProgress(80);
+      setProgressMessage('Restaurando PDFs...');
+
+      let pdfsRestored = 0;
+      const pdfFolders = ['RDOs', 'RDOs_Assinados'];
+      for (const root of pdfFolders) {
+        const pdfEntries = entries.filter(e => e.innerPath.startsWith(`${root}/`));
+        for (let i = 0; i < pdfEntries.length; i++) {
+          const { file, innerPath } = pdfEntries[i];
+          try {
+            const { error: upErr } = await supabase.storage
+              .from('report-pdfs')
+              .upload(innerPath, file, { upsert: true, contentType: 'application/pdf' });
+            if (!upErr) pdfsRestored++;
+            else console.warn(`PDF ${innerPath}:`, upErr.message);
+          } catch (e: any) {
+            console.warn(`PDF erro ${innerPath}:`, e.message);
+          }
+          if (i % 5 === 0 || i === pdfEntries.length - 1) {
+            setProgressMessage(`PDFs ${root}: ${i + 1}/${pdfEntries.length}`);
+          }
+        }
+      }
+
+      setProgress(100);
+      setProgressMessage('Restauração concluída!');
+
+      const errSummary = errors.length > 0
+        ? ` (${errors.length} erro(s) em tabelas — veja o console)`
+        : '';
+
+      toast({
+        title: 'Backup restaurado!',
+        description: `${totalRecords} registros, ${filesRestored} mídias, ${pdfsRestored} PDFs.${errSummary}`,
+      });
+
+      if (errors.length > 0) console.error('Erros de importação:', errors);
+
+      setSelectedFolderFiles(null);
+    } catch (error: any) {
+      console.error('Restore folder error:', error);
+      toast({
+        title: 'Erro ao restaurar pasta',
+        description: error.message || 'Verifique se a pasta é válida',
+        variant: 'destructive',
+      });
+    } finally {
+      setTimeout(() => {
+        setIsRestoring(false);
+        setProgress(0);
+        setProgressMessage('');
+      }, 3000);
+    }
+  };
+
   const handleSaveSchedule = async () => {
     setIsSavingSchedule(true);
     try {
