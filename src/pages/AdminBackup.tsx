@@ -1527,11 +1527,15 @@ export default function AdminBackup() {
     const list = e.target.files;
     if (!list || list.length === 0) return;
     const files = Array.from(list);
-    const manifestFile = files.find(f => f.name === 'manifest.json');
+    // Aceita manifest.json tanto na raiz quanto em caminhos preservados (ex.: backup/manifest.json)
+    const manifestFile = files.find(f => {
+      const rel = ((f as any).webkitRelativePath as string) || f.name;
+      return f.name === 'manifest.json' || rel.endsWith('/manifest.json');
+    });
     if (!manifestFile) {
       toast({
         title: 'Seleção inválida',
-        description: 'Inclua o manifest.json na seleção de arquivos.',
+        description: 'Inclua o manifest.json na seleção. Você também precisa selecionar os arquivos JSON da pasta data/ (ex.: companies.json, reports.json).',
         variant: 'destructive',
       });
       return;
@@ -1549,19 +1553,36 @@ export default function AdminBackup() {
       return;
     }
 
-    // Build per-table analysis
+    // Indexa arquivos por nome simples (independente da pasta de origem)
     const byName = new Map<string, File>();
-    for (const f of files) byName.set(f.name, f);
+    for (const f of files) {
+      // sempre indexa pelo basename
+      byName.set(f.name, f);
+      // se vier com caminho preservado, também indexa pelo caminho relativo
+      const rel = (f as any).webkitRelativePath as string | undefined;
+      if (rel && rel !== f.name) byName.set(rel, f);
+    }
 
-    // manifest.tables may be: { tableName: count } or array of { name, count }
+    // O manifest gerado por generate-backup usa:
+    //   tables: string[]  e  recordCounts: { [tableName]: number }
+    // Mantemos compatibilidade com formatos antigos: tables como objeto/array.
     const manifestCounts: Record<string, number> = {};
-    if (manifest?.tables && typeof manifest.tables === 'object') {
-      if (Array.isArray(manifest.tables)) {
-        for (const t of manifest.tables) {
-          if (t?.name) manifestCounts[t.name] = Number(t.count ?? t.records ?? 0);
+    const rc = (manifest as any)?.recordCounts;
+    if (rc && typeof rc === 'object') {
+      for (const [k, v] of Object.entries(rc)) {
+        const n = typeof v === 'number' ? v : Number(v);
+        manifestCounts[k] = isNaN(n) ? 0 : n;
+      }
+    }
+    if (Object.keys(manifestCounts).length === 0 && (manifest as any)?.tables) {
+      const t = (manifest as any).tables;
+      if (Array.isArray(t)) {
+        for (const item of t) {
+          if (typeof item === 'string') manifestCounts[item] = manifestCounts[item] ?? 0;
+          else if (item?.name) manifestCounts[item.name] = Number(item.count ?? item.records ?? 0);
         }
-      } else {
-        for (const [k, v] of Object.entries(manifest.tables)) {
+      } else if (typeof t === 'object') {
+        for (const [k, v] of Object.entries(t)) {
           const n = typeof v === 'number' ? v : Number((v as any)?.count ?? (v as any)?.records ?? 0);
           manifestCounts[k] = isNaN(n) ? 0 : n;
         }
@@ -1569,9 +1590,20 @@ export default function AdminBackup() {
     }
 
     const allTableNames = Array.from(new Set([...LOOSE_TABLE_ORDER, ...Object.keys(manifestCounts)]));
+    const findTableFile = (name: string): File | undefined => {
+      // procura "<name>.json" como basename ou como "*/data/<name>.json"
+      const target = `${name}.json`;
+      if (byName.has(target)) return byName.get(target);
+      for (const f of files) {
+        if (f.name === target) return f;
+        const rel = (f as any).webkitRelativePath as string | undefined;
+        if (rel && (rel.endsWith(`/data/${target}`) || rel.endsWith(`/${target}`))) return f;
+      }
+      return undefined;
+    };
     const tables = allTableNames
       .map(name => {
-        const file = byName.get(`${name}.json`);
+        const file = findTableFile(name);
         return {
           name,
           expected: manifestCounts[name] ?? 0,
@@ -1600,6 +1632,19 @@ export default function AdminBackup() {
     setSelectedLooseFiles(files);
     setLooseManifest(manifest);
     setLooseAnalysis({ tables, mediaCount, ignored, presentJsonCount });
+
+    if (presentJsonCount === 0) {
+      toast({
+        title: 'Nenhum JSON de tabela encontrado',
+        description: 'Você só selecionou o manifest.json (e/ou mídias). Selecione também os arquivos JSON da pasta data/ do backup.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Backup analisado',
+        description: `${presentJsonCount} tabela(s) prontas para importar.`,
+      });
+    }
   };
 
   const handleRestoreLooseFiles = async () => {
