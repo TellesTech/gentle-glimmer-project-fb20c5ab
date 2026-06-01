@@ -1526,12 +1526,12 @@ export default function AdminBackup() {
     }
   };
 
-  const handleLooseFilesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLooseFilesSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = e.target.files;
     if (!list || list.length === 0) return;
     const files = Array.from(list);
-    const hasManifest = files.some(f => f.name === 'manifest.json');
-    if (!hasManifest) {
+    const manifestFile = files.find(f => f.name === 'manifest.json');
+    if (!manifestFile) {
       toast({
         title: 'Seleção inválida',
         description: 'Inclua o manifest.json na seleção de arquivos.',
@@ -1539,7 +1539,70 @@ export default function AdminBackup() {
       });
       return;
     }
+
+    let manifest: any = null;
+    try {
+      manifest = JSON.parse(await manifestFile.text());
+    } catch {
+      toast({
+        title: 'manifest.json inválido',
+        description: 'Não foi possível ler o JSON do manifest.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Build per-table analysis
+    const byName = new Map<string, File>();
+    for (const f of files) byName.set(f.name, f);
+
+    // manifest.tables may be: { tableName: count } or array of { name, count }
+    const manifestCounts: Record<string, number> = {};
+    if (manifest?.tables && typeof manifest.tables === 'object') {
+      if (Array.isArray(manifest.tables)) {
+        for (const t of manifest.tables) {
+          if (t?.name) manifestCounts[t.name] = Number(t.count ?? t.records ?? 0);
+        }
+      } else {
+        for (const [k, v] of Object.entries(manifest.tables)) {
+          const n = typeof v === 'number' ? v : Number((v as any)?.count ?? (v as any)?.records ?? 0);
+          manifestCounts[k] = isNaN(n) ? 0 : n;
+        }
+      }
+    }
+
+    const allTableNames = Array.from(new Set([...LOOSE_TABLE_ORDER, ...Object.keys(manifestCounts)]));
+    const tables = allTableNames
+      .map(name => {
+        const file = byName.get(`${name}.json`);
+        return {
+          name,
+          expected: manifestCounts[name] ?? 0,
+          present: !!file,
+          size: file?.size ?? 0,
+        };
+      })
+      .filter(t => t.present || t.expected > 0)
+      .sort((a, b) => Number(b.present) - Number(a.present) || a.name.localeCompare(b.name));
+
+    const presentJsonCount = tables.filter(t => t.present).length;
+    const knownNames = new Set<string>([
+      'manifest.json',
+      'relatorio-backup.txt',
+      ...LOOSE_TABLE_ORDER.map(t => `${t}.json`),
+      ...Object.keys(manifestCounts).map(t => `${t}.json`),
+    ]);
+    let mediaCount = 0;
+    const ignored: string[] = [];
+    for (const f of files) {
+      if (knownNames.has(f.name)) continue;
+      if (MEDIA_EXT_RE.test(f.name)) mediaCount++;
+      else ignored.push(f.name);
+    }
+
     setSelectedLooseFiles(files);
+    setLooseManifest(manifest);
+    setLooseAnalysis({ tables, mediaCount, ignored, presentJsonCount });
   };
 
   const handleRestoreLooseFiles = async () => {
