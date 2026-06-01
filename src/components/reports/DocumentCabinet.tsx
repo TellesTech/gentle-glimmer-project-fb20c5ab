@@ -1184,7 +1184,7 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
               <div>
                 <h2 className="font-semibold text-xl">{selectedSiteFolder.name}</h2>
                 <p className="text-sm text-muted-foreground">
-                  {selectedSiteFolder.totalCount} relatório(s) • {selectedSiteFolder.years.length} ano(s)
+                  {selectedSiteFolder.years.reduce((acc, y) => acc + y.months.reduce((a, m) => a + m.projects.length, 0), 0)} atividade(s) • {selectedSiteFolder.totalCount} relatório(s) • {selectedSiteFolder.years.length} ano(s)
                 </p>
               </div>
             </div>
