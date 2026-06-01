@@ -530,7 +530,7 @@ export default function SiteDashboard() {
 
           <Button 
             size="sm"
-            onClick={() => navigate(`/sites/${siteId}`)}
+            onClick={() => navigate('/reports/new')}
             className="rounded-xl gap-2 w-fit"
           >
             <FolderKanban className="h-4 w-4" />
