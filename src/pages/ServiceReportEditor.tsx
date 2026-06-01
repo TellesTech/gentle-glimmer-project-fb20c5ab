@@ -4,7 +4,7 @@ import type { CanvasTool } from '@/components/service-reports/InteractivePdfPage
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/loose-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

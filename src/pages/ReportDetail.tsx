@@ -22,7 +22,7 @@ import { ApprovalTimeline } from '@/components/reports/ApprovalTimeline';
 import { ReportProgressStepper } from '@/components/reports/ReportProgressStepper';
 import { ShareReportDialog } from '@/components/client/ShareReportDialog';
 import { SendAutentiqueDialog } from '@/components/reports/SendAutentiqueDialog';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/loose-client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 
