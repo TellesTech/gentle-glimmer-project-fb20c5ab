@@ -1182,7 +1182,7 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
 
       if (editingProject) {
         // Modo edição
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('projects')
           .update(projectData)
           .eq('id', editingProject.id);
@@ -1191,7 +1191,7 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
         toast({ title: 'Atividade atualizada com sucesso!' });
       } else {
         // Modo criação
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('projects')
           .insert({ 
             ...projectData,
