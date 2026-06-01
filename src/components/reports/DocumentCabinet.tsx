@@ -511,47 +511,61 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['reports-cabinet-all-v2', isRestrictedAdmin ? adminProjectIds : null],
     queryFn: async () => {
-      let query = supabase
-        .from('reports')
-        .select(`
-          id,
-          date,
-          shift,
-          location,
-          status,
-          rdo_number,
-          actual_workforce,
-          daily_progress,
-          maintenance_order_title,
-          maintenance_order_number,
-          project:projects(
-            id, 
-            name,
-            code,
-            status,
-            progress,
-            site:sites(
-              id,
-              name,
-              photo_url,
-              company:companies(id, name, logo_url, photo_url)
-            )
-          ),
-          signed_pdf_url
-        `)
-        .in('status', ['completed', 'draft', 'sent', 'signed'])
-        .is('archived_at', null)
-        .order('date', { ascending: false });
-
-      if (isRestrictedAdmin && adminProjectIds && adminProjectIds.length > 0) {
-        query = query.in('project_id', adminProjectIds);
-      } else if (isRestrictedAdmin) {
+      if (isRestrictedAdmin && (!adminProjectIds || adminProjectIds.length === 0)) {
         return [] as Report[];
       }
-      
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data || []) as Report[];
+
+      // Pagina em chunks de 1000 para evitar o teto padrão do PostgREST.
+      const pageSize = 1000;
+      const all: Report[] = [];
+      let from = 0;
+      // Loop até esgotar; segurança extra com hard cap.
+      for (let i = 0; i < 50; i++) {
+        let query = supabase
+          .from('reports')
+          .select(`
+            id,
+            date,
+            shift,
+            location,
+            status,
+            rdo_number,
+            actual_workforce,
+            daily_progress,
+            maintenance_order_title,
+            maintenance_order_number,
+            project:projects(
+              id, 
+              name,
+              code,
+              status,
+              progress,
+              site:sites(
+                id,
+                name,
+                photo_url,
+                company:companies(id, name, logo_url, photo_url)
+              )
+            ),
+            signed_pdf_url
+          `)
+          .in('status', ['completed', 'draft', 'sent', 'signed'])
+          .is('archived_at', null)
+          .order('date', { ascending: false })
+          .range(from, from + pageSize - 1);
+
+        if (isRestrictedAdmin && adminProjectIds && adminProjectIds.length > 0) {
+          query = query.in('project_id', adminProjectIds);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        const batch = (data || []) as Report[];
+        all.push(...batch);
+        if (batch.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
     },
     enabled: !isRestrictedAdmin || (adminProjectIds !== undefined),
   });
@@ -698,15 +712,13 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
       }
     });
 
-    // Surface activities created in the current month even when they have no RDOs yet
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
+    // Surface TODAS as atividades (mesmo sem RDOs), agrupadas pelo ano/mês de criação.
+    const nowFallback = new Date();
     const sitesById = new Map(allSites.map(s => [s.id, s]));
     allProjects.forEach((p: any) => {
-      if (!p.created_at) return;
-      const created = parseISO(p.created_at);
-      if (getYear(created) !== currentYear || getMonth(created) !== currentMonth) return;
+      const created = p.created_at ? parseISO(p.created_at) : nowFallback;
+      const pYear = getYear(created);
+      const pMonth = getMonth(created);
       const site = sitesById.get(p.site_id);
       if (!site) return;
       const folder = map.get(site.company_id);
@@ -725,17 +737,17 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
         folder.sites.push(siteFolder);
       }
 
-      let yearFolder = siteFolder.years.find(y => y.year === currentYear);
+      let yearFolder = siteFolder.years.find(y => y.year === pYear);
       if (!yearFolder) {
-        yearFolder = { year: currentYear, reports: [], count: 0, months: [] };
+        yearFolder = { year: pYear, reports: [], count: 0, months: [] };
         siteFolder.years.push(yearFolder);
       }
 
-      let monthFolder = yearFolder.months.find(m => m.month === currentMonth);
+      let monthFolder = yearFolder.months.find(m => m.month === pMonth);
       if (!monthFolder) {
         monthFolder = {
-          month: currentMonth,
-          monthName: monthNames[currentMonth],
+          month: pMonth,
+          monthName: monthNames[pMonth],
           reports: [],
           count: 0,
           projects: [],
@@ -1172,7 +1184,7 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
               <div>
                 <h2 className="font-semibold text-xl">{selectedSiteFolder.name}</h2>
                 <p className="text-sm text-muted-foreground">
-                  {selectedSiteFolder.totalCount} relatório(s) • {selectedSiteFolder.years.length} ano(s)
+                  {selectedSiteFolder.years.reduce((acc, y) => acc + y.months.reduce((a, m) => a + m.projects.length, 0), 0)} atividade(s) • {selectedSiteFolder.totalCount} relatório(s) • {selectedSiteFolder.years.length} ano(s)
                 </p>
               </div>
             </div>
