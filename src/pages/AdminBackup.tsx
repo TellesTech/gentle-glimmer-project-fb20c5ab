@@ -29,17 +29,14 @@ const LOOSE_TABLE_ORDER = [
   'companies','company_contacts','contact_sites','sites','site_responsibles',
   'portal_admin_access','profiles','user_roles',
   'client_profiles','client_companies','client_sites','client_user_roles',
-  'client_wallet','client_wallet_transactions',
-  'rewards_catalog','reward_redemptions',
   'teams','team_members',
   'projects','project_stages','project_tasks','project_equipment','project_milestones','project_members',
-  'reports','report_activities','report_activity_steps','report_attendance','report_deviations',
-  'report_equipment','report_photos','report_signatures','report_history',
+  'reports','report_activities','report_attendance','report_deviations',
+  'report_equipment','report_photos','report_signatures',
   'report_company_approvers','report_client_approvers',
-  'autentique_documents','autentique_signatures','clicksign_documents',
+  'autentique_documents','clicksign_documents',
   'service_reports','service_report_sections','service_report_photos',
-  'notifications','feature_suggestions','suggestion_votes','delay_reasons',
-  'backup_schedules','backup_history',
+  'notifications','feature_suggestions','suggestion_votes',
 ];
 
 function formatBytes(size: number): string {
@@ -1530,11 +1527,15 @@ export default function AdminBackup() {
     const list = e.target.files;
     if (!list || list.length === 0) return;
     const files = Array.from(list);
-    const manifestFile = files.find(f => f.name === 'manifest.json');
+    // Aceita manifest.json tanto na raiz quanto em caminhos preservados (ex.: backup/manifest.json)
+    const manifestFile = files.find(f => {
+      const rel = ((f as any).webkitRelativePath as string) || f.name;
+      return f.name === 'manifest.json' || rel.endsWith('/manifest.json');
+    });
     if (!manifestFile) {
       toast({
         title: 'Seleção inválida',
-        description: 'Inclua o manifest.json na seleção de arquivos.',
+        description: 'Inclua o manifest.json na seleção. Você também precisa selecionar os arquivos JSON da pasta data/ (ex.: companies.json, reports.json).',
         variant: 'destructive',
       });
       return;
@@ -1552,19 +1553,36 @@ export default function AdminBackup() {
       return;
     }
 
-    // Build per-table analysis
+    // Indexa arquivos por nome simples (independente da pasta de origem)
     const byName = new Map<string, File>();
-    for (const f of files) byName.set(f.name, f);
+    for (const f of files) {
+      // sempre indexa pelo basename
+      byName.set(f.name, f);
+      // se vier com caminho preservado, também indexa pelo caminho relativo
+      const rel = (f as any).webkitRelativePath as string | undefined;
+      if (rel && rel !== f.name) byName.set(rel, f);
+    }
 
-    // manifest.tables may be: { tableName: count } or array of { name, count }
+    // O manifest gerado por generate-backup usa:
+    //   tables: string[]  e  recordCounts: { [tableName]: number }
+    // Mantemos compatibilidade com formatos antigos: tables como objeto/array.
     const manifestCounts: Record<string, number> = {};
-    if (manifest?.tables && typeof manifest.tables === 'object') {
-      if (Array.isArray(manifest.tables)) {
-        for (const t of manifest.tables) {
-          if (t?.name) manifestCounts[t.name] = Number(t.count ?? t.records ?? 0);
+    const rc = (manifest as any)?.recordCounts;
+    if (rc && typeof rc === 'object') {
+      for (const [k, v] of Object.entries(rc)) {
+        const n = typeof v === 'number' ? v : Number(v);
+        manifestCounts[k] = isNaN(n) ? 0 : n;
+      }
+    }
+    if (Object.keys(manifestCounts).length === 0 && (manifest as any)?.tables) {
+      const t = (manifest as any).tables;
+      if (Array.isArray(t)) {
+        for (const item of t) {
+          if (typeof item === 'string') manifestCounts[item] = manifestCounts[item] ?? 0;
+          else if (item?.name) manifestCounts[item.name] = Number(item.count ?? item.records ?? 0);
         }
-      } else {
-        for (const [k, v] of Object.entries(manifest.tables)) {
+      } else if (typeof t === 'object') {
+        for (const [k, v] of Object.entries(t)) {
           const n = typeof v === 'number' ? v : Number((v as any)?.count ?? (v as any)?.records ?? 0);
           manifestCounts[k] = isNaN(n) ? 0 : n;
         }
@@ -1572,9 +1590,20 @@ export default function AdminBackup() {
     }
 
     const allTableNames = Array.from(new Set([...LOOSE_TABLE_ORDER, ...Object.keys(manifestCounts)]));
+    const findTableFile = (name: string): File | undefined => {
+      // procura "<name>.json" como basename ou como "*/data/<name>.json"
+      const target = `${name}.json`;
+      if (byName.has(target)) return byName.get(target);
+      for (const f of files) {
+        if (f.name === target) return f;
+        const rel = (f as any).webkitRelativePath as string | undefined;
+        if (rel && (rel.endsWith(`/data/${target}`) || rel.endsWith(`/${target}`))) return f;
+      }
+      return undefined;
+    };
     const tables = allTableNames
       .map(name => {
-        const file = byName.get(`${name}.json`);
+        const file = findTableFile(name);
         return {
           name,
           expected: manifestCounts[name] ?? 0,
@@ -1603,6 +1632,19 @@ export default function AdminBackup() {
     setSelectedLooseFiles(files);
     setLooseManifest(manifest);
     setLooseAnalysis({ tables, mediaCount, ignored, presentJsonCount });
+
+    if (presentJsonCount === 0) {
+      toast({
+        title: 'Nenhum JSON de tabela encontrado',
+        description: 'Você só selecionou o manifest.json (e/ou mídias). Selecione também os arquivos JSON da pasta data/ do backup.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Backup analisado',
+        description: `${presentJsonCount} tabela(s) prontas para importar.`,
+      });
+    }
   };
 
   const handleRestoreLooseFiles = async () => {
@@ -1618,11 +1660,19 @@ export default function AdminBackup() {
     try {
       const TABLE_ORDER = LOOSE_TABLE_ORDER;
 
-      const byName = new Map<string, File>();
-      for (const f of selectedLooseFiles) byName.set(f.name, f);
+      const findTableFile = (name: string): File | undefined => {
+        const target = `${name}.json`;
+        for (const f of selectedLooseFiles) {
+          if (f.name === target) return f;
+          const rel = (f as any).webkitRelativePath as string | undefined;
+          if (rel && (rel.endsWith(`/data/${target}`) || rel.endsWith(`/${target}`))) return f;
+        }
+        return undefined;
+      };
 
       const BATCH_SIZE = 200;
       let totalRecords = 0;
+      let tablesImported = 0;
       const errors: string[] = [];
 
       setProgress(5);
@@ -1630,7 +1680,7 @@ export default function AdminBackup() {
 
       for (let t = 0; t < TABLE_ORDER.length; t++) {
         const tableName = TABLE_ORDER[t];
-        const file = byName.get(`${tableName}.json`);
+        const file = findTableFile(tableName);
         if (!file) continue;
 
         let records: any[] = [];
@@ -1642,6 +1692,7 @@ export default function AdminBackup() {
         }
         if (!Array.isArray(records) || records.length === 0) continue;
 
+        let tableHadSuccess = false;
         const totalBatches = Math.ceil(records.length / BATCH_SIZE);
         for (let i = 0; i < records.length; i += BATCH_SIZE) {
           const batch = records.slice(i, i + BATCH_SIZE);
@@ -1658,8 +1709,10 @@ export default function AdminBackup() {
             console.error(`Erro ${tableName}:`, msg);
           } else {
             totalRecords += (res as any)?.recordsImported || batch.length;
+            tableHadSuccess = true;
           }
         }
+        if (tableHadSuccess) tablesImported++;
 
         setProgress(5 + Math.round(((t + 1) / TABLE_ORDER.length) * 90));
       }
@@ -1667,19 +1720,30 @@ export default function AdminBackup() {
       setProgress(100);
       setProgressMessage('Restauração concluída!');
 
-      const errSummary = errors.length > 0
-        ? ` (${errors.length} erro(s) — veja o console)`
-        : '';
-
-      toast({
-        title: 'Backup restaurado!',
-        description: `${totalRecords} registros importados.${errSummary}`,
-      });
-
       if (errors.length > 0) console.error('Erros de importação:', errors);
-      setSelectedLooseFiles(null);
-      setLooseManifest(null);
-      setLooseAnalysis(null);
+
+      if (totalRecords === 0) {
+        toast({
+          title: 'Nenhum dado foi importado',
+          description: errors.length > 0
+            ? `Falhas: ${errors.slice(0, 3).join(' | ')}${errors.length > 3 ? ` (+${errors.length - 3})` : ''}`
+            : 'Os arquivos selecionados não continham registros válidos.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: errors.length > 0 ? 'Restauração parcial' : 'Backup restaurado!',
+          description: `${totalRecords} registro(s) em ${tablesImported} tabela(s).${
+            errors.length > 0
+              ? ` ${errors.length} erro(s): ${errors.slice(0, 2).join(' | ')}${errors.length > 2 ? '…' : ''}`
+              : ''
+          }`,
+          variant: errors.length > 0 ? 'destructive' : 'default',
+        });
+        setSelectedLooseFiles(null);
+        setLooseManifest(null);
+        setLooseAnalysis(null);
+      }
     } catch (error: any) {
       console.error('Restore loose files error:', error);
       toast({
@@ -2860,9 +2924,11 @@ export default function AdminBackup() {
             <CardHeader>
               <CardTitle>Importar Backup por Arquivos Avulsos</CardTitle>
               <CardDescription>
-                Selecione vários arquivos soltos (sem precisar de pasta ou ZIP).
-                A seleção <strong>precisa incluir</strong> <code>manifest.json</code> e os
-                JSONs das tabelas (ex.: <code>companies.json</code>, <code>reports.json</code>).
+                Descompacte o backup .zip antes. No diálogo de seleção, abra a pasta do backup,
+                segure <kbd>Ctrl</kbd> (ou <kbd>Cmd</kbd>) e selecione o <code>manifest.json</code>
+                <strong> mais todos os arquivos .json da pasta <code>data/</code></strong>
+                (companies.json, reports.json, etc.). Sem os JSONs de <code>data/</code>
+                nenhum registro será importado.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -2874,7 +2940,7 @@ export default function AdminBackup() {
                 <input
                   type="file"
                   multiple
-                  accept=".json"
+                  accept=".json,application/json"
                   onChange={handleLooseFilesSelect}
                   className="hidden"
                   id="backup-loose"
