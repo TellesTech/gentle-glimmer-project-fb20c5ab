@@ -143,7 +143,86 @@ serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { fileContent, storagePath, mode, phase, bucket } = body || {};
+    const { fileContent, storagePath, mode, phase, bucket, action, table, records } = body || {};
+
+    // ============= Lightweight batch insert mode (no ZIP) =============
+    if (action === 'batch') {
+      if (!table || typeof table !== 'string') {
+        return new Response(
+          JSON.stringify({ error: 'Parâmetro "table" obrigatório no modo batch' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (!Array.isArray(records) || records.length === 0) {
+        return new Response(
+          JSON.stringify({ success: true, recordsImported: 0 }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Skip current admin profile to avoid self-lockout
+      const sanitized = table === 'profiles'
+        ? records.filter((r: any) => r?.id !== user.id)
+        : records;
+
+      if (sanitized.length === 0) {
+        return new Response(
+          JSON.stringify({ success: true, recordsImported: 0 }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { error } = await supabase
+        .from(table)
+        .upsert(sanitized, { onConflict: 'id' });
+
+      if (error) {
+        console.error(`Batch upsert error on ${table}:`, error);
+        return new Response(
+          JSON.stringify({ error: `Erro na tabela ${table}: ${error.message}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, recordsImported: sanitized.length }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ============= File upload proxy (single file, base64) =============
+    if (action === 'upload-file') {
+      const { bucket: tgtBucket, path, contentBase64, contentType } = body || {};
+      if (!tgtBucket || !path || !contentBase64) {
+        return new Response(
+          JSON.stringify({ error: 'upload-file requer bucket, path e contentBase64' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      try {
+        const bin = atob(contentBase64);
+        const buf = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+        const { error: upErr } = await supabase.storage
+          .from(tgtBucket)
+          .upload(path, buf, { upsert: true, contentType: contentType || 'application/octet-stream' });
+        if (upErr) {
+          return new Response(
+            JSON.stringify({ error: `Falha ao subir ${path}: ${upErr.message}` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (e: any) {
+        return new Response(
+          JSON.stringify({ error: `Conteúdo inválido: ${e.message}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     console.log(`Starting restore, mode: ${mode}, phase: ${phase || 'full'}, storagePath: ${storagePath || 'inline'}`);
 
