@@ -21,7 +21,7 @@ export interface SystemSettings {
 
 async function fetchSystemSettings(): Promise<SystemSettings | null> {
   try {
-    const { data, error } = await supabase.rpc('get_public_branding');
+    const { data, error } = await (supabase as any).rpc('get_public_branding');
 
     if (error) {
       console.warn('Branding indisponível (modo degradado):', error.message);
