@@ -2938,7 +2938,7 @@ export default function AdminBackup() {
                 <input
                   type="file"
                   multiple
-                  accept=".json"
+                  accept=".json,application/json"
                   onChange={handleLooseFilesSelect}
                   className="hidden"
                   id="backup-loose"
