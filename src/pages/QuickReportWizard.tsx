@@ -8,7 +8,7 @@ import { ProjectSelector } from '@/components/reports/ProjectSelector';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileText, Building2, Plus, ChevronLeft, Loader2 } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 
 interface SelectionData {
   companyId: string | null;
@@ -40,13 +40,13 @@ export default function QuickReportWizard() {
     enabled: role === 'admin' && !!primarySiteId,
   });
 
-  const { data: hasCompanies, isLoading } = useQuery({
+  const { data: companiesCount, isLoading } = useQuery({
     queryKey: ['has-companies-wizard'],
     queryFn: async () => {
       const { count } = await supabase
         .from('companies')
         .select('*', { count: 'exact', head: true });
-      return (count || 0) > 0;
+      return count || 0;
     },
   });
 
@@ -93,18 +93,14 @@ export default function QuickReportWizard() {
     );
   }
 
-  if (!hasCompanies) {
+  const isAdminRole = role === 'admin' || role === 'super_admin';
+
+  if ((companiesCount ?? 0) === 0 && !isAdminRole) {
     return (
       <EmptyState
         icon={Building2}
-        title="Configure sua primeira fábrica"
-        description="Para criar relatórios, você precisa primeiro cadastrar uma fábrica, depois uma unidade e uma atividade."
-        action={
-          <Button onClick={() => navigate('/companies-manage')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Cadastrar Fábrica
-          </Button>
-        }
+        title="Nenhuma fábrica cadastrada"
+        description="Peça a um administrador para cadastrar uma fábrica antes de criar relatórios."
       />
     );
   }
