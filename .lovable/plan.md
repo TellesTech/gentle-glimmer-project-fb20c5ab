@@ -1,32 +1,38 @@
-## Diagnóstico
+## Objetivo
+Recuperar os dados detalhados de presença (`report_attendance`) e/ou base manual (`workforce_database`) a partir do projeto Supabase antigo (provavelmente `knubzymetllizsgeoikh`) para que a aba **Dashboard / Detalhado** da Base de Dados HH volte a exibir informações.
 
-A tela **Base de Dados HH** não está puxando as informações por dois motivos encontrados:
+## Situação atual
+- Projeto novo (`jujzmxbexukxljljpefu`): 918 RDOs em `reports`, mas `report_attendance` e `workforce_database` estão **vazios**.
+- Bucket `temp-backups` vazio; nenhuma tabela `backup_history` no projeto novo.
+- O código da página já está correto — só não há dado para puxar.
 
-1. A consulta de mão de obra tenta buscar a coluna `report_attendance.function_role`, mas essa coluna não existe no banco atual. Isso gera erro 400 e interrompe a carga automática dos dados dos RDOs.
-2. O período selecionado na tela está em junho/2026, mas o último RDO existente no banco é de **15/05/2026**. Então, mesmo corrigindo a consulta, junho continuará vazio até existir RDO nesse período.
+## O que vou precisar de você
+Para acessar o projeto antigo, preciso de dois segredos (vou cadastrá-los via tool de secrets quando entrarmos em build mode):
 
-Também confirmei que a tabela `report_attendance` está vazia no banco atual. Para RDOs antigos, a tela só conseguirá exibir mão de obra detalhada se houver registros de presença salvos; caso contrário, só poderá exibir os totais existentes no próprio RDO (`planned_workforce` e `actual_workforce`).
+1. `OLD_SUPABASE_URL` — ex.: `https://knubzymetllizsgeoikh.supabase.co`
+2. `OLD_SUPABASE_SERVICE_ROLE_KEY` — service role key do projeto antigo (Settings → API → service_role)
 
-## Plano de correção
+Sem esses dois segredos não consigo ler nada do projeto antigo.
 
-1. **Corrigir a consulta da Base de Dados HH**
-   - Remover `function_role` da seleção em `src/pages/WorkforceDatabase.tsx`.
-   - Manter a resolução de função usando `profiles.job_title`, `user_id` e nome do trabalhador.
-   - Usar função padrão quando a função não existir no RDO.
+## Plano de execução
 
-2. **Corrigir outras consultas quebradas que também usam `report_attendance.function_role`**
-   - Ajustar `src/components/workforce/WorkforceAITab.tsx` para não depender dessa coluna inexistente.
-   - Revisar pontos relacionados para evitar novos erros 400 na aba de IA/previsões.
+### 1. Edge function `migrate-workforce-from-old`
+Criar uma function (acesso restrito a `super_admin`) que:
+- Conecta no projeto antigo usando os secrets acima.
+- Lê em páginas de 1000 as tabelas `report_attendance`, `workforce_database` e (opcional) `workforce_delays` do projeto antigo, filtradas por intervalo de datas opcional.
+- Para `report_attendance`, faz match dos `report_id` antigos com os `reports.id` atuais via chave natural (`project_id` + `date` + `shift` + `rdo_number`). RDOs sem correspondência ficam num relatório de "não migrado" devolvido ao final.
+- Faz `upsert` no projeto atual em batches, com `on conflict` numa chave estável (id, ou par worker+report).
+- Retorna contadores: `attendance_migrated`, `attendance_skipped`, `workforce_db_migrated`, `delays_migrated`, lista de RDOs sem match.
 
-3. **Melhorar o estado vazio da tela**
-   - Quando não houver registros no período, manter o alerta com o último RDO encontrado.
-   - Deixar mais claro que o período atual não tem RDOs e que o botão “Ir ao último RDO” deve carregar o mês correto.
+### 2. UI mínima de disparo
+Em `WorkforceDatabase.tsx`, adicionar (somente para `super_admin`) um botão "Migrar do Supabase antigo" que:
+- Abre dialog para escolher intervalo de datas (default: todo o histórico).
+- Chama a edge function e mostra os contadores devolvidos + lista de RDOs não-mapeados.
 
-4. **Validar o resultado**
-   - Verificar se a tela deixa de fazer requisição com `function_role` em `report_attendance`.
-   - Confirmar que a Base de Dados HH não quebra mais com erro 400.
-   - Confirmar que, ao ir para maio/2026 ou para o mês do último RDO, os dados disponíveis são carregados corretamente.
+### 3. Validação
+- Conferir via `read_query` que `report_attendance` e `workforce_database` ganharam linhas.
+- Recarregar a página `/workforce-database` em maio/2026 e confirmar que Dashboard e Detalhado mostram dados.
 
-## Observação importante
-
-Se a expectativa é aparecer a lista detalhada de colaboradores por RDO, será necessário existir dado em `report_attendance`. Hoje essa tabela está com **0 registros** no banco atual. Essa correção resolve o erro de carregamento; recuperar mão de obra detalhada antiga depende de migração/importação desses registros ou de extrair novamente dos RDOs originais.
+## Observações
+- Se o projeto antigo não tiver `report_attendance` populado também, a migração não vai resolver — nesse caso voltamos para a alternativa de "Importar via Excel".
+- Se você não tiver a service_role do projeto antigo mas tiver acesso ao dashboard, pode exportar as três tabelas em CSV/JSON e me enviar — aí adapto a function para receber upload em vez de conectar no Supabase antigo. Me avisa qual caminho prefere.
