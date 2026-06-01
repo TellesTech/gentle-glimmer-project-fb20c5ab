@@ -1103,73 +1103,175 @@ export default function AdminBackup() {
       if (!manifestFile) throw new Error('Arquivo de backup inválido: manifest.json não encontrado');
       
       const manifest = JSON.parse(await manifestFile.async('string'));
-      
-      // Step 1: Upload ZIP para storage temporário (evita limite de body JSON/base64)
-      setProgress(5);
-      setProgressMessage('Enviando arquivo para o servidor...');
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Sessão expirada. Faça login novamente.');
-
-      const storagePath = `${user.id}/${crypto.randomUUID()}.zip`;
-      const { error: uploadErr } = await supabase.storage
-        .from('temp-backups')
-        .upload(storagePath, selectedFile, {
-          contentType: 'application/zip',
-          upsert: true,
-        });
-      if (uploadErr) throw new Error(`Falha ao enviar arquivo: ${uploadErr.message}`);
-
-      // Step 2: Restore DATA
-      setProgress(15);
-      setProgressMessage('Restaurando dados do sistema...');
-
-      const { data: dataRes, error: dataErr } = await supabase.functions.invoke('restore-backup', {
-        body: { storagePath, mode: 'full', phase: 'data' },
-      });
-
-      if (dataErr) {
-        const msg = (dataRes as any)?.error || dataErr.message || 'Erro ao restaurar dados';
-        throw new Error(msg);
-      }
-      if ((dataRes as any)?.error) throw new Error((dataRes as any).error);
-
-      // Step 3: Restore FILES (one bucket at a time if many files)
-      const bucketsToRestore = [
-        'report-photos', 'company-photos', 'project-photos',
-        'avatars', 'suggestion-screenshots', 'service-report-photos',
-        'report-pdfs'
+      // Ordem dos parents -> children
+      const TABLE_ORDER = [
+        'system_settings','tenant_settings','client_portal_settings',
+        'companies','company_contacts','contact_sites','sites','site_responsibles',
+        'portal_admin_access','profiles','user_roles',
+        'client_profiles','client_companies','client_sites','client_user_roles',
+        'client_wallet','client_wallet_transactions',
+        'rewards_catalog','reward_redemptions',
+        'teams','team_members',
+        'projects','project_stages','project_tasks','project_equipment','project_milestones','project_members',
+        'reports','report_activities','report_activity_steps','report_attendance','report_deviations',
+        'report_equipment','report_photos','report_signatures','report_history',
+        'report_company_approvers','report_client_approvers',
+        'autentique_documents','autentique_signatures','clicksign_documents',
+        'service_reports','service_report_sections','service_report_photos',
+        'notifications','feature_suggestions','suggestion_votes','delay_reasons',
+        'backup_schedules','backup_history'
       ];
 
-      let totalFilesRestored = 0;
-      for (let i = 0; i < bucketsToRestore.length; i++) {
-        const bucket = bucketsToRestore[i];
-        setProgress(30 + Math.round((i / bucketsToRestore.length) * 60));
-        setProgressMessage(`Restaurando arquivos: ${bucket}...`);
+      const BATCH_SIZE = 200;
+      let totalRecords = 0;
+      const errors: string[] = [];
 
-        const { data: fileRes, error: fileErr } = await supabase.functions.invoke('restore-backup', {
-          body: { storagePath, mode: 'full', phase: 'files', bucket },
+      // ============ FASE 1: DADOS (lotes pequenos via edge function) ============
+      setProgress(5);
+      setProgressMessage('Restaurando dados...');
+
+      for (let t = 0; t < TABLE_ORDER.length; t++) {
+        const tableName = TABLE_ORDER[t];
+        const dataFile = zip.file(`data/${tableName}.json`);
+        if (!dataFile) continue;
+
+        let records: any[] = [];
+        try {
+          const txt = await dataFile.async('string');
+          records = JSON.parse(txt);
+        } catch (e) {
+          errors.push(`Falha ao ler ${tableName}.json`);
+          continue;
+        }
+        if (!Array.isArray(records) || records.length === 0) continue;
+
+        const totalBatches = Math.ceil(records.length / BATCH_SIZE);
+        for (let i = 0; i < records.length; i += BATCH_SIZE) {
+          const batch = records.slice(i, i + BATCH_SIZE);
+          const currentBatch = Math.floor(i / BATCH_SIZE) + 1;
+          setProgressMessage(`Dados: ${tableName} (${currentBatch}/${totalBatches})`);
+
+          const { data: res, error: err } = await supabase.functions.invoke('restore-backup', {
+            body: { action: 'batch', table: tableName, records: batch },
+          });
+
+          if (err || (res as any)?.error) {
+            const msg = (res as any)?.error || err?.message || 'erro';
+            errors.push(`${tableName}: ${msg}`);
+            console.error(`Erro ${tableName}:`, msg);
+          } else {
+            totalRecords += (res as any)?.recordsImported || batch.length;
+          }
+        }
+
+        setProgress(5 + Math.round(((t + 1) / TABLE_ORDER.length) * 40));
+      }
+
+      // ============ FASE 2: ARQUIVOS DE MÍDIA ============
+      setProgress(45);
+      setProgressMessage('Restaurando arquivos de mídia...');
+
+      let filesRestored = 0;
+      let filesFailed = 0;
+
+      const filesFolder = zip.folder('files');
+      if (filesFolder) {
+        // Descobre buckets presentes no ZIP
+        const bucketsInZip = new Set<string>();
+        filesFolder.forEach((rel, fileObj) => {
+          if (fileObj.dir) return;
+          const parts = rel.split('/');
+          if (parts.length >= 2) bucketsInZip.add(parts[0]);
         });
 
-        if (!fileErr && fileRes?.filesRestored) {
-          totalFilesRestored += fileRes.filesRestored;
+        const allFileEntries: { bucket: string; path: string; file: JSZip.JSZipObject }[] = [];
+        filesFolder.forEach((rel, fileObj) => {
+          if (fileObj.dir) return;
+          const parts = rel.split('/');
+          if (parts.length < 2) return;
+          const bucket = parts[0];
+          const path = parts.slice(1).join('/');
+          allFileEntries.push({ bucket, path, file: fileObj });
+        });
+
+        const totalFiles = allFileEntries.length;
+        for (let i = 0; i < allFileEntries.length; i++) {
+          const { bucket, path, file } = allFileEntries[i];
+          try {
+            const blob = await file.async('blob');
+            const { error: upErr } = await supabase.storage
+              .from(bucket)
+              .upload(path, blob, { upsert: true, contentType: blob.type || undefined });
+            if (upErr) {
+              filesFailed++;
+              console.warn(`Falha ${bucket}/${path}:`, upErr.message);
+            } else {
+              filesRestored++;
+            }
+          } catch (e: any) {
+            filesFailed++;
+            console.warn(`Erro ${bucket}/${path}:`, e.message);
+          }
+
+          if (i % 10 === 0 || i === totalFiles - 1) {
+            setProgress(45 + Math.round(((i + 1) / Math.max(totalFiles, 1)) * 35));
+            setProgressMessage(`Mídia: ${i + 1}/${totalFiles} (${filesRestored} ok, ${filesFailed} falhas)`);
+          }
         }
       }
 
-      // Cleanup do arquivo temporário
-      try {
-        await supabase.storage.from('temp-backups').remove([storagePath]);
-      } catch (cleanupErr) {
-        console.warn('Falha ao limpar ZIP temporário:', cleanupErr);
+      // ============ FASE 3: PDFs (RDOs e RDOs_Assinados) ============
+      setProgress(80);
+      setProgressMessage('Restaurando PDFs...');
+
+      let pdfsRestored = 0;
+      const pdfTargets: { folder: string; bucket: string }[] = [
+        { folder: 'RDOs', bucket: 'report-pdfs' },
+        { folder: 'RDOs_Assinados', bucket: 'report-pdfs' },
+      ];
+
+      for (const { folder, bucket } of pdfTargets) {
+        const root = zip.folder(folder);
+        if (!root) continue;
+        const entries: { path: string; file: JSZip.JSZipObject }[] = [];
+        root.forEach((rel, fileObj) => {
+          if (fileObj.dir) return;
+          entries.push({ path: `${folder}/${rel}`, file: fileObj });
+        });
+
+        const total = entries.length;
+        for (let i = 0; i < total; i++) {
+          try {
+            const blob = await entries[i].file.async('blob');
+            const { error: upErr } = await supabase.storage
+              .from(bucket)
+              .upload(entries[i].path, blob, { upsert: true, contentType: 'application/pdf' });
+            if (!upErr) pdfsRestored++;
+            else console.warn(`PDF ${entries[i].path}:`, upErr.message);
+          } catch (e: any) {
+            console.warn(`PDF erro ${entries[i].path}:`, e.message);
+          }
+
+          if (i % 5 === 0 || i === total - 1) {
+            setProgressMessage(`PDFs ${folder}: ${i + 1}/${total}`);
+          }
+        }
       }
 
       setProgress(100);
       setProgressMessage('Restauração concluída!');
 
+      const errSummary = errors.length > 0
+        ? ` (${errors.length} erro(s) em tabelas — veja o console)`
+        : '';
+
       toast({
-        title: 'Backup restaurado com sucesso!',
-        description: `${(dataRes as any)?.recordsImported || 0} registros e ${totalFilesRestored} arquivos restaurados.`,
+        title: 'Backup restaurado!',
+        description: `${totalRecords} registros, ${filesRestored} mídias, ${pdfsRestored} PDFs.${errSummary}`,
       });
+
+      if (errors.length > 0) console.error('Erros de importação:', errors);
 
       setSelectedFile(null);
     } catch (error: any) {
@@ -1184,7 +1286,7 @@ export default function AdminBackup() {
         setIsRestoring(false);
         setProgress(0);
         setProgressMessage('');
-      }, 2000);
+      }, 3000);
     }
   };
 
