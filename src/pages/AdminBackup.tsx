@@ -524,6 +524,7 @@ export default function AdminBackup() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [selectedFolderFiles, setSelectedFolderFiles] = useState<File[] | null>(null);
+  const [selectedLooseFiles, setSelectedLooseFiles] = useState<File[] | null>(null);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
   const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
