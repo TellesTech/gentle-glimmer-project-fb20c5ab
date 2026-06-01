@@ -108,26 +108,37 @@ serve(async (req) => {
       throw new Error('Usuário não autenticado');
     }
 
-    // Get user profile
+    // Check permissions FIRST (super_admin doesn't need a company_id)
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id);
+
+    const allowedRoles = ['admin', 'director', 'super_admin'];
+    const userRoleList = (roles || []).map((r: any) => r.role);
+    const hasAccess = userRoleList.some((r: string) => allowedRoles.includes(r));
+    const isSuperAdmin = userRoleList.includes('super_admin');
+
+    if (!hasAccess) {
+      console.error('Restore denied. User roles:', userRoleList);
+      return new Response(
+        JSON.stringify({ error: 'Sem permissão para restaurar backup' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Profile is optional for super_admin; load if exists for logging
     const { data: profile } = await supabase
       .from('profiles')
       .select('company_id')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (!profile?.company_id) {
+    if (!isSuperAdmin && !profile?.company_id) {
       throw new Error('Perfil não encontrado');
     }
 
-    // Check permissions
-    const { data: userRole } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    const allowedRoles = ['admin', 'director', 'super_admin'];
-    if (!userRole || !allowedRoles.includes(userRole.role)) {
+    if (false) {
       throw new Error('Sem permissão para restaurar backup');
     }
 
