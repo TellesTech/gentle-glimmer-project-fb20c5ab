@@ -525,6 +525,13 @@ export default function AdminBackup() {
   const [isRestoring, setIsRestoring] = useState(false);
   const [selectedFolderFiles, setSelectedFolderFiles] = useState<File[] | null>(null);
   const [selectedLooseFiles, setSelectedLooseFiles] = useState<File[] | null>(null);
+  const [looseManifest, setLooseManifest] = useState<any | null>(null);
+  const [looseAnalysis, setLooseAnalysis] = useState<{
+    tables: Array<{ name: string; expected: number; present: boolean; size: number }>;
+    mediaCount: number;
+    ignored: string[];
+    presentJsonCount: number;
+  } | null>(null);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
   const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
