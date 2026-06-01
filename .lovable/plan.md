@@ -1,55 +1,85 @@
-## Problema
+## Diagnóstico encontrado
 
-No card "Importar Backup por Arquivos Avulsos", após selecionar os arquivos, não há nenhuma análise/prévia — o sistema só pede para clicar em "Iniciar Restauração". No print, foi selecionado apenas 1 arquivo (provavelmente `manifest.json`) e nenhum JSON de tabela, então a restauração não importa nada e o usuário não tem feedback do que será feito.
+O problema principal não parece ser “o arquivo não foi aceito”, e sim o fluxo de importação estar frágil e silencioso:
 
-Além disso há um bug menor: o texto diz "1 arquivos selecionados" (plural errado) e "0.00 MB" quando o arquivo é muito pequeno.
+- O usuário selecionou uma imagem `.jpg` no modo de pasta e recebeu erro de `manifest.json`, porque esse modo exige a pasta raiz inteira do backup, não arquivos soltos.
+- O modo “Arquivos Avulsos” só aceita `.json`, mas hoje procura os arquivos pelo nome simples (`companies.json`). Se os arquivos vierem da pasta original (`data/companies.json`) ou forem selecionados de forma diferente, a análise/importação pode não encontrar nada.
+- O `manifest.json` gerado pelo backup usa `tables: string[]` e `recordCounts`, mas a prévia atual interpreta `manifest.tables` como mapa de contagens; por isso pode mostrar `0` registros esperados mesmo quando o backup tem dados.
+- A função `restore-backup` faz `upsert(..., { onConflict: 'id' })` para todas as tabelas, mas algumas tabelas podem não ter chave primária detectável/compatível, e várias tabelas listadas no código nem existem no banco atual (`client_wallet`, `reward_redemptions`, `backup_history`, etc.). Isso pode gerar erros por tabela.
+- O fluxo mostra “Backup restaurado!” mesmo quando houve erros em tabelas; o usuário fica sem saber que nada útil foi importado.
+- A restauração de mídias/PDFs tenta usar buckets que não existem no projeto atual (`report-photos`, `company-photos`, `project-photos`, `report-pdfs`, etc.). Hoje só existem `avatars`, `service-report-photos` e `temp-backups`, então parte da restauração sempre falha.
+- O botão “Substituir” existe, mas o modo `replace` não é realmente enviado/aplicado no backend; isso é perigoso e confuso.
 
-## Solução: adicionar prévia antes de confirmar
+## Plano de correção
 
-Tudo dentro de `src/pages/AdminBackup.tsx`, sem mudar backend/edge function.
+### 1. Corrigir análise dos arquivos avulsos
 
-### 1. Ao selecionar arquivos, ler e analisar imediatamente
+No `src/pages/AdminBackup.tsx`:
 
-No `handleLooseFilesSelect`:
-- Validar que `manifest.json` está presente (já existe).
-- Ler `manifest.json` (`await file.text()` + `JSON.parse`) e guardar em novo estado `looseManifest`.
-- Para cada chave em `manifest.tables` (ou no `TABLE_ORDER`), verificar se existe `<tabela>.json` na seleção. Montar estado `looseAnalysis` com:
-  - Data/hora do backup (`manifest.exportedAt` / `manifest.createdAt`)
-  - Versão / origem (se houver no manifest)
-  - Lista de tabelas: nome, registros esperados (do manifest), JSON presente sim/não, tamanho do arquivo
-  - Lista de arquivos de mídia presentes (jpg/png/webp/pdf), contagem
-  - Lista de arquivos ignorados (que não batem com nenhuma tabela conhecida nem são mídia)
+- Ler `manifest.recordCounts` corretamente.
+- Aceitar tanto arquivos soltos (`companies.json`) quanto caminhos preservados (`data/companies.json`) quando disponível via `webkitRelativePath`.
+- Mostrar contagem real esperada por tabela.
+- Detectar e informar quando o usuário selecionou só imagens/PDFs sem os JSONs de dados.
+- Ajustar o texto para deixar claro:
+  - `.zip` = backup completo;
+  - pasta = pasta raiz descompactada;
+  - arquivos avulsos = `manifest.json` + JSONs da pasta `data/`.
 
-### 2. Renderizar painel de prévia no card
+### 2. Transformar a restauração em diagnóstico confiável
 
-Logo abaixo do dropzone, quando `looseManifest` estiver populado:
-- Resumo: "Backup de DD/MM/AAAA HH:MM • N tabelas no manifest • X arquivos JSON encontrados • Y mídias"
-- Tabela compacta (Table do shadcn): coluna Tabela | Registros (manifest) | Arquivo encontrado (✓/—) | Tamanho
-  - Linhas com arquivo ausente em destaque (text-muted-foreground ou ícone de aviso)
-- Bloco de alertas:
-  - Se nenhum `<tabela>.json` for encontrado → alerta destrutivo "Nenhuma tabela será restaurada — você selecionou apenas o manifest.json. Selecione também os arquivos JSON da pasta `data/`."
-  - Se faltarem tabelas que o manifest declarou → alerta amarelo listando até 5 nomes
-  - Se houver arquivos ignorados → alerta informativo
-- Botão "Iniciar Restauração dos Arquivos" fica **desabilitado** quando não houver nenhum JSON de tabela presente.
+Ainda em `AdminBackup.tsx`:
 
-### 3. Correções de UI
+- Trocar o toast genérico por um resultado claro:
+  - tabelas importadas;
+  - registros importados;
+  - tabelas com erro;
+  - arquivos ignorados;
+  - mídias/PDFs falhos por bucket ausente.
+- Se `totalRecords === 0` e existirem erros, mostrar “Nenhum dado foi importado” em vez de “Backup restaurado”.
+- Exibir uma lista resumida dos primeiros erros na própria tela, sem depender do console.
+- Desabilitar ou renomear visualmente o modo `replace`, já que ele não está implementado de verdade, para evitar expectativa errada.
 
-- Pluralizar: `${n} arquivo${n === 1 ? '' : 's'} selecionado${n === 1 ? '' : 's'}`
-- Mostrar tamanho em KB quando < 1 MB: `size < 1MB ? `${(size/1024).toFixed(1)} KB` : `${(size/1024/1024).toFixed(2)} MB``
-- Adicionar botão "Limpar seleção" ao lado do botão de restaurar.
+### 3. Corrigir a função `restore-backup`
 
-### 4. Reset
+No `supabase/functions/restore-backup/index.ts`:
 
-Ao concluir (sucesso ou erro), limpar também `looseManifest` e `looseAnalysis` junto com `selectedLooseFiles`.
+- Validar que a tabela recebida no modo `batch` está na lista permitida e existe no banco.
+- Retornar resposta estruturada por lote:
+  - `success`;
+  - `recordsImported`;
+  - `table`;
+  - `error`;
+  - `hint` quando for erro esperado.
+- Melhorar mensagens de erro de banco para aparecerem corretamente no frontend.
+- Evitar que um erro em uma tabela pare toda a importação, mas marcar claramente que a restauração foi parcial.
 
-## Detalhes técnicos
+### 4. Corrigir buckets de mídia/PDF
 
-- Novos estados: `looseManifest: any | null`, `looseAnalysis: { tables: Array<{name:string; expected:number; present:boolean; size:number}>; mediaCount:number; ignored:string[] } | null`.
-- Mídias são contadas mas **não** enviadas (a edge function `restore-backup` no modo `action: 'batch'` só lida com registros; uploads de mídia avulsa ficam fora do escopo, como já estava no plano original).
-- Sem mudanças em migrations, edge functions ou outros arquivos.
+Como o projeto só tem estes buckets hoje:
 
-## Fora do escopo
+- `avatars`
+- `service-report-photos`
+- `temp-backups`
 
-- Upload de mídias avulsas para os buckets.
-- Mudanças nos fluxos de ZIP e Pasta.
-- Salvar/cachear o manifest entre sessões.
+A correção será:
+
+- No frontend, detectar mídias/PDFs de buckets inexistentes e mostrar como “não restaurados: bucket ausente”.
+- Não tentar fazer upload para buckets inexistentes sem avisar.
+- Se for necessário restaurar fotos de relatórios, logos e PDFs completos, criarei uma migração separada para criar/configurar os buckets ausentes e políticas de storage. Essa parte precisa de aprovação porque altera Supabase Storage.
+
+### 5. Testar com sinais reais
+
+Após implementar:
+
+- Validar chamadas recentes da Edge Function `restore-backup` nos logs.
+- Usar um teste controlado de chamada à função para confirmar que erros agora voltam legíveis.
+- Garantir que a UI não mostre mais sucesso falso quando nenhuma tabela for importada.
+
+## Arquivos afetados
+
+- `src/pages/AdminBackup.tsx`
+- `supabase/functions/restore-backup/index.ts`
+
+## Observação importante
+
+A correção inicial será focada em fazer a importação de dados JSON funcionar e diagnosticar corretamente. Restauração completa de fotos/PDFs depende dos buckets ausentes no Supabase; isso pode exigir uma etapa extra de configuração de Storage.
