@@ -1493,7 +1493,6 @@ export default function AdminBackup() {
     }
   };
 
-  const handleSaveSchedule = async () => {
   const handleLooseFilesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = e.target.files;
     if (!list || list.length === 0) return;
