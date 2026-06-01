@@ -1,38 +1,25 @@
-## Objetivo
-Recuperar os dados detalhados de presença (`report_attendance`) e/ou base manual (`workforce_database`) a partir do projeto Supabase antigo (provavelmente `knubzymetllizsgeoikh`) para que a aba **Dashboard / Detalhado** da Base de Dados HH volte a exibir informações.
+## Diagnóstico
 
-## Situação atual
-- Projeto novo (`jujzmxbexukxljljpefu`): 918 RDOs em `reports`, mas `report_attendance` e `workforce_database` estão **vazios**.
-- Bucket `temp-backups` vazio; nenhuma tabela `backup_history` no projeto novo.
-- O código da página já está correto — só não há dado para puxar.
+O erro atual não é falta de dados nem problema no modal: a Edge Function publicada ainda está chamando o modelo antigo `google/gemini-2.0-flash-001`, e o Lovable AI Gateway rejeita com `400 invalid model`.
 
-## O que vou precisar de você
-Para acessar o projeto antigo, preciso de dois segredos (vou cadastrá-los via tool de secrets quando entrarmos em build mode):
+No arquivo local já aparece `google/gemini-3-flash-preview`, então o problema provável é que a função publicada no Supabase não foi redeployada após a alteração anterior.
 
-1. `OLD_SUPABASE_URL` — ex.: `https://knubzymetllizsgeoikh.supabase.co`
-2. `OLD_SUPABASE_SERVICE_ROLE_KEY` — service role key do projeto antigo (Settings → API → service_role)
+## Plano de correção
 
-Sem esses dois segredos não consigo ler nada do projeto antigo.
+1. Reimplantar a Edge Function `generate-service-report` para publicar a versão local corrigida.
+2. Testar a função implantada com o mesmo payload do erro atual:
+   - `project_id`: `4d114afb-0449-4b5e-8ab6-fdf48751e7aa`
+   - `site_id`: `3b9d33c6-4587-4088-b30e-a9062b05396f`
+   - `period_start`: `null`
+   - `period_end`: `null`
+3. Conferir os logs da Edge Function após o teste para confirmar que ela chama `google/gemini-3-flash-preview` e não retorna mais `AI error: 400`.
+4. Se ainda houver erro 400, trocar a chamada manual `fetch` para o padrão recomendado do Lovable AI Gateway com AI SDK/OpenAI-compatible, preservando o schema estruturado do relatório.
+5. Melhorar a mensagem retornada ao app para exibir o detalhe real do gateway quando houver erro de IA, em vez de apenas `AI error: 400`.
 
-## Plano de execução
+## Arquivos envolvidos
 
-### 1. Edge function `migrate-workforce-from-old`
-Criar uma function (acesso restrito a `super_admin`) que:
-- Conecta no projeto antigo usando os secrets acima.
-- Lê em páginas de 1000 as tabelas `report_attendance`, `workforce_database` e (opcional) `workforce_delays` do projeto antigo, filtradas por intervalo de datas opcional.
-- Para `report_attendance`, faz match dos `report_id` antigos com os `reports.id` atuais via chave natural (`project_id` + `date` + `shift` + `rdo_number`). RDOs sem correspondência ficam num relatório de "não migrado" devolvido ao final.
-- Faz `upsert` no projeto atual em batches, com `on conflict` numa chave estável (id, ou par worker+report).
-- Retorna contadores: `attendance_migrated`, `attendance_skipped`, `workforce_db_migrated`, `delays_migrated`, lista de RDOs sem match.
+- `supabase/functions/generate-service-report/index.ts`
 
-### 2. UI mínima de disparo
-Em `WorkforceDatabase.tsx`, adicionar (somente para `super_admin`) um botão "Migrar do Supabase antigo" que:
-- Abre dialog para escolher intervalo de datas (default: todo o histórico).
-- Chama a edge function e mostra os contadores devolvidos + lista de RDOs não-mapeados.
+## Resultado esperado
 
-### 3. Validação
-- Conferir via `read_query` que `report_attendance` e `workforce_database` ganharam linhas.
-- Recarregar a página `/workforce-database` em maio/2026 e confirmar que Dashboard e Detalhado mostram dados.
-
-## Observações
-- Se o projeto antigo não tiver `report_attendance` populado também, a migração não vai resolver — nesse caso voltamos para a alternativa de "Importar via Excel".
-- Se você não tiver a service_role do projeto antigo mas tiver acesso ao dashboard, pode exportar as três tabelas em CSV/JSON e me enviar — aí adapto a function para receber upload em vez de conectar no Supabase antigo. Me avisa qual caminho prefere.
+O botão “Gerar Relatório com IA” deixa de falhar com `Edge Function returned a non-2xx status code` por modelo inválido, e o relatório volta a ser gerado com a versão atual do Lovable AI Gateway.
