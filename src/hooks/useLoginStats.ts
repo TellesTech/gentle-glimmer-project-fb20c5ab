@@ -12,7 +12,7 @@ export function useLoginStats() {
     queryKey: ['login-stats'],
     queryFn: async (): Promise<LoginStats> => {
       try {
-        const { data, error } = await supabase.rpc('get_login_stats');
+        const { data, error } = await (supabase as any).rpc('get_login_stats');
         
         if (error) {
           console.warn('Estatísticas indisponíveis:', error.message);
