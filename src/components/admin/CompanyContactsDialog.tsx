@@ -308,7 +308,7 @@ Atenciosamente,
 
   const toggleStatus = async (contact: Contact, field: 'is_active' | 'can_approve') => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('company_contacts')
         .update({ [field]: !contact[field] })
         .eq('id', contact.id);
