@@ -53,8 +53,8 @@ export function PhotoGallery({ photos, className }: PhotoGalleryProps) {
           try {
             const needsSignedUrl = 
               !photo.url.startsWith('http') ||
-              photo.url.includes('supabase') ||
-              photo.url.includes('/storage/');
+              ((photo.url.includes('supabase') || photo.url.includes('/storage/')) &&
+                !photo.url.includes('/storage/v1/object/public/'));
 
             if (needsSignedUrl) {
               const signedUrl = await getViewUrl(photo.url);
