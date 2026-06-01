@@ -2924,9 +2924,11 @@ export default function AdminBackup() {
             <CardHeader>
               <CardTitle>Importar Backup por Arquivos Avulsos</CardTitle>
               <CardDescription>
-                Selecione vários arquivos soltos (sem precisar de pasta ou ZIP).
-                A seleção <strong>precisa incluir</strong> <code>manifest.json</code> e os
-                JSONs das tabelas (ex.: <code>companies.json</code>, <code>reports.json</code>).
+                Descompacte o backup .zip antes. No diálogo de seleção, abra a pasta do backup,
+                segure <kbd>Ctrl</kbd> (ou <kbd>Cmd</kbd>) e selecione o <code>manifest.json</code>
+                <strong> mais todos os arquivos .json da pasta <code>data/</code></strong>
+                (companies.json, reports.json, etc.). Sem os JSONs de <code>data/</code>
+                nenhum registro será importado.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
