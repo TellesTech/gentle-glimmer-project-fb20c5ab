@@ -17,6 +17,7 @@ import { SuperAdminCharts } from '@/components/admin/SuperAdminCharts';
 import { Progress } from '@/components/ui/progress';
 import { ValidatedInput } from '@/components/shared/ValidatedInput';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { CompanyFormDialog } from '@/components/companies/CompanyFormDialog';
 import { 
   Crown, Plus, Search, Edit, Trash2, Users, Loader2, Building2, 
   FileText, UserPlus,
@@ -174,35 +175,13 @@ function OverviewTab() {
 
   // Edit/Delete state for hub cards
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<CompanyHubCard | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [editForm, setEditForm] = useState({ name: '', cnpj: '' });
 
   const handleEditCompany = (company: CompanyHubCard) => {
     setSelectedCompany(company);
-    setEditForm({ name: company.name, cnpj: company.cnpj || '' });
     setEditDialogOpen(true);
-  };
-
-  const handleSaveCompany = async () => {
-    if (!selectedCompany || !editForm.name.trim()) return;
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from('companies')
-        .update({ name: editForm.name, cnpj: editForm.cnpj || null })
-        .eq('id', selectedCompany.id);
-      if (error) throw error;
-      toast({ title: 'Fábrica atualizada com sucesso' });
-      setEditDialogOpen(false);
-      fetchStats();
-    } catch (error) {
-      console.error('Error saving company:', error);
-      toast({ title: 'Erro ao salvar fábrica', variant: 'destructive' });
-    } finally {
-      setSaving(false);
-    }
   };
 
   const handleDeleteCompany = async () => {
@@ -522,7 +501,7 @@ function OverviewTab() {
             {/* Nova Fábrica card */}
             <Card
               className="cursor-pointer border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-all hover:shadow-md flex items-center justify-center min-h-[160px]"
-              onClick={() => navigate('/companies-manage')}
+              onClick={() => setCreateDialogOpen(true)}
             >
               <div className="flex flex-col items-center gap-2 text-muted-foreground">
                 <Plus className="h-8 w-8" />
@@ -551,40 +530,21 @@ function OverviewTab() {
         </Card>
       </div>
 
-      {/* Edit Company Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Fábrica</DialogTitle>
-            <DialogDescription>Atualize os dados da fábrica</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Nome *</Label>
-              <Input
-                value={editForm.name}
-                onChange={(e) => setEditForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="Nome da fábrica"
-              />
-            </div>
-            <div>
-              <Label>CNPJ</Label>
-              <Input
-                value={editForm.cnpj}
-                onChange={(e) => setEditForm(f => ({ ...f, cnpj: e.target.value }))}
-                placeholder="00.000.000/0000-00"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSaveCompany} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Edit Company Dialog (formulário completo) */}
+      <CompanyFormDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        companyId={selectedCompany?.id ?? null}
+        onSaved={fetchStats}
+      />
+
+      {/* Create Company Dialog (formulário completo) */}
+      <CompanyFormDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        companyId={null}
+        onSaved={fetchStats}
+      />
 
       {/* Delete Company Confirm */}
       <ConfirmDialog
