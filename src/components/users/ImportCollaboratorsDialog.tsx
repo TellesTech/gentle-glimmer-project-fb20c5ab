@@ -7,6 +7,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { normalizeFunction } from '@/lib/jobFunctions';
@@ -29,7 +31,12 @@ interface ImportCollaboratorsDialogProps {
   onSuccess: () => void;
 }
 
-type Step = 'upload' | 'analyzing' | 'preview' | 'importing';
+type Step = 'upload' | 'selectSheet' | 'analyzing' | 'preview' | 'importing';
+
+interface SheetInfo {
+  name: string;
+  rowCount: number;
+}
 
 export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: ImportCollaboratorsDialogProps) {
   const { toast } = useToast();
@@ -37,11 +44,17 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [summary, setSummary] = useState<{ total: number; duplicates: number; withEmail: number; withPhone: number } | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [pendingWorkbook, setPendingWorkbook] = useState<ExcelJS.Workbook | null>(null);
+  const [sheetOptions, setSheetOptions] = useState<SheetInfo[]>([]);
+  const [selectedSheet, setSelectedSheet] = useState<string>('');
 
   const resetDialog = useCallback(() => {
     setStep('upload');
     setCollaborators([]);
     setSummary(null);
+    setPendingWorkbook(null);
+    setSheetOptions([]);
+    setSelectedSheet('');
   }, []);
 
   const handleClose = useCallback((open: boolean) => {
@@ -50,6 +63,69 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
     }
     onOpenChange(open);
   }, [onOpenChange, resetDialog]);
+
+  const extractAndAnalyze = useCallback(async (workbook: ExcelJS.Workbook, sheetName?: string) => {
+    try {
+      setStep('analyzing');
+      const sheet = sheetName ? workbook.getWorksheet(sheetName) : workbook.worksheets[0];
+      if (!sheet) {
+        toast({ title: 'Aba não encontrada', variant: 'destructive' });
+        setStep('upload');
+        return;
+      }
+
+      const rawData: any[][] = [];
+      sheet.eachRow((row) => {
+        const rowValues: any[] = [];
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          rowValues[colNumber - 1] = cell.value;
+        });
+        rawData.push(rowValues);
+      });
+
+      const filteredData = rawData.filter(row =>
+        row.some(cell => cell !== undefined && cell !== null && String(cell).trim() !== '')
+      );
+
+      if (filteredData.length < 2) {
+        toast({ title: 'Aba vazia ou sem dados válidos', variant: 'destructive' });
+        setStep('upload');
+        return;
+      }
+
+      console.log('Sending data to AI for analysis...', { rows: filteredData.length });
+
+      const response = await supabase.functions.invoke('import-collaborators', {
+        body: { action: 'analyze', rawData: filteredData },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Erro de conexão');
+      }
+      if (!response.data?.success) {
+        throw new Error(response.data?.error || response.data?.reason || 'Erro ao analisar planilha');
+      }
+
+      const result = response.data.data;
+      const collabsWithSelection = (result.collaborators || []).map((c: any) => ({
+        ...c,
+        cargo: normalizeFunction(c.cargo) || c.cargo,
+        selected: !c.isDuplicate,
+      }));
+
+      setCollaborators(collabsWithSelection);
+      setSummary(result.summary);
+      setStep('preview');
+    } catch (error) {
+      console.error('Analyze error:', error);
+      toast({
+        title: 'Erro ao processar planilha',
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: 'destructive',
+      });
+      setStep('upload');
+    }
+  }, [toast]);
 
   const parseFile = useCallback(async (file: File) => {
     try {
@@ -88,67 +164,24 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
         } else {
           await workbook.xlsx.load(arrayBuffer);
         }
-        
-        const sheet = workbook.worksheets[0];
-        if (!sheet) {
+
+        const sheets = workbook.worksheets;
+        if (sheets.length === 0) {
           toast({ title: 'Planilha vazia', variant: 'destructive' });
           setStep('upload');
           return;
         }
-        
-        // Convert sheet to array of arrays
-        const rawData: any[][] = [];
-        sheet.eachRow((row, rowNumber) => {
-          const rowValues: any[] = [];
-          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-            rowValues[colNumber - 1] = cell.value;
-          });
-          rawData.push(rowValues);
-        });
 
-        // Filter out completely empty rows
-        const filteredData = rawData.filter(row => 
-          row.some(cell => cell !== undefined && cell !== null && String(cell).trim() !== '')
-        );
-
-        if (filteredData.length < 2) {
-          toast({ title: 'Planilha vazia ou sem dados válidos', variant: 'destructive' });
-          setStep('upload');
+        if (sheets.length > 1) {
+          const options: SheetInfo[] = sheets.map(s => ({ name: s.name, rowCount: s.actualRowCount }));
+          setPendingWorkbook(workbook);
+          setSheetOptions(options);
+          setSelectedSheet(sheets[0].name);
+          setStep('selectSheet');
           return;
         }
 
-        console.log('Sending data to AI for analysis...', { rows: filteredData.length });
-
-          // Send to edge function for AI analysis
-          const response = await supabase.functions.invoke('import-collaborators', {
-            body: { action: 'analyze', rawData: filteredData },
-          });
-
-          console.log('Function response:', response);
-
-          if (response.error) {
-            console.error('Function error:', response.error);
-            const errorDetail = response.error.message || 'Erro de conexão';
-            throw new Error(errorDetail);
-          }
-
-          if (!response.data?.success) {
-            const errorMsg = response.data?.error || response.data?.reason || 'Erro ao analisar planilha';
-            throw new Error(errorMsg);
-          }
-
-          const result = response.data.data;
-          
-          // Add selected flag to all collaborators
-          const collabsWithSelection = (result.collaborators || []).map((c: any) => ({
-            ...c,
-            cargo: normalizeFunction(c.cargo) || c.cargo,
-            selected: !c.isDuplicate,
-          }));
-
-        setCollaborators(collabsWithSelection);
-        setSummary(result.summary);
-        setStep('preview');
+        await extractAndAnalyze(workbook);
 
       } catch (error) {
         console.error('Parse error:', error);
@@ -165,7 +198,12 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
       toast({ title: 'Erro ao processar arquivo', variant: 'destructive' });
       setStep('upload');
     }
-  }, [toast]);
+  }, [toast, extractAndAnalyze]);
+
+  const confirmSheetSelection = useCallback(async () => {
+    if (!pendingWorkbook || !selectedSheet) return;
+    await extractAndAnalyze(pendingWorkbook, selectedSheet);
+  }, [pendingWorkbook, selectedSheet, extractAndAnalyze]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -263,6 +301,7 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
           </DialogTitle>
           <DialogDescription>
             {step === 'upload' && 'Faça upload de uma planilha Excel ou CSV com os dados dos colaboradores'}
+            {step === 'selectSheet' && 'A planilha possui várias abas. Escolha qual deseja importar.'}
             {step === 'analyzing' && 'Analisando planilha com inteligência artificial...'}
             {step === 'preview' && `${collaborators.length} colaborador(es) encontrado(s). Revise e selecione para importar.`}
             {step === 'importing' && 'Importando colaboradores...'}
@@ -304,6 +343,26 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
                 {step === 'analyzing' ? 'A IA está organizando os dados...' : 'Importando colaboradores...'}
               </p>
             </div>
+          )}
+
+          {step === 'selectSheet' && (
+            <ScrollArea className="max-h-[400px] pr-2">
+              <RadioGroup value={selectedSheet} onValueChange={setSelectedSheet} className="space-y-2">
+                {sheetOptions.map((s) => (
+                  <Label
+                    key={s.name}
+                    htmlFor={`sheet-${s.name}`}
+                    className="flex items-center gap-3 border rounded-md p-3 cursor-pointer hover:bg-muted/50"
+                  >
+                    <RadioGroupItem value={s.name} id={`sheet-${s.name}`} />
+                    <div className="flex-1">
+                      <div className="font-medium">{s.name}</div>
+                      <div className="text-xs text-muted-foreground">{s.rowCount} linha(s)</div>
+                    </div>
+                  </Label>
+                ))}
+              </RadioGroup>
+            </ScrollArea>
           )}
 
           {step === 'preview' && (
@@ -400,6 +459,16 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
             <Button variant="outline" onClick={() => handleClose(false)}>
               Cancelar
             </Button>
+          )}
+          {step === 'selectSheet' && (
+            <>
+              <Button variant="outline" onClick={resetDialog}>
+                Cancelar
+              </Button>
+              <Button onClick={confirmSheetSelection} disabled={!selectedSheet}>
+                Continuar
+              </Button>
+            </>
           )}
           {step === 'preview' && (
             <>
