@@ -1,17 +1,24 @@
-Diagnóstico encontrado:
-- O app continua enviando fotos para o bucket `report-photos`.
-- O Supabase conectado não tem esse bucket; os buckets existentes são `avatars`, `company-photos`, `service-report-photos` e `temp-backups`.
-- A requisição que falha é `POST /storage/v1/object/report-photos/...`, com resposta `Bucket not found`.
-- A tentativa anterior provavelmente não criou o bucket de verdade, porque buckets de Storage não devem ser criados via SQL/migration; precisam ser criados pela Storage API.
+Vou corrigir o fluxo de criação/salvamento do RDO de ponta a ponta.
 
-Plano de correção:
-1. Criar o bucket real `report-photos` no Supabase Storage usando a ferramenta nativa de Storage, público para manter as URLs atuais usadas no PDF/portal.
-2. Adicionar políticas em `storage.objects` para o bucket `report-photos`:
-   - qualquer pessoa pode visualizar as imagens públicas;
-   - usuários autenticados podem enviar, editar e remover fotos do RDO.
-3. Reconsultar os buckets e políticas para confirmar que `report-photos` aparece na lista e que as regras foram aplicadas.
-4. Se a criação do bucket público for bloqueada pela configuração do workspace, ajustar o plano para usar um bucket já existente (`service-report-photos`) e trocar o frontend do RDO para apontar para ele.
+Plano:
 
-Arquivos previstos:
-- Sem alteração inicial de frontend se o bucket puder ser criado corretamente.
-- Alteração em `src/hooks/useStorageUpload.ts`, `src/components/shared/PhotoUploader.tsx` e usos relacionados somente se for necessário migrar para um bucket existente.
+1. Corrigir incompatibilidade entre formulário e banco
+- O formulário novo de RDO envia campos que não existem atualmente na tabela `reports`, como dados de emergência, rádio, bloqueio, pontos de encontro/liberação e rotina.
+- Vou criar uma migration adicionando essas colunas faltantes em `reports`, para o insert/update não falhar.
+
+2. Corrigir etapas ponderadas
+- O código tenta salvar em `report_activity_steps`, mas essa tabela não existe no banco conectado.
+- Vou criar a tabela com permissões, RLS e políticas seguindo o mesmo padrão das demais tabelas filhas do RDO.
+
+3. Corrigir permissões de acesso via API
+- As tabelas públicas do RDO não aparecem com grants para `authenticated`/`service_role` na consulta de privilégios.
+- Vou garantir permissões explícitas para `reports`, `report_activities`, `report_attendance`, `report_deviations`, `report_photos`, `report_activity_steps` e `workforce_delays`, sem mexer em dados existentes.
+
+4. Ajustar o frontend para evitar novos bloqueios
+- Vou melhorar o tratamento de erro no `SimplifiedReportForm` para mostrar a mensagem real do Supabase, em vez de apenas “Erro ao criar relatório”.
+- Vou sanitizar campos antes de salvar: `team_id` vazio vira `null`, listas vazias não geram inserts inválidos, e atrasos adicionais só salvam quando tiverem dados mínimos válidos.
+
+5. Validar o resultado
+- Depois da correção, vou revisar as consultas e logs relevantes para confirmar que o banco aceita os campos/tabelas esperados e que o erro genérico foi removido.
+
+Observação: o navegador de teste caiu na tela de login, então não vou executar ações dentro da sua conta. A validação será feita por estrutura do banco, logs/requisições e código.
