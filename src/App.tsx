@@ -31,7 +31,7 @@ import ClientPortalPicker from "@/pages/client/ClientPortalPicker";
 import ClientPortalUsers from "@/pages/client/ClientPortalUsers";
 
 import { ClientProtectedRoute } from "@/components/client/ClientProtectedRoute";
-import Home from "@/pages/Home";
+import { HomeRedirect } from "@/components/HomeRedirect";
 import AdminExports from "@/pages/AdminExports";
 import AdminSignatures from "@/pages/AdminSignatures";
 import AdminClickSign from "@/pages/AdminClickSign";
@@ -109,7 +109,7 @@ const App = () => (
 
                 {/* Protected routes */}
                 <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-                  <Route path="/home" element={<Home />} />
+                  <Route path="/home" element={<HomeRedirect />} />
                   <Route path="/admin/exports" element={<AdminExports />} />
                   <Route path="/admin/signatures" element={<AdminSignatures />} />
                   <Route path="/admin/clicksign" element={<AdminClickSign />} />
