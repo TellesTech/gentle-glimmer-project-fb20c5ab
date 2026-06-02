@@ -800,21 +800,18 @@ serve(async (req) => {
         }
         const { userId } = payload;
 
-        // Determine which table to read based on target user's role
-        const { data: targetRoleRow } = await supabaseAdmin
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', userId)
-          .maybeSingle();
-        const targetRole = targetRoleRow?.role || 'collaborator';
-        const table = targetRole === 'admin' ? 'portal_admin_access' : 'site_responsibles';
-
-        const { data, error } = await supabaseAdmin
-          .from(table)
-          .select('site_id')
-          .eq('user_id', userId);
-        if (error) throw error;
-        return new Response(JSON.stringify({ siteIds: (data || []).map((r: any) => r.site_id) }), {
+        // Union of both tables — keeps results consistent regardless of role transitions.
+        const [respRes, portalRes] = await Promise.all([
+          supabaseAdmin.from('site_responsibles').select('site_id').eq('user_id', userId),
+          supabaseAdmin.from('portal_admin_access').select('site_id').eq('user_id', userId),
+        ]);
+        if (respRes.error) throw respRes.error;
+        if (portalRes.error) throw portalRes.error;
+        const siteSet = new Set<string>();
+        [...(respRes.data || []), ...(portalRes.data || [])].forEach((r: any) => {
+          if (r.site_id) siteSet.add(r.site_id);
+        });
+        return new Response(JSON.stringify({ siteIds: Array.from(siteSet) }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
@@ -832,47 +829,47 @@ serve(async (req) => {
           });
         }
 
-        // Determine which table to write based on target user's role
-        const { data: targetRoleRow } = await supabaseAdmin
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', userId)
-          .maybeSingle();
-        const targetRole = targetRoleRow?.role || 'collaborator';
-        const table = targetRole === 'admin' ? 'portal_admin_access' : 'site_responsibles';
-
-        // Get current assignments
-        const { data: current, error: curErr } = await supabaseAdmin
-          .from(table)
-          .select('site_id')
-          .eq('user_id', userId);
-        if (curErr) throw curErr;
-
-        const currentIds = new Set((current || []).map((r: any) => r.site_id));
+        // Sync BOTH tables. Some app surfaces read from site_responsibles
+        // (portal picker, dashboards, zapi webhook) and others from
+        // portal_admin_access (admin sidebar via useAdminSiteAccess), so we
+        // mirror the desired set on both tables to avoid mismatches when the
+        // user's role changes.
         const desiredIds = new Set(siteIds);
+        const tables = ['site_responsibles', 'portal_admin_access'] as const;
+        let totalAdded = 0;
+        let totalRemoved = 0;
 
-        const toAdd = [...desiredIds].filter(id => !currentIds.has(id));
-        const toRemove = [...currentIds].filter(id => !desiredIds.has(id));
-
-        if (toAdd.length > 0) {
-          const rows = toAdd.map(site_id => ({ user_id: userId, site_id }));
-          const { error: insErr } = await supabaseAdmin
+        for (const table of tables) {
+          const { data: current, error: curErr } = await supabaseAdmin
             .from(table)
-            .insert(rows);
-          if (insErr) throw insErr;
-        }
+            .select('site_id')
+            .eq('user_id', userId);
+          if (curErr) throw curErr;
 
-        if (toRemove.length > 0) {
-          const { error: delErr } = await supabaseAdmin
-            .from(table)
-            .delete()
-            .eq('user_id', userId)
-            .in('site_id', toRemove);
-          if (delErr) throw delErr;
+          const currentIds = new Set((current || []).map((r: any) => r.site_id));
+          const toAdd = [...desiredIds].filter(id => !currentIds.has(id));
+          const toRemove = [...currentIds].filter(id => !desiredIds.has(id));
+
+          if (toAdd.length > 0) {
+            const rows = toAdd.map(site_id => ({ user_id: userId, site_id }));
+            const { error: insErr } = await supabaseAdmin.from(table).insert(rows);
+            if (insErr) throw insErr;
+            totalAdded += toAdd.length;
+          }
+
+          if (toRemove.length > 0) {
+            const { error: delErr } = await supabaseAdmin
+              .from(table)
+              .delete()
+              .eq('user_id', userId)
+              .in('site_id', toRemove);
+            if (delErr) throw delErr;
+            totalRemoved += toRemove.length;
+          }
         }
 
         return new Response(JSON.stringify({
-          success: true, added: toAdd.length, removed: toRemove.length, total: desiredIds.size, table,
+          success: true, added: totalAdded, removed: totalRemoved, total: desiredIds.size,
         }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
