@@ -437,8 +437,16 @@ export function ParseReportModal({ onDataParsed, teamMembers = [], allProfiles =
               presente: item.presente === false ? false : true,
             };
           })
-          // Ignora linhas sem nome (ex.: "9.N1-✅")
-          .filter(item => item.nome && item.nome.trim().length > 1);
+          // Ignora linhas sem nome real (ex.: "9.N1-✅" vira nome "N1" ou vazio)
+          .filter(item => {
+            const n = (item.nome || '').trim();
+            if (n.length < 2) return false;
+            const normalized = normalizeName(n);
+            // Se sobrar apenas tokens de função/nível, descartar
+            const cleaned = stripFunctionTokens(normalized);
+            if (!cleaned) return false;
+            return true;
+          });
         
         formData.attendance = normalizedEfetivo.map((item, index): Attendance => {
           const matchedTeamMember = matchCollaborator(item.nome, teamMembers.map(m => ({ id: m.id, name: m.name })));
