@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { normalizeFunction } from '@/lib/jobFunctions';
@@ -22,7 +23,7 @@ interface Collaborator {
   isDuplicate: boolean;
   duplicateOf: string | null;
   warnings: string[];
-  selected: boolean;
+  action: 'skip' | 'import';
 }
 
 interface ImportCollaboratorsDialogProps {
@@ -110,7 +111,7 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
       const collabsWithSelection = (result.collaborators || []).map((c: any) => ({
         ...c,
         cargo: normalizeFunction(c.cargo) || c.cargo,
-        selected: !c.isDuplicate,
+        action: c.isDuplicate ? 'skip' : 'import',
       }));
 
       setCollaborators(collabsWithSelection);
@@ -231,21 +232,29 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
   }, [parseFile]);
 
   const toggleSelection = useCallback((index: number) => {
-    setCollaborators(prev => prev.map((c, i) => 
-      i === index ? { ...c, selected: !c.selected } : c
+    setCollaborators(prev => prev.map((c, i) =>
+      i === index ? { ...c, action: c.action === 'import' ? 'skip' : 'import' } : c
     ));
   }, []);
 
+  const setDuplicateAction = useCallback((index: number, action: 'skip' | 'import') => {
+    setCollaborators(prev => prev.map((c, i) => (i === index ? { ...c, action } : c)));
+  }, []);
+
   const selectAll = useCallback(() => {
-    setCollaborators(prev => prev.map(c => ({ ...c, selected: true })));
+    setCollaborators(prev => prev.map(c => ({ ...c, action: 'import' })));
   }, []);
 
   const deselectDuplicates = useCallback(() => {
-    setCollaborators(prev => prev.map(c => ({ ...c, selected: c.isDuplicate ? false : c.selected })));
+    setCollaborators(prev => prev.map(c => (c.isDuplicate ? { ...c, action: 'skip' } : c)));
+  }, []);
+
+  const importAllDuplicates = useCallback(() => {
+    setCollaborators(prev => prev.map(c => (c.isDuplicate ? { ...c, action: 'import' } : c)));
   }, []);
 
   const handleImport = useCallback(async () => {
-    const selected = collaborators.filter(c => c.selected);
+    const selected = collaborators.filter(c => c.action === 'import');
     if (selected.length === 0) {
       toast({ title: 'Selecione ao menos um colaborador', variant: 'destructive' });
       return;
@@ -288,7 +297,7 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
     }
   }, [collaborators, toast, handleClose, onSuccess]);
 
-  const selectedCount = collaborators.filter(c => c.selected).length;
+  const selectedCount = collaborators.filter(c => c.action === 'import').length;
   const duplicateCount = collaborators.filter(c => c.isDuplicate).length;
 
   return (
@@ -391,9 +400,14 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
                   Selecionar Todos
                 </Button>
                 {duplicateCount > 0 && (
-                  <Button variant="outline" size="sm" onClick={deselectDuplicates}>
-                    Desmarcar Duplicatas
-                  </Button>
+                  <>
+                    <Button variant="outline" size="sm" onClick={deselectDuplicates}>
+                      Pular Duplicatas
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={importAllDuplicates}>
+                      Importar Duplicatas
+                    </Button>
+                  </>
                 )}
               </div>
 
@@ -417,12 +431,21 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
                         className={collab.isDuplicate ? 'bg-destructive/5' : ''}
                       >
                         <TableCell>
-                          <Checkbox
-                            checked={collab.selected}
-                            onCheckedChange={() => toggleSelection(index)}
-                          />
+                          {collab.isDuplicate ? null : (
+                            <Checkbox
+                              checked={collab.action === 'import'}
+                              onCheckedChange={() => toggleSelection(index)}
+                            />
+                          )}
                         </TableCell>
-                        <TableCell className="font-medium">{collab.nome}</TableCell>
+                        <TableCell className="font-medium">
+                          <div>{collab.nome}</div>
+                          {collab.isDuplicate && collab.duplicateOf && (
+                            <div className="text-xs text-muted-foreground font-normal mt-0.5">
+                              {collab.duplicateOf}
+                            </div>
+                          )}
+                        </TableCell>
                         <TableCell className="text-muted-foreground">
                           {collab.email || '-'}
                         </TableCell>
@@ -434,10 +457,18 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
                         </TableCell>
                         <TableCell>
                           {collab.isDuplicate ? (
-                            <Badge variant="destructive" className="text-xs">
-                              <AlertTriangle className="h-3 w-3 mr-1" />
-                              Duplicata
-                            </Badge>
+                            <Select
+                              value={collab.action}
+                              onValueChange={(v) => setDuplicateAction(index, v as 'skip' | 'import')}
+                            >
+                              <SelectTrigger className="h-8 text-xs w-[180px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="skip">Pular</SelectItem>
+                                <SelectItem value="import">Importar mesmo assim</SelectItem>
+                              </SelectContent>
+                            </Select>
                           ) : (
                             <Badge variant="outline" className="text-xs">
                               <Check className="h-3 w-3 mr-1" />
