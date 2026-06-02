@@ -412,16 +412,31 @@ export default function UsersPage() {
   const handleBulkDeleteCollaborators = async () => {
     setBulkDeleting(true);
     try {
-      const response = await supabase.functions.invoke('admin-users', {
-        body: { action: 'delete-all-collaborators' },
-      });
+      let totalDeleted = 0;
+      const allErrors: string[] = [];
+      const MAX_BATCHES = 200; // hard safety stop
 
-      if (response.error) throw new Error(response.error.message);
-      if (response.data.error) throw new Error(response.data.error);
+      for (let i = 0; i < MAX_BATCHES; i++) {
+        const response = await supabase.functions.invoke('admin-users', {
+          body: { action: 'delete-all-collaborators' },
+        });
 
-      toast({ 
-        title: 'Colaboradores excluídos', 
-        description: `${response.data.deletedCount} colaborador(es) removido(s)` 
+        const data: any = response.data;
+        if (response.error) {
+          const msg = data?.error || data?.message || response.error.message;
+          throw new Error(msg);
+        }
+        if (data?.error) throw new Error(data.error);
+
+        totalDeleted += data?.deletedCount ?? 0;
+        if (Array.isArray(data?.errors)) allErrors.push(...data.errors);
+
+        if (!data?.hasMore) break;
+      }
+
+      toast({
+        title: 'Colaboradores excluídos',
+        description: `${totalDeleted} colaborador(es) removido(s)${allErrors.length ? ` · ${allErrors.length} erro(s)` : ''}`,
       });
       setBulkDeleteDialog(false);
       setBulkDeleteConfirmText('');
