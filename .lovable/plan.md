@@ -1,18 +1,25 @@
-Plano de correção:
+## Problema encontrado
 
-1. Ajustar o `ImageUploader` para não tratar qualquer texto salvo em `photo_url` como imagem válida.
-   - Hoje, se `image` tiver um valor quebrado/inválido, ele entra no modo de prévia e mostra apenas o ícone de imagem quebrada, escondendo a opção de upload.
-   - Vou adicionar controle de erro no `<img>` para detectar falha de carregamento.
+O campo de upload está no lugar correto: `Editar/Nova Fábrica` em `/super-admin`, usando o bucket `company-photos`.
 
-2. Quando a imagem estiver inválida, mostrar novamente a área normal de upload.
-   - Exibir o campo com “Arraste uma imagem ou Selecionar arquivo”.
-   - Manter o título “Foto da Fábrica”.
-   - Não deixar o texto/URL quebrado ocupar o lugar do botão.
+O erro real não é mais visual. O upload falha porque o bucket `company-photos` existe, mas não há política ativa em `storage.objects` permitindo inserir arquivos nesse bucket. Por isso aparece: `new row violates row-level security policy`.
 
-3. Melhorar o estado com foto existente válida.
-   - Deixar a opção “Trocar” acessível de forma clara, sem depender apenas do hover se necessário.
-   - Garantir que no formulário de Nova/Editar Fábrica sempre exista uma forma visível de enviar ou trocar a foto.
+## Plano de correção
 
-4. Validar no fluxo correto.
-   - Conferir `/super-admin` → editar fábrica → seção “Foto da Fábrica”.
-   - Confirmar que imagem quebrada cai no upload e imagem válida mantém prévia com opção de troca.
+1. **Adicionar políticas de Storage para `company-photos`**
+   - Permitir leitura pública das fotos da fábrica, já que o bucket é público.
+   - Permitir que usuários autenticados façam upload no bucket `company-photos`.
+   - Permitir atualização e exclusão por usuários autenticados no mesmo bucket, mantendo o escopo limitado a fotos de fábrica.
+
+2. **Manter o frontend atual**
+   - O formulário já aponta para `bucketName="company-photos"` e `folder="companies"`.
+   - O componente já mostra a área de upload quando a imagem antiga está quebrada.
+   - Não é necessário mover o campo de lugar.
+
+3. **Validar depois da migração**
+   - Testar o fluxo em `/super-admin` → editar fábrica → selecionar arquivo.
+   - Confirmar que o upload salva a URL em `photo_url` e a imagem aparece na listagem/cartão.
+
+## Detalhes técnicos
+
+Será criada uma migração SQL apenas para `storage.objects`, com políticas idempotentes usando `DROP POLICY IF EXISTS` antes de recriar as regras corretas para o bucket `company-photos`. Nenhuma tabela nova será criada.
