@@ -1724,6 +1724,7 @@ export type Database = {
           arrival_time: string | null
           created_at: string | null
           departure_time: string | null
+          function_role: string | null
           id: string
           notes: string | null
           present: boolean | null
@@ -1735,6 +1736,7 @@ export type Database = {
           arrival_time?: string | null
           created_at?: string | null
           departure_time?: string | null
+          function_role?: string | null
           id?: string
           notes?: string | null
           present?: boolean | null
@@ -1746,6 +1748,7 @@ export type Database = {
           arrival_time?: string | null
           created_at?: string | null
           departure_time?: string | null
+          function_role?: string | null
           id?: string
           notes?: string | null
           present?: boolean | null

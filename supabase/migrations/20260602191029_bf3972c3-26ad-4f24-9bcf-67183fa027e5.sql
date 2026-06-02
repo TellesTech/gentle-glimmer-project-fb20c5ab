@@ -1,0 +1,1 @@
+ALTER TABLE public.report_attendance ADD COLUMN IF NOT EXISTS function_role text;
