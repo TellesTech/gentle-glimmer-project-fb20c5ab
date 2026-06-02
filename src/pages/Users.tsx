@@ -316,9 +316,11 @@ export default function UsersPage() {
 
         // Persist site assignments for new user (super admin only)
         if (role === 'super_admin' && createdUserId && assignedSiteIds.size > 0 && formData.role !== 'super_admin') {
-          await supabase.functions.invoke('admin-users', {
+          const sitesResp = await supabase.functions.invoke('admin-users', {
             body: { action: 'set-user-sites', userId: createdUserId, siteIds: Array.from(assignedSiteIds) }
           });
+          const sitesErr = sitesResp.data?.error || sitesResp.error?.message;
+          if (sitesErr) throw new Error(sitesErr);
         }
       }
 
