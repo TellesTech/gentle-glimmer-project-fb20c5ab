@@ -165,7 +165,7 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.0-flash-001',
+          model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: `Analise estes dados da planilha e retorne o JSON formatado:\n\n${JSON.stringify(rawData)}` }
