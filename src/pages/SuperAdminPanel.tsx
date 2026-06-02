@@ -17,6 +17,7 @@ import { SuperAdminCharts } from '@/components/admin/SuperAdminCharts';
 import { Progress } from '@/components/ui/progress';
 import { ValidatedInput } from '@/components/shared/ValidatedInput';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { CompanyFormDialog } from '@/components/companies/CompanyFormDialog';
 import { 
   Crown, Plus, Search, Edit, Trash2, Users, Loader2, Building2, 
   FileText, UserPlus,
@@ -174,35 +175,13 @@ function OverviewTab() {
 
   // Edit/Delete state for hub cards
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<CompanyHubCard | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [editForm, setEditForm] = useState({ name: '', cnpj: '' });
 
   const handleEditCompany = (company: CompanyHubCard) => {
     setSelectedCompany(company);
-    setEditForm({ name: company.name, cnpj: company.cnpj || '' });
     setEditDialogOpen(true);
-  };
-
-  const handleSaveCompany = async () => {
-    if (!selectedCompany || !editForm.name.trim()) return;
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from('companies')
-        .update({ name: editForm.name, cnpj: editForm.cnpj || null })
-        .eq('id', selectedCompany.id);
-      if (error) throw error;
-      toast({ title: 'Fábrica atualizada com sucesso' });
-      setEditDialogOpen(false);
-      fetchStats();
-    } catch (error) {
-      console.error('Error saving company:', error);
-      toast({ title: 'Erro ao salvar fábrica', variant: 'destructive' });
-    } finally {
-      setSaving(false);
-    }
   };
 
   const handleDeleteCompany = async () => {
