@@ -1,27 +1,18 @@
-## Plano
+Plano de correção:
 
-1. **Confirmar o fluxo correto do `/super-admin`**
-   - A tela está redirecionando para o login porque a sessão atual não está como `super_admin`.
-   - O formulário correto de criação/edição de fábrica é chamado em `src/pages/SuperAdminPanel.tsx` e usa `CompanyFormDialog`.
+1. Ajustar o `ImageUploader` para não tratar qualquer texto salvo em `photo_url` como imagem válida.
+   - Hoje, se `image` tiver um valor quebrado/inválido, ele entra no modo de prévia e mostra apenas o ícone de imagem quebrada, escondendo a opção de upload.
+   - Vou adicionar controle de erro no `<img>` para detectar falha de carregamento.
 
-2. **Corrigir o campo no lugar certo**
-   - Ajustar `src/components/companies/CompanyFormDialog.tsx`, que é o diálogo usado pelos botões de editar/criar fábrica no `/super-admin`.
-   - Trocar o uso atual de `ImageUploader` com `label=""` para `label="Foto da Fábrica"` e remover o `Label` externo duplicado, garantindo que o próprio uploader renderize a área “Selecionar arquivo”.
-   - Se necessário, adicionar uma `className`/largura explícita para o upload ocupar a área do formulário e não ficar escondido.
+2. Quando a imagem estiver inválida, mostrar novamente a área normal de upload.
+   - Exibir o campo com “Arraste uma imagem ou Selecionar arquivo”.
+   - Manter o título “Foto da Fábrica”.
+   - Não deixar o texto/URL quebrado ocupar o lugar do botão.
 
-3. **Validar visualmente**
-   - Após implementar, abrir `/super-admin` com sessão autorizada quando disponível.
-   - Confirmar que o diálogo “Nova Fábrica” e “Editar Fábrica” mostram a área de upload com o botão “Selecionar arquivo”.
+3. Melhorar o estado com foto existente válida.
+   - Deixar a opção “Trocar” acessível de forma clara, sem depender apenas do hover se necessário.
+   - Garantir que no formulário de Nova/Editar Fábrica sempre exista uma forma visível de enviar ou trocar a foto.
 
-## Detalhes técnicos
-
-O componente certo já está conectado aqui:
-
-```text
-/super-admin
-└─ SuperAdminPanel.tsx
-   └─ CompanyFormDialog.tsx
-      └─ ImageUploader.tsx
-```
-
-A correção anterior no `ImageUploader` ajuda, mas o ponto mais seguro é deixar o `CompanyFormDialog` passar um label real para o uploader, porque é esse componente que aparece na criação/edição da fábrica.
+4. Validar no fluxo correto.
+   - Conferir `/super-admin` → editar fábrica → seção “Foto da Fábrica”.
+   - Confirmar que imagem quebrada cai no upload e imagem válida mantém prévia com opção de troca.
