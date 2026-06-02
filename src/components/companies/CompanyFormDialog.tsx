@@ -144,17 +144,15 @@ export function CompanyFormDialog({ open, onOpenChange, companyId, onSaved }: Co
             </div>
           ) : (
             <div className="space-y-6 p-6 pt-4">
-              <div className="space-y-2">
-                <Label>Foto da Fábrica</Label>
-                <ImageUploader
-                  image={form.photo_url}
-                  onImageChange={(img) => setForm(prev => ({ ...prev, photo_url: img || '' }))}
-                  label=""
-                  bucketName="company-photos"
-                  folder="companies"
-                  previewSize="lg"
-                />
-              </div>
+              <ImageUploader
+                image={form.photo_url}
+                onImageChange={(img) => setForm(prev => ({ ...prev, photo_url: img || '' }))}
+                label="Foto da Fábrica"
+                bucketName="company-photos"
+                folder="companies"
+                previewSize="lg"
+                className="w-full"
+              />
 
               <Separator />
 
