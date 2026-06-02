@@ -207,13 +207,20 @@ desvios/interferências:
   "Interferências:", "INTERFERENCIAS:", "Interferência:", "Desvios:", "Ocorrências:", "Interrupções:", "Problemas:"
 
 numeroOM:
-  "Nº OM:", "OM:", "Ordem:", "N° OM:", "Nº contrato:", "Contrato:", "Número da OM:"
+  "Nº OM:", "OM:", "Ordem:", "N° OM:", "Nº contrato:", "Contrato:", "Número da OM:", "Nº da OS:", "Número da OS:", "OS:", "Ordem de Serviço:"
 
 tituloOM:
   "Título da OM:", "Título OM:", "Descrição da OM:", "Serviço:"
 
 supervisor:
   "Supervisor:", "👷🏽 Supervisor:", "Encarregado:", "Enc:", "Responsável:", "Líder:"
+
+REGRAS CRÍTICAS PARA EVITAR FALSOS POSITIVOS:
+- pontoAmbulancia: SOMENTE preencha se houver explicitamente "Ponto de Ambulância:", "Ambulância:" ou similar no texto. NUNCA confundir com "Ponto de Encontro".
+- pontoEncontro: preencha quando houver "Ponto de Encontro:".
+- Se a seção de Desvio/Interferência contiver "N/A", "Nenhum", "Sem desvios" etc., retorne desvios: []. Texto após "Desvio: N/A" geralmente são atividades, NÃO comentários nem desvios.
+- comentarios: SOMENTE preencha se houver seção explícita como "Obs:", "Observação:", "Observações:", "Comentários:". NÃO use atividades como comentários.
+- supervisor e responsavelTecnico: retorne null se não houver seção dedicada e nenhum membro do efetivo com função "Supervisor"/"Encarregado"/"RT"/"Engenheiro".
 
 responsavelTecnico:
   "Responsável Técnico:", "RT:", "Engenheiro:", "Técnico Responsável:", "Eng.:", "Engenheiro responsável:"
