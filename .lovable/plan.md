@@ -1,9 +1,22 @@
-## Problema
+## Objetivo
+Quando a planilha importada tiver mais de uma aba, permitir que o usuário escolha qual aba enviar para análise antes do processamento.
 
-A edge function `import-collaborators` usa `google/gemini-2.0-flash-001`, modelo não mais disponível no Lovable AI Gateway. O Gateway retorna 400 com a lista de modelos permitidos, causando o erro "Edge Function returned a non-2xx status code".
+## Mudanças
 
-## Correção
+**`src/components/users/ImportCollaboratorsDialog.tsx`**
 
-Atualizar `supabase/functions/import-collaborators/index.ts` trocando o modelo para `google/gemini-2.5-flash` (substituto direto, rápido e gratuito durante o período promocional do Lovable AI).
+1. Adicionar novo estado `'selectSheet'` ao tipo `Step`.
+2. Ao carregar o arquivo em `parseFile`:
+   - Carregar o workbook com ExcelJS normalmente.
+   - Se `workbook.worksheets.length === 1` (ou CSV) → manter fluxo atual (vai direto para análise).
+   - Se houver 2+ abas → guardar o workbook em estado, listar os nomes das abas e ir para o step `'selectSheet'`.
+3. Nova UI no step `'selectSheet'`:
+   - Lista de abas (RadioGroup) mostrando nome e quantidade de linhas de cada uma.
+   - Botões "Cancelar" e "Continuar" no footer.
+   - Ao confirmar, extrai os dados apenas da aba escolhida e segue para `'analyzing'` + envio à edge function (mesma lógica de hoje).
+4. `resetDialog` limpa também o workbook e a aba selecionada.
 
-Nenhuma outra alteração necessária — o resto do fluxo (auth, parsing, import) está funcional.
+## Comportamento
+- Planilha com 1 aba ou CSV: fluxo idêntico ao atual (nenhuma tela extra).
+- Planilha com várias abas: tela intermediária para escolher a aba antes de enviar à IA.
+- Nenhuma mudança na edge function `import-collaborators`.
