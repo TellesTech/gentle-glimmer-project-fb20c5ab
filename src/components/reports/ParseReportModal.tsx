@@ -30,6 +30,7 @@ interface ParseReportModalProps {
 interface EfetivoItem {
   nome: string;
   funcao?: string | null;
+  presente?: boolean;
 }
 
 interface ParsedReportData {
@@ -80,6 +81,17 @@ function preprocessText(text: string): string {
     .trim();
 }
 
+// Normalize string: lowercase, strip accents, collapse spaces, remove punctuation
+function normalizeName(s: string): string {
+  return (s || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // Levenshtein distance for fuzzy matching
 function levenshtein(a: string, b: string): number {
   const m = a.length, n = b.length;
@@ -103,8 +115,8 @@ function levenshtein(a: string, b: string): number {
 
 // Helper: compute token overlap score between two multi-word names
 const tokenOverlapScore = (a: string, b: string): number => {
-  const tokensA = a.toLowerCase().split(/\s+/);
-  const tokensB = b.toLowerCase().split(/\s+/);
+  const tokensA = normalizeName(a).split(/\s+/).filter(Boolean);
+  const tokensB = normalizeName(b).split(/\s+/).filter(Boolean);
   let score = 0;
   for (const t of tokensA) {
     if (tokensB.includes(t)) score++;
@@ -115,99 +127,88 @@ const tokenOverlapScore = (a: string, b: string): number => {
 // Helper function to match collaborator names from parsed text
 const matchCollaborator = (parsedName: string, profiles: ProfileBasic[]): ProfileBasic | null => {
   if (!parsedName || typeof parsedName !== 'string') return null;
-  const normalized = parsedName.toLowerCase().trim();
+  const normalized = normalizeName(parsedName);
   if (!normalized) return null;
-  
-  // 1. Match exato por nome completo
-  let match = profiles.find(p => p.name?.toLowerCase().trim() === normalized);
-  if (match) return match;
-  
-  // 2. Fuzzy match por nome completo (Levenshtein <= 2) — prioriza sobrenome
-  const normalizedTokens = normalized.split(/\s+/);
-  if (normalizedTokens.length > 1) {
-    let bestDist = 3;
-    let bestMatch: ProfileBasic | null = null;
-    for (const p of profiles) {
-      const pName = p.name?.toLowerCase().trim() || '';
-      const dist = levenshtein(normalized, pName);
-      if (dist < bestDist) {
-        bestDist = dist;
-        bestMatch = p;
-      }
-    }
-    if (bestMatch) return bestMatch;
-  }
 
-  // 3. Match por primeiro nome — com desambiguação por sobrenome
-  const firstName = normalizedTokens[0];
-  const candidates = profiles.filter(p => {
-    const profileFirstName = p.name?.toLowerCase().trim().split(/\s+/)[0];
-    return profileFirstName === firstName;
-  });
+  const needleTokens = normalized.split(/\s+/).filter(Boolean);
 
-  if (candidates.length === 1) return candidates[0];
-  
-  if (candidates.length > 1 && normalizedTokens.length > 1) {
-    // Desambiguar pelo sobrenome: maior overlap de tokens vence
-    let best: ProfileBasic | null = null;
-    let bestScore = 0;
-    let bestLev = Infinity;
-    for (const c of candidates) {
-      const cName = c.name?.toLowerCase().trim() || '';
-      const score = tokenOverlapScore(normalized, cName);
-      const dist = levenshtein(normalized, cName);
-      if (score > bestScore || (score === bestScore && dist < bestLev)) {
-        bestScore = score;
-        bestLev = dist;
-        best = c;
-      }
-    }
-    if (best && bestScore > 0) return best;
-  }
-  
-  if (candidates.length > 0) return candidates[0];
+  // Pré-computar nomes normalizados dos perfis
+  const indexed = profiles
+    .filter(p => p.name)
+    .map(p => {
+      const n = normalizeName(p.name as string);
+      return { profile: p, norm: n, tokens: n.split(/\s+/).filter(Boolean) };
+    });
 
-  // 4. Match parcial (nome contém)
-  match = profiles.find(p => 
-    p.name?.toLowerCase().includes(normalized) || 
-    normalized.includes(p.name?.toLowerCase() || '')
-  );
-  if (match) return match;
+  if (indexed.length === 0) return null;
 
-  // 5. Fuzzy match por primeiro nome (Levenshtein <= 2), desambiguando pelo nome completo
-  let bestDist = 3;
-  let bestFuzzy: ProfileBasic | null = null;
-  const fuzzyCandidates: { profile: ProfileBasic; dist: number }[] = [];
-  for (const p of profiles) {
-    const profileFirstName = p.name?.toLowerCase().trim().split(/\s+/)[0];
-    if (!profileFirstName) continue;
-    const dist = levenshtein(firstName, profileFirstName);
-    if (dist < bestDist) {
-      fuzzyCandidates.length = 0;
-      bestDist = dist;
-      fuzzyCandidates.push({ profile: p, dist });
-    } else if (dist === bestDist) {
-      fuzzyCandidates.push({ profile: p, dist });
+  // 1. Match exato pelo nome completo normalizado
+  const exact = indexed.find(e => e.norm === normalized);
+  if (exact) return exact.profile;
+
+  // 2. Match por substring (nome do texto contido em qualquer perfil, ou vice-versa)
+  //    Útil para "Antonio Mardem" vs "Antonio Marden da Silva" — passo 4 cuida via tokens.
+  //    Aqui pegamos casos como "Lafftow" → "Lafftow Marques de Oliveira".
+  if (needleTokens.length >= 1) {
+    const subMatches = indexed.filter(e => {
+      // Texto inteiro aparece como sequência no nome do perfil
+      return e.norm === normalized
+        || e.norm.startsWith(normalized + ' ')
+        || e.norm.endsWith(' ' + normalized)
+        || e.norm.includes(' ' + normalized + ' ');
+    });
+    if (subMatches.length === 1) return subMatches[0].profile;
+    if (subMatches.length > 1) {
+      // Múltiplos: pega o de menor distância
+      subMatches.sort((a, b) => levenshtein(normalized, a.norm) - levenshtein(normalized, b.norm));
+      return subMatches[0].profile;
     }
   }
 
-  if (fuzzyCandidates.length === 1) {
-    bestFuzzy = fuzzyCandidates[0].profile;
-  } else if (fuzzyCandidates.length > 1 && normalizedTokens.length > 1) {
-    // Múltiplos com mesmo primeiro nome fuzzy — desambiguar pelo nome completo
-    let bestFullDist = Infinity;
-    for (const c of fuzzyCandidates) {
-      const fullDist = levenshtein(normalized, c.profile.name?.toLowerCase().trim() || '');
-      if (fullDist < bestFullDist) {
-        bestFullDist = fullDist;
-        bestFuzzy = c.profile;
-      }
+  // 3. Token-overlap: para cada perfil, contar quantos tokens do texto aparecem no nome do perfil
+  //    Score = nº de tokens em comum. Empate → menor Levenshtein no nome completo.
+  let bestByTokens: { profile: ProfileBasic; score: number; dist: number } | null = null;
+  let runnerUpScore = 0;
+  for (const e of indexed) {
+    let score = 0;
+    for (const t of needleTokens) {
+      if (t.length < 2) continue;
+      // Match exato de token OU token do texto é prefixo de algum token do perfil (>=4 chars) ou vice-versa
+      const hit = e.tokens.some(pt =>
+        pt === t
+        || (t.length >= 4 && pt.startsWith(t))
+        || (pt.length >= 4 && t.startsWith(pt))
+      );
+      if (hit) score++;
     }
-  } else if (fuzzyCandidates.length > 0) {
-    bestFuzzy = fuzzyCandidates[0].profile;
+    if (score === 0) continue;
+    const dist = levenshtein(normalized, e.norm);
+    if (!bestByTokens || score > bestByTokens.score || (score === bestByTokens.score && dist < bestByTokens.dist)) {
+      runnerUpScore = bestByTokens?.score ?? 0;
+      bestByTokens = { profile: e.profile, score, dist };
+    } else if (score > runnerUpScore) {
+      runnerUpScore = score;
+    }
   }
-  
-  return bestFuzzy;
+
+  if (bestByTokens) {
+    // Aceitar se: cobriu todos os tokens do texto, OU venceu por margem (ambiguidade controlada)
+    const allCovered = bestByTokens.score >= needleTokens.filter(t => t.length >= 2).length;
+    const clearWinner = bestByTokens.score > runnerUpScore;
+    if (allCovered || clearWinner) return bestByTokens.profile;
+  }
+
+  // 4. Fallback fuzzy no nome completo (Levenshtein <= 2)
+  let bestFuzzy: { profile: ProfileBasic; dist: number } | null = null;
+  for (const e of indexed) {
+    const dist = levenshtein(normalized, e.norm);
+    if (dist <= 2 && (!bestFuzzy || dist < bestFuzzy.dist)) {
+      bestFuzzy = { profile: e.profile, dist };
+    }
+  }
+  if (bestFuzzy) return bestFuzzy.profile;
+
+  return null;
 };
 
 const FIELD_LABELS: Record<string, string> = {
@@ -381,8 +382,12 @@ export function ParseReportModal({ onDataParsed, teamMembers = [], allProfiles =
       // Attendance
       if (parsed.efetivo && parsed.efetivo.length > 0) {
         const normalizedEfetivo = parsed.efetivo.map(item => {
-          if (typeof item === 'string') return { nome: item, funcao: null as string | null };
-          return { nome: String(item.nome || ''), funcao: item.funcao || null };
+          if (typeof item === 'string') return { nome: item, funcao: null as string | null, presente: true };
+          return {
+            nome: String(item.nome || ''),
+            funcao: item.funcao || null,
+            presente: item.presente === false ? false : true,
+          };
         });
         
         formData.attendance = normalizedEfetivo.map((item, index): Attendance => {
@@ -403,9 +408,9 @@ export function ParseReportModal({ onDataParsed, teamMembers = [], allProfiles =
             reportId: '',
             userId: matchedProfile?.id || null,
             userName: matchedProfile?.name || item.nome,
-            present: true,
-            arrivalTime: parsed.horaInicio || '',
-            departureTime: parsed.horaFim || '',
+            present: item.presente,
+            arrivalTime: item.presente ? (parsed.horaInicio || '') : '',
+            departureTime: item.presente ? (parsed.horaFim || '') : '',
             functionRole,
           };
         });

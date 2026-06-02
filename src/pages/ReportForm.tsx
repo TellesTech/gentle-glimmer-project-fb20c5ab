@@ -826,6 +826,7 @@ export default function ReportForm() {
           <ParseReportModal 
             onDataParsed={handleAIParsedData}
             teamMembers={teamMembers}
+            allProfiles={allProfiles}
           />
         )}
       </div>
