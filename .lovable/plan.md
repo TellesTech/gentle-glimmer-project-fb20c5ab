@@ -1,17 +1,24 @@
-## Objetivo
-Adicionar um botão "Remover Duplicatas" no diálogo de importação de colaboradores que remove completamente os itens duplicados da lista de preview (não apenas marca como skip).
+## Plano
 
-## Local
-`src/components/users/ImportCollaboratorsDialog.tsx` — seção `step === 'preview'`
+Corrigir a ação `delete-all-collaborators` na edge function `admin-users` para que a exclusão em massa realmente encontre os colaboradores de registro (`@internal.local`) sem estourar limite de URL.
 
-## O que será feito
-1. Adicionar função `removeDuplicates` que filtra o estado `collaborators`, removendo todos os itens com `isDuplicate === true`.
-2. Adicionar botão "Remover Duplicatas" junto aos botões de ação existentes (`Selecionar Todos`, `Pular Duplicatas`, `Importar Duplicatas`).
-3. O botão só aparece quando `duplicateCount > 0`.
-4. Atualizar o `Badge` de resumo (contagem de encontrados/duplicatas/selecionados) automaticamente após a remoção, pois o estado reage normalmente.
+### Mudança principal
 
-## Comportamento
-- Ao clicar, todos os colaboradores marcados como duplicatas (`isDuplicate: true`) são removidos da lista `collaborators`.
-- O contador de duplicatas no resumo zera.
-- Os colaboradores restantes continuam selecionáveis/importáveis normalmente.
-- Nenhuma mudança no backend ou Edge Function.
+- Trocar o filtro atual:
+  - `profiles.in('id', collaboratorUserIds).ilike('email', '%@internal.local')`
+- Por uma busca paginada em `profiles`:
+  - `select('id, email')`
+  - `ilike('email', '%@internal.local')`
+  - `.range(...)` em blocos de 1000
+- Cruzar em memória com `Set(collaboratorUserIds)` para manter apenas IDs que também têm role `collaborator`.
+
+### Escopo
+
+- Alterar apenas `supabase/functions/admin-users/index.ts`.
+- Manter o botão e o fluxo atual da tela `/users` sem mudanças.
+- Manter os logs existentes de contagem para facilitar diagnóstico.
+- Preservar a regra de não excluir o próprio usuário autenticado.
+
+### Resultado esperado
+
+Ao clicar em **Excluir Todos**, a função deve localizar corretamente os colaboradores `@internal.local`, excluir em massa pelo Admin API e retornar a quantidade removida no toast.
