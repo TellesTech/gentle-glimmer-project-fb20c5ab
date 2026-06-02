@@ -1,20 +1,21 @@
-## Problema
+## Plano
 
-A função "Interpretar com IA" do RDO está falhando com erro:
-```
-invalid model: google/gemini-2.0-flash-001
-```
+1. **Corrigir a gravação de acesso por fábrica**
+   - Ajustar a ação `set-user-sites` da Edge Function `admin-users` para salvar os acessos de forma idempotente, evitando erro quando já existir vínculo parcial em `site_responsibles` ou `portal_admin_access`.
+   - Tratar conflitos de chave única como operação segura, usando upsert/ignore em vez de insert simples.
 
-O modelo `google/gemini-2.0-flash-001` foi descontinuado pelo gateway de IA da Lovable e não está mais na lista de modelos permitidos.
+2. **Melhorar diagnóstico do erro**
+   - Manter a resposta da função com mensagem real do banco quando falhar, para o toast não mostrar apenas “non-2xx status code”.
+   - Preservar CORS em todas as respostas.
 
-## Solução
+3. **Validar o fluxo no backend**
+   - Testar a chamada `admin-users` com `set-user-sites` para o colaborador da tela e a fábrica “Bahia”.
+   - Confirmar no banco se o vínculo foi salvo nas tabelas usadas pelo app.
 
-Substituir `google/gemini-2.0-flash-001` por `google/gemini-2.5-flash` (modelo equivalente, rápido e atualmente suportado) nas 5 edge functions afetadas:
+## Arquivos prováveis
 
-1. `supabase/functions/parse-report-text/index.ts` — causa direta do erro reportado
-2. `supabase/functions/generate-report-summary/index.ts`
-3. `supabase/functions/magic-write/index.ts`
-4. `supabase/functions/ai-assistant/index.ts`
-5. `supabase/functions/zapi-webhook/index.ts`
+- `supabase/functions/admin-users/index.ts`
 
-Mudança simples de string, sem alteração de lógica. Após o deploy, "Interpretar com IA" voltará a funcionar.
+## Observação
+
+A constraint do `portal_admin_access` já está como `UNIQUE (user_id, site_id)`, então o próximo ajuste deve ser no código da função para lidar melhor com inserções repetidas/parciais entre as duas tabelas.
