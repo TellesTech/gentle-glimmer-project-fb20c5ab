@@ -1,25 +1,28 @@
-## Objetivo
-Evitar erro ao salvar o RDO quando o usuário preenche horas de desvio (operacional/climático/AMT) no formato `HH:MM`, já que as colunas no banco são `numeric`.
+## Diagnóstico
 
-## Mudanças
-Arquivo: `src/pages/SimplifiedReportForm.tsx`
+O erro atual acontece ao salvar o efetivo do RDO:
 
-1. Adicionar helper `hhmmToDecimal(value: string): number | null` ao lado do `formatHHMM` existente:
-   - Aceita string `HH:MM` ou número já decimal
-   - Retorna `null` para string vazia/inválida
-   - Retorna `horas + minutos/60` como número
+`Could not find the 'function_role' column of 'report_attendance' in the schema cache`
 
-2. Nas duas mutations (create em ~L324-330 e update em ~L527-533), converter antes do insert/update:
-   - `operational_deviation_hours: hhmmToDecimal(data.operationalDeviationHours)`
-   - `climatic_deviation_hours: hhmmToDecimal(data.climaticDeviationHours)`
-   - `amt_deviation_hours: hhmmToDecimal(data.amtDeviationHours)`
+A tela está enviando o campo `function_role` para a tabela `report_attendance`, mas essa coluna não existe no banco. A tabela hoje tem apenas: `id`, `report_id`, `user_id`, `user_name`, `present`, `arrival_time`, `departure_time`, `notes`, `created_at`.
 
-3. Leitura (linhas ~210-216): já existe `existingReport.operational_deviation_hours?.toString().slice(0, 5)` — substituir por `formatHHMM(Number(existingReport.operational_deviation_hours))` quando o valor não for nulo, para exibir corretamente `HH:MM` a partir do decimal.
+## Plano de correção
 
-## Não muda
-- Banco de dados (estrutura já está correta após a última migration)
-- `workforce_delays` (já converte corretamente)
-- Demais campos do formulário
+1. **Adicionar a coluna faltante no banco**
+   - Criar uma migration adicionando `function_role` em `public.report_attendance`.
+   - Tipo sugerido: `text`, opcional, para armazenar a função/cargo do colaborador no efetivo.
 
-## Validação
-Após a alteração: criar um RDO com hora de desvio `00:30` preenchida e confirmar que salva sem erro e que ao reabrir o relatório o valor aparece como `00:30`.
+2. **Atualizar os tipos do Supabase**
+   - Ajustar `src/integrations/supabase/types.ts` para incluir `function_role` em `report_attendance`.
+
+3. **Manter o formulário como está**
+   - O código do formulário já envia e lê `function_role` corretamente em criação e edição.
+   - Depois da coluna existir, o salvamento do efetivo deve passar.
+
+4. **Validação final**
+   - Conferir no schema se a coluna foi criada.
+   - Revisar se a inserção enviada pela tela bate com as colunas reais da tabela.
+
+## Resultado esperado
+
+Após aplicar a migration, o RDO deve conseguir salvar o efetivo com função/cargo sem cair no erro de schema cache.
