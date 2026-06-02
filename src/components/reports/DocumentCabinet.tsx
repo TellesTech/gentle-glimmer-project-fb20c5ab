@@ -264,7 +264,16 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
         throw error;
       }
       if (count === 0) {
-        throw new Error('Sem permissão para excluir este item.');
+        toast({
+          title: 'Item já removido',
+          description: `"${deletingItem.name}" não foi encontrado no banco. Atualizando a lista...`,
+        });
+        queryClient.invalidateQueries({ queryKey: ['reports-cabinet-all-v2'] });
+        queryClient.invalidateQueries({ queryKey: ['all-companies-cabinet-v2'] });
+        if (deletingItem.type === 'company' && deletingItem.id === openCompanyId) setOpenCompanyId(null);
+        if (deletingItem.type === 'site' && deletingItem.id === openSiteId) setOpenSiteId(null);
+        if (deletingItem.type === 'project' && deletingItem.id === openProjectId) setOpenProjectId(null);
+        return;
       }
 
       toast({ title: 'Excluído com sucesso', description: `"${deletingItem.name}" foi removido.` });
