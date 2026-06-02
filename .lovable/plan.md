@@ -1,44 +1,29 @@
-## Diagnóstico
+## Por que está zerado
+O hook `useLoginStats` chama `supabase.rpc('get_login_stats')`, mas essa função não existe no banco — então retorna 0 e o bloco de stats fica escondido. No banco há 918 relatórios, 142 projetos e 14 unidades.
 
-A função já está encontrando os colaboradores corretamente. O problema agora é outro: ela tenta apagar todos os usuários encontrados em uma única execução da Edge Function.
+## Mudança (1 migration, sem alteração de UI)
 
-Pelos sinais atuais:
-- A chamada retorna `WORKER_RESOURCE_LIMIT`.
-- Os logs mostram que a função encontrou `446` colaboradores para excluir.
-- A execução morreu antes de finalizar o loop de exclusão.
-- Consulta atual no banco indica que ainda restam `127` colaboradores importados com email `@internal.local`.
+```sql
+CREATE OR REPLACE FUNCTION public.get_login_stats()
+RETURNS jsonb
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT jsonb_build_object(
+    'totalReports',        (SELECT COUNT(*) FROM public.reports),
+    'totalProjects',       (SELECT COUNT(*) FROM public.projects),
+    'totalCompaniesSites', (SELECT COUNT(*) FROM public.sites)
+  );
+$$;
 
-## Plano de correção
+GRANT EXECUTE ON FUNCTION public.get_login_stats() TO anon, authenticated;
+```
 
-Alterar a exclusão em massa para funcionar em lotes pequenos, evitando estourar o limite de compute da Edge Function.
+## Resultado esperado no login
+- Relatórios: 918+
+- Atividades: 142
+- Unidades: 14
 
-### 1. Backend: limitar cada execução da Edge Function
-No case `delete-all-collaborators` em `supabase/functions/admin-users/index.ts`:
-
-- Manter a busca paginada por `profiles.email ilike '%@internal.local'`.
-- Cruzar os IDs em memória com os usuários que têm role `collaborator`.
-- Em vez de tentar apagar todos de uma vez, apagar apenas um lote por chamada, por exemplo `25` usuários.
-- Retornar no JSON:
-  - `deletedCount`: quantos foram removidos nesta chamada.
-  - `remainingCount`: quantos ainda restam para apagar.
-  - `hasMore`: se ainda há mais colaboradores importados para excluir.
-  - `errors`: erros individuais, se houver.
-
-### 2. Frontend: repetir chamadas até acabar
-Em `src/pages/Users.tsx`, no `handleBulkDeleteCollaborators`:
-
-- Chamar `delete-all-collaborators` em loop.
-- Continuar enquanto a resposta vier com `hasMore: true`.
-- Somar o total apagado entre as chamadas.
-- Atualizar o toast ao final com o total removido.
-- Se algum lote falhar, mostrar erro claro e parar o loop.
-
-### 3. Melhorar mensagem de erro
-Ainda no frontend:
-
-- Trocar o erro genérico `Edge Function returned a non-2xx status code` por uma mensagem mais útil quando a Edge Function retornar erro estruturado.
-- Assim, se sobrar algum bloqueio real de exclusão, o toast vai mostrar o motivo.
-
-## Resultado esperado
-
-Ao clicar em **Excluir Todos**, o sistema vai apagar os colaboradores importados em várias execuções curtas, até zerar todos os registros `@internal.local`, sem cair no limite de recursos da Edge Function.
+Os números se atualizam automaticamente conforme o banco cresce (cache de 2 min no React Query, já configurado).
