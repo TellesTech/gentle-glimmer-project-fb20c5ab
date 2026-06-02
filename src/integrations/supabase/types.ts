@@ -2813,7 +2813,8 @@ export type Database = {
           group_name: string | null
           id: string
           is_active: boolean | null
-          project_id: string
+          project_id: string | null
+          site_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -2822,7 +2823,8 @@ export type Database = {
           group_name?: string | null
           id?: string
           is_active?: boolean | null
-          project_id: string
+          project_id?: string | null
+          site_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -2831,7 +2833,8 @@ export type Database = {
           group_name?: string | null
           id?: string
           is_active?: boolean | null
-          project_id?: string
+          project_id?: string | null
+          site_id?: string | null
         }
         Relationships: [
           {
@@ -2839,6 +2842,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_group_projects_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
             referencedColumns: ["id"]
           },
         ]
