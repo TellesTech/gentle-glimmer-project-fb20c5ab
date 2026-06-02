@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { ImageUploader } from '@/components/shared/ImageUploader';
 import { ValidatedInput } from '@/components/shared/ValidatedInput';
 import { PhoneInput } from '@/components/ui/phone-input';
@@ -138,7 +137,7 @@ export function CompanyFormDialog({ open, onOpenChange, companyId, onSaved }: Co
         <DialogHeader className="p-6 pb-0">
           <DialogTitle>{isEdit ? 'Editar' : 'Nova'} Fábrica</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="max-h-[calc(90vh-140px)]">
+        <div className="overflow-y-auto" style={{ maxHeight: 'calc(90vh - 140px)' }}>
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -264,7 +263,7 @@ export function CompanyFormDialog({ open, onOpenChange, companyId, onSaved }: Co
               </div>
             </div>
           )}
-        </ScrollArea>
+        </div>
         <DialogFooter className="p-6 pt-0 border-t mt-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={handleSave} disabled={saving || loading || !form.name.trim()}>
