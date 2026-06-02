@@ -3073,6 +3073,7 @@ export type Database = {
           name: string
         }[]
       }
+      get_login_stats: { Args: never; Returns: Json }
       get_project_predictions: {
         Args: never
         Returns: {
