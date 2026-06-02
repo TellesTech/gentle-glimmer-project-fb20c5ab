@@ -382,7 +382,7 @@ export function ImageUploader({
   if (isEditing && tempImage) {
     return (
       <div className={cn('space-y-2', className)}>
-        <label className="text-sm font-medium">{label}</label>
+        {label && <label className="text-sm font-medium">{label}</label>}
         <ImageEditor
           imageSrc={tempImage}
           onApply={handleEditorApply}
@@ -399,7 +399,7 @@ export function ImageUploader({
   if (showLoading) {
     return (
       <div className={cn('space-y-2', className)}>
-        <label className="text-sm font-medium">{label}</label>
+        {label && <label className="text-sm font-medium">{label}</label>}
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 border-primary/50 bg-primary/5">
           <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
           <p className="text-sm text-muted-foreground">Enviando imagem...</p>
@@ -410,7 +410,7 @@ export function ImageUploader({
 
   return (
     <div className={cn('space-y-2', className)}>
-      <label className="text-sm font-medium">{label}</label>
+      {label && <label className="text-sm font-medium">{label}</label>}
       
       {image ? (
         <div className="space-y-3">

@@ -1,17 +1,14 @@
-### Correção: campo "Foto da Fábrica" não aparece no diálogo de editar/criar fábrica
+Plano para corrigir o upload da fábrica:
 
-**Problema:** O componente `ScrollArea` do shadcn/ui está colapsando a altura do viewport interno, fazendo com que o conteúdo no topo do diálogo (a seção "Foto da Fábrica") não seja renderizado/visível ao abrir o dialog.
+1. Ajustar `src/components/shared/ImageUploader.tsx` para não renderizar uma `<label>` vazia quando `label=""`.
+   - Hoje essa label vazia ocupa a área logo abaixo de “Foto da Fábrica”, dando a impressão de que o upload sumiu.
+   - A correção será renderizar a label interna apenas quando houver texto.
 
-**Arquivo afetado:** `src/components/companies/CompanyFormDialog.tsx`
+2. Ajustar o uso em `src/components/companies/CompanyFormDialog.tsx` para garantir espaço visível do upload.
+   - Manter “Foto da Fábrica” no topo.
+   - Usar o `ImageUploader` com `label="Foto da Fábrica"` ou remover a label externa para evitar duplicidade.
+   - Garantir que a área “Selecionar arquivo” apareça quando não houver imagem e que “Trocar/Editar/Deletar” apareça quando houver imagem.
 
-**Mudanças:**
-
-1. **Remover import do ScrollArea** — a linha `import { ScrollArea } from '@/components/ui/scroll-area';` será removida.
-
-2. **Substituir `<ScrollArea>` por `<div>` com overflow nativo:**
-   - Abertura: `<ScrollArea className="max-h-[calc(90vh-140px)]">` → `<div className="overflow-y-auto px-6 pb-6 pt-4" style={{ maxHeight: 'calc(90vh - 140px)' }}>`
-   - Fechamento: `</ScrollArea>` → `</div>`
-
-3. **Ajustar padding do conteúdo interno:** O `div` interno que envolve os campos tem `className="space-y-6 p-6 pt-4"`. Com o scroll na div externa e padding movido para ela, o padding duplicado será ajustado removendo o `p-6 pt-4` do div interno para evitar padding duplo.
-
-**Resultado esperado:** Ao abrir "Editar Fábrica" ou "Nova Fábrica" no painel `/super-admin`, a seção "Foto da Fábrica" aparecerá imediatamente no topo do diálogo, com scroll funcional para o restante do formulário.
+3. Validar visualmente no `/super-admin`.
+   - Abrir edição/criação de fábrica.
+   - Confirmar que a seção mostra o campo completo de upload logo abaixo do título “Foto da Fábrica”.
