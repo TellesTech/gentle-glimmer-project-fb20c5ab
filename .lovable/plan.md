@@ -1,28 +1,23 @@
-## Diagnóstico
+## Problema
 
-O erro atual acontece ao salvar o efetivo do RDO:
+Ao criar uma atividade, o app envia `status: ""` (string vazia) para o Supabase, e o Postgres rejeita com `invalid input value for enum project_status: ""`.
 
-`Could not find the 'function_role' column of 'report_attendance' in the schema cache`
+Origem: `src/components/reports/ProjectSelector.tsx` linha 322 inicializa `projectFormData.status = ''`, e a linha 1167 envia esse valor direto no insert sem fallback.
 
-A tela está enviando o campo `function_role` para a tabela `report_attendance`, mas essa coluna não existe no banco. A tabela hoje tem apenas: `id`, `report_id`, `user_id`, `user_name`, `present`, `arrival_time`, `departure_time`, `notes`, `created_at`.
+## Correção
 
-## Plano de correção
+Em `src/components/reports/ProjectSelector.tsx`, linha 1167, trocar:
 
-1. **Adicionar a coluna faltante no banco**
-   - Criar uma migration adicionando `function_role` em `public.report_attendance`.
-   - Tipo sugerido: `text`, opcional, para armazenar a função/cargo do colaborador no efetivo.
+```ts
+status: projectFormData.status,
+```
 
-2. **Atualizar os tipos do Supabase**
-   - Ajustar `src/integrations/supabase/types.ts` para incluir `function_role` em `report_attendance`.
+por:
 
-3. **Manter o formulário como está**
-   - O código do formulário já envia e lê `function_role` corretamente em criação e edição.
-   - Depois da coluna existir, o salvamento do efetivo deve passar.
+```ts
+status: projectFormData.status || 'planning',
+```
 
-4. **Validação final**
-   - Conferir no schema se a coluna foi criada.
-   - Revisar se a inserção enviada pela tela bate com as colunas reais da tabela.
+Isso garante que, quando o usuário não seleciona um status no formulário, a atividade é criada como `planning` (mesmo valor padrão da coluna no banco) em vez de mandar string vazia.
 
-## Resultado esperado
-
-Após aplicar a migration, o RDO deve conseguir salvar o efetivo com função/cargo sem cair no erro de schema cache.
+Mudança pontual, 1 linha, sem impacto em outras telas.
