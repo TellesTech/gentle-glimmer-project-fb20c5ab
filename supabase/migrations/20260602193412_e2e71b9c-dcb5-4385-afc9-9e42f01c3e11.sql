@@ -1,0 +1,1 @@
+UPDATE public.projects SET status = 'planning' WHERE status IS NULL;
