@@ -75,7 +75,10 @@ async function loadImageAsBase64(storedUrl: string): Promise<string | null> {
     // Determine which bucket to use based on URL
     const isSystemSettings = storedUrl.includes('system-settings');
     const isCompanyPhotos = storedUrl.includes('company-photos');
-    const bucketName = isSystemSettings ? 'system-settings' : (isCompanyPhotos ? 'company-photos' : 'report-photos');
+    const isLegacyReportPhotos = storedUrl.includes('/report-photos/');
+    const bucketName = isSystemSettings
+      ? 'system-settings'
+      : (isCompanyPhotos ? 'company-photos' : (isLegacyReportPhotos ? 'report-photos' : 'service-report-photos'));
     
     if (!storedUrl.startsWith('http')) {
       // It's a path, create signed URL

@@ -424,7 +424,7 @@ export default function Settings() {
                     maxWidth={400}
                     maxHeight={400}
                     quality={0.85}
-                    bucketName="report-photos"
+                    bucketName="service-report-photos"
                     folder="avatars"
                   />
                   <p className="text-xs text-muted-foreground mt-2 text-center sm:text-left">

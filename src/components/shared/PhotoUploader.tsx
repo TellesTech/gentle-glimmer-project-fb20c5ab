@@ -28,7 +28,7 @@ export function PhotoUploader({
 }: PhotoUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState<UploadingPhoto[]>([]);
-  const { uploadFile, deleteFile, isUploading } = useStorageUpload('report-photos');
+  const { uploadFile, deleteFile, isUploading } = useStorageUpload('service-report-photos');
 
   // Refs to avoid stale closures in async processFiles
   const photosRef = useRef(photos);

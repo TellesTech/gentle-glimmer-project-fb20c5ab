@@ -59,7 +59,7 @@ export function ImageUploader({
   enableEditor = true,
   cropWidth = 300,
   cropHeight = 200,
-  bucketName = 'report-photos',
+  bucketName = 'service-report-photos',
   folder,
   onUploadStart,
   onUploadEnd,
