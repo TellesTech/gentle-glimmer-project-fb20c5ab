@@ -512,24 +512,6 @@ function OverviewTab() {
         )}
       </div>
 
-      {/* Atalhos administrativos */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <Card
-          className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
-          onClick={() => navigate('/admin/backup')}
-        >
-          <CardHeader className="flex flex-row items-center gap-3 space-y-0">
-            <div className="rounded-lg bg-primary/10 p-2">
-              <HardDrive className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-base">Backup do Sistema</CardTitle>
-              <CardDescription className="text-xs">Exportar, agendar e importar backup completo (.zip)</CardDescription>
-            </div>
-          </CardHeader>
-        </Card>
-      </div>
-
       {/* Edit Company Dialog (formulário completo) */}
       <CompanyFormDialog
         open={editDialogOpen}
