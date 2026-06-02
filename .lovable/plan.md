@@ -1,23 +1,14 @@
-## Problema
+Atualizar registros existentes nas tabelas `report_activities` e `projects` onde a coluna `status` é NULL ou string vazia, definindo o valor para `'planning'` (default do enum `project_status`).
 
-Ao criar uma atividade, o app envia `status: ""` (string vazia) para o Supabase, e o Postgres rejeita com `invalid input value for enum project_status: ""`.
+SQL:
+```sql
+UPDATE public.report_activities
+SET status = 'planning'
+WHERE status IS NULL OR status::text = '';
 
-Origem: `src/components/reports/ProjectSelector.tsx` linha 322 inicializa `projectFormData.status = ''`, e a linha 1167 envia esse valor direto no insert sem fallback.
-
-## Correção
-
-Em `src/components/reports/ProjectSelector.tsx`, linha 1167, trocar:
-
-```ts
-status: projectFormData.status,
+UPDATE public.projects
+SET status = 'planning'
+WHERE status IS NULL OR status::text = '';
 ```
 
-por:
-
-```ts
-status: projectFormData.status || 'planning',
-```
-
-Isso garante que, quando o usuário não seleciona um status no formulário, a atividade é criada como `planning` (mesmo valor padrão da coluna no banco) em vez de mandar string vazia.
-
-Mudança pontual, 1 linha, sem impacto em outras telas.
+Execução via tool de migration (única forma de rodar UPDATE neste ambiente).
