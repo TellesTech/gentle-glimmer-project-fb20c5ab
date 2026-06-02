@@ -73,6 +73,7 @@ export function ImageUploader({
   const [isEditing, setIsEditing] = useState(false);
   const [tempImage, setTempImage] = useState<string>('');
   const [isUploadingState, setIsUploadingState] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
   
   const { uploadBase64, deleteFile, isUploading } = useStorageUpload(bucketName);
 
@@ -125,8 +126,10 @@ export function ImageUploader({
   useEffect(() => {
     if (image) {
       getImageInfo(image);
+      setImageLoadError(false);
     } else {
       setImageInfo(null);
+      setImageLoadError(false);
     }
   }, [image, getImageInfo]);
 
@@ -412,7 +415,7 @@ export function ImageUploader({
     <div className={cn('space-y-2', className)}>
       {label && <label className="text-sm font-medium">{label}</label>}
       
-      {image ? (
+      {image && !imageLoadError ? (
         <div className="space-y-3">
           {/* Preview com background quadriculado e overlay hover */}
           <div 
@@ -432,6 +435,7 @@ export function ImageUploader({
             <img
               src={image}
               alt={label}
+              onError={() => setImageLoadError(true)}
               className={cn(
                 "relative z-10 max-w-full rounded-lg object-contain",
                 previewSizeClasses[previewSize]
@@ -517,6 +521,11 @@ export function ImageUploader({
               : 'border-muted-foreground/25 hover:border-primary/50'
           )}
         >
+          {imageLoadError && (
+            <p className="mb-2 text-xs text-destructive">
+              Imagem anterior não pôde ser carregada. Envie uma nova.
+            </p>
+          )}
           <ImageIcon className="mb-2 h-8 w-8 text-muted-foreground" />
           <p className="mb-2 text-sm text-muted-foreground">
             Arraste uma imagem ou
