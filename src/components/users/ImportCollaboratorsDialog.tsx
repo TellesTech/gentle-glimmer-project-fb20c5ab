@@ -37,6 +37,7 @@ type Step = 'upload' | 'selectSheet' | 'analyzing' | 'preview' | 'importing';
 interface SheetInfo {
   name: string;
   rowCount: number;
+  hidden: boolean;
 }
 
 export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: ImportCollaboratorsDialogProps) {
@@ -175,10 +176,16 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
         }
 
         if (sheets.length > 1) {
-          const options: SheetInfo[] = sheets.map(s => ({ name: s.name, rowCount: s.actualRowCount }));
+          const options: SheetInfo[] = sheets
+            .map(s => ({
+              name: s.name,
+              rowCount: s.actualRowCount,
+              hidden: (s as any).state && (s as any).state !== 'visible',
+            }))
+            .sort((a, b) => Number(a.hidden) - Number(b.hidden));
           setPendingWorkbook(workbook);
           setSheetOptions(options);
-          setSelectedSheet(sheets[0].name);
+          setSelectedSheet(options[0].name);
           setStep('selectSheet');
           return;
         }
@@ -384,7 +391,12 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
                   >
                     <RadioGroupItem value={s.name} id={`sheet-${s.name}`} />
                     <div className="flex-1">
-                      <div className="font-medium">{s.name}</div>
+                      <div className="font-medium flex items-center gap-2">
+                        {s.name}
+                        {s.hidden && (
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Oculta</Badge>
+                        )}
+                      </div>
                       <div className="text-xs text-muted-foreground">{s.rowCount} linha(s)</div>
                     </div>
                   </Label>
