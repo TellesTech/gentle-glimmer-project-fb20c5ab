@@ -19,6 +19,22 @@ const formatHHMM = (hours: number) => {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 };
 
+const hhmmToDecimal = (value: string | number | null | undefined): number | null => {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'number') return isFinite(value) ? value : null;
+  const str = String(value).trim();
+  if (!str) return null;
+  if (str.includes(':')) {
+    const [hStr, mStr] = str.split(':');
+    const h = parseInt(hStr, 10);
+    const m = parseInt(mStr || '0', 10);
+    if (isNaN(h) || isNaN(m)) return null;
+    return h + m / 60;
+  }
+  const num = parseFloat(str);
+  return isNaN(num) ? null : num;
+};
+
 interface SelectionState {
   companyId: string;
   companyName: string;
@@ -207,13 +223,13 @@ export default function SimplifiedReportForm() {
     routine: existingReport.routine || '',
     supervisorName: existingReport.supervisor_name || '',
     technicalResponsibleName: existingReport.technical_responsible_name || '',
-    operationalDeviationHours: existingReport.operational_deviation_hours?.toString().slice(0, 5) || '',
+    operationalDeviationHours: existingReport.operational_deviation_hours != null ? formatHHMM(Number(existingReport.operational_deviation_hours)) : '',
     operationalDeviationReason: existingReport.operational_deviation_reason || '',
     operationalDeviationDetails: existingReport.operational_deviation_details || '',
-    climaticDeviationHours: existingReport.climatic_deviation_hours?.toString().slice(0, 5) || '',
+    climaticDeviationHours: existingReport.climatic_deviation_hours != null ? formatHHMM(Number(existingReport.climatic_deviation_hours)) : '',
     climaticDeviationReason: existingReport.climatic_deviation_reason || '',
     climaticDeviationDetails: existingReport.climatic_deviation_details || '',
-    amtDeviationHours: existingReport.amt_deviation_hours?.toString().slice(0, 5) || '',
+    amtDeviationHours: existingReport.amt_deviation_hours != null ? formatHHMM(Number(existingReport.amt_deviation_hours)) : '',
     amtDeviationReason: existingReport.amt_deviation_reason || '',
     amtDeviationDetails: existingReport.amt_deviation_details || '',
     isEmergency: existingReport.is_emergency || false,
@@ -321,13 +337,13 @@ export default function SimplifiedReportForm() {
           real_percentage: data.realPercentage ?? null,
           daily_progress: data.dailyProgress || 0,
           no_activity: data.noActivity || false,
-          operational_deviation_hours: data.operationalDeviationHours || null,
+          operational_deviation_hours: hhmmToDecimal(data.operationalDeviationHours),
           operational_deviation_reason: data.operationalDeviationReason || null,
           operational_deviation_details: data.operationalDeviationDetails || null,
-          climatic_deviation_hours: data.climaticDeviationHours || null,
+          climatic_deviation_hours: hhmmToDecimal(data.climaticDeviationHours),
           climatic_deviation_reason: data.climaticDeviationReason || null,
           climatic_deviation_details: data.climaticDeviationDetails || null,
-          amt_deviation_hours: data.amtDeviationHours || null,
+          amt_deviation_hours: hhmmToDecimal(data.amtDeviationHours),
           amt_deviation_reason: data.amtDeviationReason || null,
           amt_deviation_details: data.amtDeviationDetails || null,
           use_weighted_progress: data.useWeightedProgress || false,
@@ -524,13 +540,13 @@ export default function SimplifiedReportForm() {
           real_percentage: data.realPercentage ?? null,
           daily_progress: data.dailyProgress || 0,
           no_activity: data.noActivity || false,
-          operational_deviation_hours: data.operationalDeviationHours || null,
+          operational_deviation_hours: hhmmToDecimal(data.operationalDeviationHours),
           operational_deviation_reason: data.operationalDeviationReason || null,
           operational_deviation_details: data.operationalDeviationDetails || null,
-          climatic_deviation_hours: data.climaticDeviationHours || null,
+          climatic_deviation_hours: hhmmToDecimal(data.climaticDeviationHours),
           climatic_deviation_reason: data.climaticDeviationReason || null,
           climatic_deviation_details: data.climaticDeviationDetails || null,
-          amt_deviation_hours: data.amtDeviationHours || null,
+          amt_deviation_hours: hhmmToDecimal(data.amtDeviationHours),
           amt_deviation_reason: data.amtDeviationReason || null,
           amt_deviation_details: data.amtDeviationDetails || null,
           updated_at: new Date().toISOString(),
