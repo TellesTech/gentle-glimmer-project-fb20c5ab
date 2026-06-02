@@ -30,6 +30,7 @@ interface ParseReportModalProps {
 interface EfetivoItem {
   nome: string;
   funcao?: string | null;
+  presente?: boolean;
 }
 
 interface ParsedReportData {
@@ -381,8 +382,12 @@ export function ParseReportModal({ onDataParsed, teamMembers = [], allProfiles =
       // Attendance
       if (parsed.efetivo && parsed.efetivo.length > 0) {
         const normalizedEfetivo = parsed.efetivo.map(item => {
-          if (typeof item === 'string') return { nome: item, funcao: null as string | null };
-          return { nome: String(item.nome || ''), funcao: item.funcao || null };
+          if (typeof item === 'string') return { nome: item, funcao: null as string | null, presente: true };
+          return {
+            nome: String(item.nome || ''),
+            funcao: item.funcao || null,
+            presente: item.presente === false ? false : true,
+          };
         });
         
         formData.attendance = normalizedEfetivo.map((item, index): Attendance => {
@@ -403,9 +408,9 @@ export function ParseReportModal({ onDataParsed, teamMembers = [], allProfiles =
             reportId: '',
             userId: matchedProfile?.id || null,
             userName: matchedProfile?.name || item.nome,
-            present: true,
-            arrivalTime: parsed.horaInicio || '',
-            departureTime: parsed.horaFim || '',
+            present: item.presente,
+            arrivalTime: item.presente ? (parsed.horaInicio || '') : '',
+            departureTime: item.presente ? (parsed.horaFim || '') : '',
             functionRole,
           };
         });
