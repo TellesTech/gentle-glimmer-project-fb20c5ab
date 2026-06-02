@@ -750,10 +750,16 @@ serve(async (req) => {
 
         console.log('Found', collaboratorUserIds.length, 'record-only collaborators to delete');
 
+        // Limit per invocation to avoid WORKER_RESOURCE_LIMIT.
+        // Frontend will call repeatedly while hasMore is true.
+        const BATCH_LIMIT = 25;
+        const totalRemaining = collaboratorUserIds.length;
+        const batch = collaboratorUserIds.slice(0, BATCH_LIMIT);
+
         let deletedCount = 0;
         const errors: string[] = [];
 
-        for (const collabId of collaboratorUserIds) {
+        for (const collabId of batch) {
           try {
             // Clean up related records that might block deletion
             await supabaseAdmin.from('app_client_errors').delete().eq('user_id', collabId);
@@ -771,11 +777,15 @@ serve(async (req) => {
           }
         }
 
-        console.log('Bulk delete completed:', deletedCount, 'deleted,', errors.length, 'errors');
+        const remainingCount = Math.max(0, totalRemaining - deletedCount);
+        const hasMore = remainingCount > 0;
+        console.log('Bulk delete batch:', deletedCount, 'deleted,', errors.length, 'errors, remaining:', remainingCount);
 
         return new Response(JSON.stringify({ 
           success: true, 
           deletedCount,
+          remainingCount,
+          hasMore,
           errors: errors.length > 0 ? errors : undefined
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
