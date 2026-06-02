@@ -1,22 +1,27 @@
-## Objetivo
-Quando a IA marcar uma linha como duplicada (nome já existe no sistema ou aparece repetido na planilha), o usuário poderá decidir caso a caso o que fazer, em vez de a linha ficar apenas desmarcada.
+## Problema
+
+O erro `IDLE_TIMEOUT (150s)` ocorre porque a edge function `import-collaborators` processa todos os 214 colaboradores em série (cada um cria um auth user + profile + role, ~500ms cada → ~107s+ e ultrapassa o limite). Importações grandes sempre vão estourar.
+
+## Solução
+
+Importar em **lotes (chunks)** a partir do cliente, chamando a edge function várias vezes com até ~25 colaboradores por chamada. Isso mantém cada chamada bem abaixo do limite de 150s e permite mostrar progresso.
 
 ## Mudanças
 
-**`src/components/users/ImportCollaboratorsDialog.tsx`**
+### 1. `src/components/users/ImportCollaboratorsDialog.tsx`
+- Em `handleImport`, dividir `selected` em chunks de 25.
+- Loop sequencial: para cada chunk chamar `supabase.functions.invoke('import-collaborators', { body: { action: 'import', collaborators: chunk } })`.
+- Acumular `imported` e `errors` de todas as respostas.
+- Adicionar estado `importProgress` (`{ done, total }`) e exibir na tela de `importing` ("Importando 50 de 214...").
+- Toast final consolidado com total importado e total de erros.
+- Se um chunk falhar com erro de rede, continuar os próximos e registrar o erro.
 
-1. Estender o tipo `Collaborator` com um campo `action: 'skip' | 'import'` (padrão `'skip'` para duplicatas, `'import'` para os demais). O `selected` passa a ser derivado de `action === 'import'`.
-2. Na coluna **Status** da tabela de pré-visualização:
-   - Linhas OK: continuam mostrando badge "OK" e checkbox normal.
-   - Linhas duplicadas: substituir o checkbox por um `Select` com as opções:
-     - "Pular" (não importa)
-     - "Importar mesmo assim" (cria novo registro, mesmo havendo nome igual)
-   - Mostrar abaixo do nome o motivo (ex.: "Já cadastrado no sistema" ou "Duplicado na planilha").
-3. Adicionar uma nova ação em massa: "Importar todas as duplicatas mesmo assim" (além das já existentes "Selecionar Todos" e "Desmarcar Duplicatas").
-4. Atualizar o contador de selecionados e o botão "Importar N" para considerar `action === 'import'`.
-5. Nenhuma mudança na edge function `import-collaborators` — ela já cria um novo registro para cada item recebido (sem deduplicar por nome no servidor).
+### 2. `supabase/functions/import-collaborators/index.ts`
+- Nenhuma mudança de lógica necessária; ela já aceita arrays de qualquer tamanho.
+- (Opcional) Adicionar log do tamanho do lote recebido para facilitar debug futuro.
 
-## Comportamento resultante
-- Linhas únicas: continuam selecionadas por padrão.
-- Linhas duplicadas: por padrão ficam como "Pular", mas o usuário pode mudar para "Importar mesmo assim" individualmente ou em lote.
-- O botão de importar envia somente as linhas com `action = 'import'`.
+## Resultado esperado
+
+- 214 colaboradores → ~9 chamadas de 25 → cada chamada ~12s, bem abaixo do timeout.
+- Usuário vê progresso em tempo real.
+- Sem mudanças no fluxo de duplicatas, seleção ou UI de preview.

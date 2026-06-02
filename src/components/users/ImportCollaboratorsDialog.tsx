@@ -48,6 +48,7 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
   const [pendingWorkbook, setPendingWorkbook] = useState<ExcelJS.Workbook | null>(null);
   const [sheetOptions, setSheetOptions] = useState<SheetInfo[]>([]);
   const [selectedSheet, setSelectedSheet] = useState<string>('');
+  const [importProgress, setImportProgress] = useState<{ done: number; total: number }>({ done: 0, total: 0 });
 
   const resetDialog = useCallback(() => {
     setStep('upload');
@@ -261,37 +262,53 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
     }
 
     setStep('importing');
+    setImportProgress({ done: 0, total: selected.length });
+
+    const CHUNK_SIZE = 25;
+    const payload = selected.map(({ nome, email, cargo, telefone, estado }) => ({ nome, email, cargo, telefone, estado }));
+    let totalImported = 0;
+    const allErrors: string[] = [];
 
     try {
-      const response = await supabase.functions.invoke('import-collaborators', {
-        body: { 
-          action: 'import', 
-          collaborators: selected.map(({ nome, email, cargo, telefone, estado }) => ({ nome, email, cargo, telefone, estado }))
-        },
-      });
+      for (let i = 0; i < payload.length; i += CHUNK_SIZE) {
+        const chunk = payload.slice(i, i + CHUNK_SIZE);
+        try {
+          const response = await supabase.functions.invoke('import-collaborators', {
+            body: { action: 'import', collaborators: chunk },
+          });
 
-      if (response.error) {
-        throw new Error(response.error.message);
+          if (response.error) {
+            allErrors.push(`Lote ${Math.floor(i / CHUNK_SIZE) + 1}: ${response.error.message}`);
+          } else if (!response.data?.success) {
+            allErrors.push(`Lote ${Math.floor(i / CHUNK_SIZE) + 1}: ${response.data?.error || 'Erro desconhecido'}`);
+          } else {
+            totalImported += response.data.imported || 0;
+            if (Array.isArray(response.data.errors)) {
+              allErrors.push(...response.data.errors);
+            }
+          }
+        } catch (chunkErr) {
+          console.error('Chunk error:', chunkErr);
+          allErrors.push(`Lote ${Math.floor(i / CHUNK_SIZE) + 1}: ${chunkErr instanceof Error ? chunkErr.message : 'Erro de rede'}`);
+        }
+
+        setImportProgress({ done: Math.min(i + CHUNK_SIZE, payload.length), total: payload.length });
       }
 
-      if (!response.data?.success) {
-        throw new Error(response.data?.error || 'Erro ao importar');
-      }
-
-      toast({ 
-        title: 'Importação concluída', 
-        description: response.data.message 
+      toast({
+        title: 'Importação concluída',
+        description: `${totalImported} colaborador(es) importado(s)${allErrors.length > 0 ? `. ${allErrors.length} erro(s).` : '.'}`,
+        variant: allErrors.length > 0 && totalImported === 0 ? 'destructive' : 'default',
       });
 
       handleClose(false);
       onSuccess();
-
     } catch (error) {
       console.error('Import error:', error);
-      toast({ 
-        title: 'Erro na importação', 
+      toast({
+        title: 'Erro na importação',
         description: error instanceof Error ? error.message : 'Erro desconhecido',
-        variant: 'destructive' 
+        variant: 'destructive',
       });
       setStep('preview');
     }
@@ -349,7 +366,9 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
               <p className="text-muted-foreground">
-                {step === 'analyzing' ? 'A IA está organizando os dados...' : 'Importando colaboradores...'}
+                {step === 'analyzing'
+                  ? 'A IA está organizando os dados...'
+                  : `Importando ${importProgress.done} de ${importProgress.total} colaboradores...`}
               </p>
             </div>
           )}
