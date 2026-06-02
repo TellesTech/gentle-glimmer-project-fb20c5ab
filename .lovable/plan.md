@@ -1,17 +1,17 @@
-## Problema
+## Objetivo
+Adicionar um botão "Remover Duplicatas" no diálogo de importação de colaboradores que remove completamente os itens duplicados da lista de preview (não apenas marca como skip).
 
-Algumas planilhas têm abas ocultas (hidden/veryHidden) que o ExcelJS lista em `workbook.worksheets`, mas que podem não estar contando ou exibindo o nome corretamente. Além disso, hoje só mostramos a tela de seleção quando há mais de 1 aba — e queremos incluir as ocultas.
+## Local
+`src/components/users/ImportCollaboratorsDialog.tsx` — seção `step === 'preview'`
 
-## Solução
+## O que será feito
+1. Adicionar função `removeDuplicates` que filtra o estado `collaborators`, removendo todos os itens com `isDuplicate === true`.
+2. Adicionar botão "Remover Duplicatas" junto aos botões de ação existentes (`Selecionar Todos`, `Pular Duplicatas`, `Importar Duplicatas`).
+3. O botão só aparece quando `duplicateCount > 0`.
+4. Atualizar o `Badge` de resumo (contagem de encontrados/duplicatas/selecionados) automaticamente após a remoção, pois o estado reage normalmente.
 
-Em `src/components/users/ImportCollaboratorsDialog.tsx`, no fluxo `parseFile`:
-
-1. Após carregar o workbook, considerar **todas** as abas (`workbook.worksheets`), inclusive `hidden` e `veryHidden`.
-2. Se houver mais de 1 aba (qualquer estado), mostrar a tela `selectSheet` com:
-   - Nome da aba
-   - Quantidade de linhas
-   - Badge "Oculta" para abas com `state !== 'visible'`
-3. Manter o comportamento atual de pular direto para análise quando houver apenas 1 aba.
-4. Ordenar as abas: visíveis primeiro, depois ocultas.
-
-Nenhuma mudança no backend / edge function.
+## Comportamento
+- Ao clicar, todos os colaboradores marcados como duplicatas (`isDuplicate: true`) são removidos da lista `collaborators`.
+- O contador de duplicatas no resumo zera.
+- Os colaboradores restantes continuam selecionáveis/importáveis normalmente.
+- Nenhuma mudança no backend ou Edge Function.
