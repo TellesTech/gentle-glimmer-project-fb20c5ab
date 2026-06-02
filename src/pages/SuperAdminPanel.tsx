@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,7 +21,7 @@ import { CompanyFormDialog } from '@/components/companies/CompanyFormDialog';
 import { 
   Crown, Plus, Search, Edit, Trash2, Users, Loader2, Building2, 
   FileText, UserPlus,
-  PenTool, CheckCircle2, AlertCircle, Pencil, HardDrive
+  PenTool, CheckCircle2, AlertCircle, Pencil
 } from 'lucide-react';
 
 // =============== TYPES ===============
