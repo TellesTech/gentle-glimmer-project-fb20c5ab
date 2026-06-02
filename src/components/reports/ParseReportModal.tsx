@@ -219,7 +219,22 @@ const matchCollaborator = (parsedName: string, profiles: ProfileBasic[]): Profil
     else if (dist === bestDist) candidates.push(p);
   }
 
-  if (candidates.length === 0) return null;
+  // Fallback: token contido em qualquer posição do nome do perfil
+  // Útil para "Erivan" -> "Francisco Erivan Alves Barros Filho"
+  // ou "Maranhão" como apelido de uma pessoa cadastrada.
+  const tokenFallback = (): ProfileBasic | null => {
+    const tokenMatches = profiles.filter((p) => {
+      if (!p.name) return false;
+      const tokens = norm(p).split(' ');
+      return tokens.some((tok) => tok.length >= 3 && damerauLevenshtein(firstName, tok) <= 1);
+    });
+    if (tokenMatches.length === 1) return tokenMatches[0];
+    return null;
+  };
+
+  if (candidates.length === 0) {
+    return tokenFallback();
+  }
 
   // Se o input tinha sobrenome, exige sobrenome compatível
   if (secondName) {
@@ -228,25 +243,16 @@ const matchCollaborator = (parsedName: string, profiles: ProfileBasic[]): Profil
       if (np.length < 2) return false;
       return np.slice(1).some((tok) => damerauLevenshtein(secondName, tok) <= 2);
     });
-    if (validated.length === 0) return null;
+    if (validated.length === 0) return tokenFallback();
     candidates = validated;
-  } else {
-    // Sem sobrenome no input: aceita match único pelo primeiro nome
-    // (Wellington -> Jose Wellington só seria pego se o "wellington" for o primeiro token;
-    // como não é, esse caso cai para o passo 4 abaixo.)
   }
 
   if (candidates.length === 1) return candidates[0];
 
-  // 4. Fallback: token contido em qualquer posição do nome do perfil
-  // Útil para "Wellington" -> "Jose Wellington Araujo de Souza"
+  // Última tentativa: token em qualquer posição
   if (parts.length === 1) {
-    const tokenMatches = profiles.filter((p) => {
-      if (!p.name) return false;
-      const tokens = norm(p).split(' ');
-      return tokens.some((tok) => damerauLevenshtein(firstName, tok) <= 1);
-    });
-    if (tokenMatches.length === 1) return tokenMatches[0];
+    const fb = tokenFallback();
+    if (fb) return fb;
   }
 
   return null;
@@ -422,14 +428,25 @@ export function ParseReportModal({ onDataParsed, teamMembers = [], allProfiles =
 
       // Attendance
       if (parsed.efetivo && parsed.efetivo.length > 0) {
-        const normalizedEfetivo = parsed.efetivo.map(item => {
-          if (typeof item === 'string') return { nome: item, funcao: null as string | null, presente: true };
-          return {
-            nome: String(item.nome || ''),
-            funcao: item.funcao || null,
-            presente: item.presente === false ? false : true,
-          };
-        });
+        const normalizedEfetivo = parsed.efetivo
+          .map(item => {
+            if (typeof item === 'string') return { nome: item, funcao: null as string | null, presente: true };
+            return {
+              nome: String(item.nome || ''),
+              funcao: item.funcao || null,
+              presente: item.presente === false ? false : true,
+            };
+          })
+          // Ignora linhas sem nome real (ex.: "9.N1-✅" vira nome "N1" ou vazio)
+          .filter(item => {
+            const n = (item.nome || '').trim();
+            if (n.length < 2) return false;
+            const normalized = normalizeName(n);
+            // Se sobrar apenas tokens de função/nível, descartar
+            const cleaned = stripFunctionTokens(normalized);
+            if (!cleaned) return false;
+            return true;
+          });
         
         formData.attendance = normalizedEfetivo.map((item, index): Attendance => {
           const matchedTeamMember = matchCollaborator(item.nome, teamMembers.map(m => ({ id: m.id, name: m.name })));
