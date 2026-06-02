@@ -12,7 +12,7 @@ interface SignedUrlResult {
   error: Error | null;
 }
 
-export function useStorageUpload(bucketName: string = 'report-photos') {
+export function useStorageUpload(bucketName: string = 'service-report-photos') {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
