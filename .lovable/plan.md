@@ -1,24 +1,25 @@
-Vou corrigir o fluxo de criação/salvamento do RDO de ponta a ponta.
+## Objetivo
+Evitar erro ao salvar o RDO quando o usuário preenche horas de desvio (operacional/climático/AMT) no formato `HH:MM`, já que as colunas no banco são `numeric`.
 
-Plano:
+## Mudanças
+Arquivo: `src/pages/SimplifiedReportForm.tsx`
 
-1. Corrigir incompatibilidade entre formulário e banco
-- O formulário novo de RDO envia campos que não existem atualmente na tabela `reports`, como dados de emergência, rádio, bloqueio, pontos de encontro/liberação e rotina.
-- Vou criar uma migration adicionando essas colunas faltantes em `reports`, para o insert/update não falhar.
+1. Adicionar helper `hhmmToDecimal(value: string): number | null` ao lado do `formatHHMM` existente:
+   - Aceita string `HH:MM` ou número já decimal
+   - Retorna `null` para string vazia/inválida
+   - Retorna `horas + minutos/60` como número
 
-2. Corrigir etapas ponderadas
-- O código tenta salvar em `report_activity_steps`, mas essa tabela não existe no banco conectado.
-- Vou criar a tabela com permissões, RLS e políticas seguindo o mesmo padrão das demais tabelas filhas do RDO.
+2. Nas duas mutations (create em ~L324-330 e update em ~L527-533), converter antes do insert/update:
+   - `operational_deviation_hours: hhmmToDecimal(data.operationalDeviationHours)`
+   - `climatic_deviation_hours: hhmmToDecimal(data.climaticDeviationHours)`
+   - `amt_deviation_hours: hhmmToDecimal(data.amtDeviationHours)`
 
-3. Corrigir permissões de acesso via API
-- As tabelas públicas do RDO não aparecem com grants para `authenticated`/`service_role` na consulta de privilégios.
-- Vou garantir permissões explícitas para `reports`, `report_activities`, `report_attendance`, `report_deviations`, `report_photos`, `report_activity_steps` e `workforce_delays`, sem mexer em dados existentes.
+3. Leitura (linhas ~210-216): já existe `existingReport.operational_deviation_hours?.toString().slice(0, 5)` — substituir por `formatHHMM(Number(existingReport.operational_deviation_hours))` quando o valor não for nulo, para exibir corretamente `HH:MM` a partir do decimal.
 
-4. Ajustar o frontend para evitar novos bloqueios
-- Vou melhorar o tratamento de erro no `SimplifiedReportForm` para mostrar a mensagem real do Supabase, em vez de apenas “Erro ao criar relatório”.
-- Vou sanitizar campos antes de salvar: `team_id` vazio vira `null`, listas vazias não geram inserts inválidos, e atrasos adicionais só salvam quando tiverem dados mínimos válidos.
+## Não muda
+- Banco de dados (estrutura já está correta após a última migration)
+- `workforce_delays` (já converte corretamente)
+- Demais campos do formulário
 
-5. Validar o resultado
-- Depois da correção, vou revisar as consultas e logs relevantes para confirmar que o banco aceita os campos/tabelas esperados e que o erro genérico foi removido.
-
-Observação: o navegador de teste caiu na tela de login, então não vou executar ações dentro da sua conta. A validação será feita por estrutura do banco, logs/requisições e código.
+## Validação
+Após a alteração: criar um RDO com hora de desvio `00:30` preenchida e confirmar que salva sem erro e que ao reabrir o relatório o valor aparece como `00:30`.
