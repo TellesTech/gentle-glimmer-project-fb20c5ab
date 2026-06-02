@@ -260,14 +260,17 @@ export default function UsersPage() {
 
         // Função do colaborador é resolvida via profiles.job_title em tempo de leitura
 
-        toast({ title: 'Usuário atualizado com sucesso' });
-
-        // Persist site assignments (backend validates super_admin permission)
-        if (editingUser.role !== 'super_admin') {
-          await supabase.functions.invoke('admin-users', {
+        // Persist site assignments (backend validates super_admin permission).
+        // Skip only when the *resulting* role is super_admin (acesso total automático).
+        if (formData.role !== 'super_admin') {
+          const sitesResp = await supabase.functions.invoke('admin-users', {
             body: { action: 'set-user-sites', userId: editingUser.id, siteIds: Array.from(assignedSiteIds) }
           });
+          const sitesErr = sitesResp.data?.error || sitesResp.error?.message;
+          if (sitesErr) throw new Error(sitesErr);
         }
+
+        toast({ title: 'Usuário atualizado com sucesso' });
       } else {
         // Different flow for collaborators vs users with system access
         let createdUserId: string | null = null;

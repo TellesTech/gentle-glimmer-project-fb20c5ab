@@ -1,29 +1,26 @@
-## Por que está zerado
-O hook `useLoginStats` chama `supabase.rpc('get_login_stats')`, mas essa função não existe no banco — então retorna 0 e o bloco de stats fica escondido. No banco há 918 relatórios, 142 projetos e 14 unidades.
+## Plano
 
-## Mudança (1 migration, sem alteração de UI)
+1. **Corrigir o salvamento da liberação por fábrica**
+   - Fazer o botão **Salvar** tratar erro também na etapa `set-user-sites`.
+   - Só mostrar “Usuário atualizado com sucesso” depois que dados do colaborador e fábricas forem salvos com sucesso.
+   - Atualizar a contagem/listagem após salvar, para o badge de fábricas refletir o banco.
 
-```sql
-CREATE OR REPLACE FUNCTION public.get_login_stats()
-RETURNS jsonb
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT jsonb_build_object(
-    'totalReports',        (SELECT COUNT(*) FROM public.reports),
-    'totalProjects',       (SELECT COUNT(*) FROM public.projects),
-    'totalCompaniesSites', (SELECT COUNT(*) FROM public.sites)
-  );
-$$;
+2. **Ajustar o caso de admin/super_admin selecionado como colaborador de fábrica**
+   - Hoje a função escolhe uma tabela diferente conforme o papel do usuário: `admin` vai para `portal_admin_access`, enquanto colaborador vai para `site_responsibles`.
+   - Para não perder acesso quando o papel muda ou quando um admin é liberado por fábrica, vou fazer a gravação manter as tabelas coerentes e evitar sobras conflitantes.
 
-GRANT EXECUTE ON FUNCTION public.get_login_stats() TO anon, authenticated;
-```
+3. **Validar o caso do Alef**
+   - Conferi no banco que **Jose Alefy Viana Jovino** está como `super_admin` e possui 1 fábrica registrada.
+   - Como `super_admin` deve ver todas as fábricas automaticamente, vou garantir que a UI não dependa da tabela de liberação para ele.
+   - Para usuários `admin`/`collaborator`, o seletor do portal continuará usando apenas as fábricas atribuídas.
 
-## Resultado esperado no login
-- Relatórios: 918+
-- Atividades: 142
-- Unidades: 14
+## Arquivos previstos
 
-Os números se atualizam automaticamente conforme o banco cresce (cache de 2 min no React Query, já configurado).
+- `src/pages/Users.tsx`
+- `supabase/functions/admin-users/index.ts`
+
+## Resultado esperado
+
+- Ao selecionar fábricas e salvar, falhas de gravação aparecem na tela em vez de parecer que salvou.
+- O acesso por fábrica passa a aparecer corretamente no seletor/topo/sidebar para usuários internos com acesso restrito.
+- Super admins continuam com acesso total, independentemente das fábricas selecionadas.
