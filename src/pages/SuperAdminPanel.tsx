@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,7 +21,7 @@ import { CompanyFormDialog } from '@/components/companies/CompanyFormDialog';
 import { 
   Crown, Plus, Search, Edit, Trash2, Users, Loader2, Building2, 
   FileText, UserPlus,
-  PenTool, CheckCircle2, AlertCircle, Pencil, HardDrive
+  PenTool, CheckCircle2, AlertCircle, Pencil
 } from 'lucide-react';
 
 // =============== TYPES ===============
@@ -510,24 +510,6 @@ function OverviewTab() {
             </Card>
           </div>
         )}
-      </div>
-
-      {/* Atalhos administrativos */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <Card
-          className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
-          onClick={() => navigate('/admin/backup')}
-        >
-          <CardHeader className="flex flex-row items-center gap-3 space-y-0">
-            <div className="rounded-lg bg-primary/10 p-2">
-              <HardDrive className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-base">Backup do Sistema</CardTitle>
-              <CardDescription className="text-xs">Exportar, agendar e importar backup completo (.zip)</CardDescription>
-            </div>
-          </CardHeader>
-        </Card>
       </div>
 
       {/* Edit Company Dialog (formulário completo) */}
