@@ -428,14 +428,17 @@ export function ParseReportModal({ onDataParsed, teamMembers = [], allProfiles =
 
       // Attendance
       if (parsed.efetivo && parsed.efetivo.length > 0) {
-        const normalizedEfetivo = parsed.efetivo.map(item => {
-          if (typeof item === 'string') return { nome: item, funcao: null as string | null, presente: true };
-          return {
-            nome: String(item.nome || ''),
-            funcao: item.funcao || null,
-            presente: item.presente === false ? false : true,
-          };
-        });
+        const normalizedEfetivo = parsed.efetivo
+          .map(item => {
+            if (typeof item === 'string') return { nome: item, funcao: null as string | null, presente: true };
+            return {
+              nome: String(item.nome || ''),
+              funcao: item.funcao || null,
+              presente: item.presente === false ? false : true,
+            };
+          })
+          // Ignora linhas sem nome (ex.: "9.N1-✅")
+          .filter(item => item.nome && item.nome.trim().length > 1);
         
         formData.attendance = normalizedEfetivo.map((item, index): Attendance => {
           const matchedTeamMember = matchCollaborator(item.nome, teamMembers.map(m => ({ id: m.id, name: m.name })));
