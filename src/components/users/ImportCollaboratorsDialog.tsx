@@ -261,6 +261,10 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
     setCollaborators(prev => prev.map(c => (c.isDuplicate ? { ...c, action: 'import' } : c)));
   }, []);
 
+  const removeDuplicates = useCallback(() => {
+    setCollaborators(prev => prev.filter(c => !c.isDuplicate));
+  }, []);
+
   const handleImport = useCallback(async () => {
     const selected = collaborators.filter(c => c.action === 'import');
     if (selected.length === 0) {
@@ -437,6 +441,9 @@ export function ImportCollaboratorsDialog({ open, onOpenChange, onSuccess }: Imp
                     </Button>
                     <Button variant="outline" size="sm" onClick={importAllDuplicates}>
                       Importar Duplicatas
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={removeDuplicates}>
+                      Remover Duplicatas
                     </Button>
                   </>
                 )}
