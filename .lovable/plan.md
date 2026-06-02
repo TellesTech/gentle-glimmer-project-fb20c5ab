@@ -1,25 +1,54 @@
-## Diagnóstico
+## Contexto
 
-O erro atual não é falta de dados nem problema no modal: a Edge Function publicada ainda está chamando o modelo antigo `google/gemini-2.0-flash-001`, e o Lovable AI Gateway rejeita com `400 invalid model`.
+- **Tela 1 — `/home` (`src/pages/Home.tsx`)**: WelcomeHeader, QuickActions (Criar Relatório, Meus Relatórios, Gerenciar Assinaturas), UserDashboardStats, UserRecentReports, UserProjectsList. Hoje é o destino pós-login de **84 colaboradores**.
+- **Tela 2 — `/super-admin` (`src/pages/SuperAdminPanel.tsx`)**: Dashboard com cards das fábricas + Backup. Destino dos 2 super admins.
+- O `ProtectedRoute` já redireciona `super_admin` de `/home` → `/super-admin`. Logo, o super admin nunca vê a Tela 1. A redundância real é que **a Tela 1 não é mais a "home" do sistema** — você quer só uma home.
 
-No arquivo local já aparece `google/gemini-3-flash-preview`, então o problema provável é que a função publicada no Supabase não foi redeployada após a alteração anterior.
+## Decisão proposta
 
-## Plano de correção
+Eliminar a Tela 1 (`/home`) e tornar `/super-admin` a única "home", redirecionando cada papel para o lugar certo:
 
-1. Reimplantar a Edge Function `generate-service-report` para publicar a versão local corrigida.
-2. Testar a função implantada com o mesmo payload do erro atual:
-   - `project_id`: `4d114afb-0449-4b5e-8ab6-fdf48751e7aa`
-   - `site_id`: `3b9d33c6-4587-4088-b30e-a9062b05396f`
-   - `period_start`: `null`
-   - `period_end`: `null`
-3. Conferir os logs da Edge Function após o teste para confirmar que ela chama `google/gemini-3-flash-preview` e não retorna mais `AI error: 400`.
-4. Se ainda houver erro 400, trocar a chamada manual `fetch` para o padrão recomendado do Lovable AI Gateway com AI SDK/OpenAI-compatible, preservando o schema estruturado do relatório.
-5. Melhorar a mensagem retornada ao app para exibir o detalhe real do gateway quando houver erro de IA, em vez de apenas `AI error: 400`.
+| Papel | Novo destino pós-login |
+|---|---|
+| `super_admin` | `/super-admin` (cards de fábricas) |
+| `admin` com 1 unidade | `/sites/:id/dashboard` (já era) |
+| `admin` com várias | `/super-admin` (mesmos cards de fábricas) |
+| `collaborator` | `/reports` (lista dos relatórios dele — é o que ele mais usa; as ações de "Criar Relatório", "Meus Relatórios" e "Gerenciar Assinaturas" já estão acessíveis pela sidebar/bottom-nav) |
 
-## Arquivos envolvidos
+> Se preferir outro destino para colaborador (`/reports/new`, `/admin/signatures`, etc.), me diga antes de eu implementar.
 
-- `supabase/functions/generate-service-report/index.ts`
+## Alterações
 
-## Resultado esperado
+### 1. Roteamento (`src/App.tsx`)
+- Remover `import Home`.
+- Trocar `<Route path="/home" element={<Home />} />` por um componente `HomeRedirect` que lê `role` + `useAdminSiteAccess` e faz `<Navigate>` para o destino correto.
+- Manter o fallback `"/admin/*" → "/home"` apontando para `/home` (que agora só redireciona).
 
-O botão “Gerar Relatório com IA” deixa de falhar com `Edge Function returned a non-2xx status code` por modelo inválido, e o relatório volta a ser gerado com a versão atual do Lovable AI Gateway.
+### 2. `src/components/ProtectedRoute.tsx`
+- Remover a lógica específica de `/home` (super_admin e admin), pois passa toda para o `HomeRedirect`.
+
+### 3. Arquivos deletados
+- `src/pages/Home.tsx`
+- `src/components/home/WelcomeHeader.tsx`
+- `src/components/home/QuickActions.tsx`
+- `src/components/home/UserDashboardStats.tsx`
+- `src/components/home/UserRecentReports.tsx`
+- `src/components/home/UserProjectsList.tsx`
+- `src/components/home/StatsCards.tsx`
+- `src/components/home/CompanyCard.tsx`
+- `src/components/home/ProjectCard.tsx`
+- `src/components/home/SiteCard.tsx`
+- `src/components/home/index.ts`
+- Pasta `src/components/home/` inteira
+
+Antes de excluir cada um, confirmar via `rg` que não há import fora de `Home.tsx`.
+
+### 4. Sidebar / MobileSidebar / BottomNav
+- Manter links "Início" apontando para `/home` (o redirect cuida do resto) — sem alteração visual.
+
+## Verificação após implementar
+
+1. Login como super_admin → cai em `/super-admin`.
+2. Login como collaborator → cai em `/reports`.
+3. Clicar "Início" na sidebar funciona para ambos.
+4. Build sem erros de import órfão.
