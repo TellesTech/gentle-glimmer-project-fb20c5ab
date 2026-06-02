@@ -1,54 +1,42 @@
-## Contexto
+## Problema
 
-- **Tela 1 — `/home` (`src/pages/Home.tsx`)**: WelcomeHeader, QuickActions (Criar Relatório, Meus Relatórios, Gerenciar Assinaturas), UserDashboardStats, UserRecentReports, UserProjectsList. Hoje é o destino pós-login de **84 colaboradores**.
-- **Tela 2 — `/super-admin` (`src/pages/SuperAdminPanel.tsx`)**: Dashboard com cards das fábricas + Backup. Destino dos 2 super admins.
-- O `ProtectedRoute` já redireciona `super_admin` de `/home` → `/super-admin`. Logo, o super admin nunca vê a Tela 1. A redundância real é que **a Tela 1 não é mais a "home" do sistema** — você quer só uma home.
+Existem dois diálogos diferentes para fábrica:
 
-## Decisão proposta
+1. **Completo** (`ProjectSelector.tsx`, linhas 2007‑2221): foto, nome, CNPJ, Nº contrato, telefone, email, endereço (rua/cidade/UF/CEP), Cliente Ativo, Responsável Principal, Observações. Usado em `/reports/new`.
+2. **Reduzido** (`SuperAdminPanel.tsx`, linhas 555‑587): só Nome + CNPJ. Disparado pelo lápis do card de fábrica em `/super-admin`.
 
-Eliminar a Tela 1 (`/home`) e tornar `/super-admin` a única "home", redirecionando cada papel para o lugar certo:
+Quando o super admin clica em "Editar" no card, abre só o reduzido — perdendo todos os outros campos da fábrica.
 
-| Papel | Novo destino pós-login |
-|---|---|
-| `super_admin` | `/super-admin` (cards de fábricas) |
-| `admin` com 1 unidade | `/sites/:id/dashboard` (já era) |
-| `admin` com várias | `/super-admin` (mesmos cards de fábricas) |
-| `collaborator` | `/reports` (lista dos relatórios dele — é o que ele mais usa; as ações de "Criar Relatório", "Meus Relatórios" e "Gerenciar Assinaturas" já estão acessíveis pela sidebar/bottom-nav) |
+## Solução
 
-> Se preferir outro destino para colaborador (`/reports/new`, `/admin/signatures`, etc.), me diga antes de eu implementar.
+Extrair o formulário completo num componente reutilizável e usar nos dois lugares.
 
-## Alterações
+### 1. Criar `src/components/companies/CompanyFormDialog.tsx`
+Componente isolado que recebe:
+- `open`, `onOpenChange`
+- `companyId?: string | null` (null/undefined = criar; preenchido = editar)
+- `onSaved?: () => void` (callback de refetch)
 
-### 1. Roteamento (`src/App.tsx`)
-- Remover `import Home`.
-- Trocar `<Route path="/home" element={<Home />} />` por um componente `HomeRedirect` que lê `role` + `useAdminSiteAccess` e faz `<Navigate>` para o destino correto.
-- Manter o fallback `"/admin/*" → "/home"` apontando para `/home` (que agora só redireciona).
+Internamente:
+- Se `companyId` presente, carrega o registro completo de `companies` no `useEffect` quando o dialog abre, e popula o estado do form.
+- Reaproveita exatamente o mesmo JSX/markup do bloco atual em `ProjectSelector.tsx` (foto, dados, endereço, switch Cliente Ativo, responsável, observações).
+- `handleSave` faz `update` quando há `companyId` e `insert` quando não há, com o mesmo payload usado hoje no ProjectSelector.
+- Mostra toasts de sucesso/erro coerentes.
 
-### 2. `src/components/ProtectedRoute.tsx`
-- Remover a lógica específica de `/home` (super_admin e admin), pois passa toda para o `HomeRedirect`.
+### 2. Substituir o diálogo reduzido em `SuperAdminPanel.tsx`
+- Remover bloco `Edit Company Dialog` (linhas 554‑587), estado `editForm`, `handleSaveCompany` e `setEditDialogOpen`.
+- Trocar por `<CompanyFormDialog open={editDialogOpen} onOpenChange={setEditDialogOpen} companyId={selectedCompany?.id ?? null} onSaved={fetchStats} />`.
+- `handleEditCompany` passa a só setar `selectedCompany` + abrir.
 
-### 3. Arquivos deletados
-- `src/pages/Home.tsx`
-- `src/components/home/WelcomeHeader.tsx`
-- `src/components/home/QuickActions.tsx`
-- `src/components/home/UserDashboardStats.tsx`
-- `src/components/home/UserRecentReports.tsx`
-- `src/components/home/UserProjectsList.tsx`
-- `src/components/home/StatsCards.tsx`
-- `src/components/home/CompanyCard.tsx`
-- `src/components/home/ProjectCard.tsx`
-- `src/components/home/SiteCard.tsx`
-- `src/components/home/index.ts`
-- Pasta `src/components/home/` inteira
+### 3. Trocar o card "Nova Fábrica" em `/super-admin`
+Hoje ele faz `navigate('/companies-manage')` (que redireciona para `/reports/new`). Trocar para abrir o `CompanyFormDialog` sem `companyId` no próprio `/super-admin`, mantendo o usuário na tela.
 
-Antes de excluir cada um, confirmar via `rg` que não há import fora de `Home.tsx`.
+### 4. (Opcional, mesma PR) Atualizar `ProjectSelector.tsx`
+Substituir o JSX inline (linhas 2007‑2221) por `<CompanyFormDialog ... />`, removendo `companyFormData`, `initialCompanyFormData`, `handleSaveCompany`, etc. Isso elimina duplicação e mantém um único ponto de manutenção.
 
-### 4. Sidebar / MobileSidebar / BottomNav
-- Manter links "Início" apontando para `/home` (o redirect cuida do resto) — sem alteração visual.
+## Verificação
 
-## Verificação após implementar
-
-1. Login como super_admin → cai em `/super-admin`.
-2. Login como collaborator → cai em `/reports`.
-3. Clicar "Início" na sidebar funciona para ambos.
-4. Build sem erros de import órfão.
+1. Em `/super-admin`, clicar lápis em "Aperam" → abre dialog com todos os campos preenchidos da fábrica.
+2. Editar e salvar → toast OK + card atualizado.
+3. Clicar "+ Nova Fábrica" no super-admin → mesmo dialog vazio, cria a fábrica.
+4. Em `/reports/new`, criar/editar fábrica continua funcionando exatamente igual.
