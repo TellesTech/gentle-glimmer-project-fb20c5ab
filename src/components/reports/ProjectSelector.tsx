@@ -1164,7 +1164,7 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
       const projectData = {
         name: projectFormData.name.trim(),
         code: projectFormData.code || null,
-        status: projectFormData.status,
+        status: projectFormData.status || 'planning',
         description: projectFormData.description || null,
         photo_url: photoUrl,
         client_responsible_name: projectFormData.client_responsible_name || null,
