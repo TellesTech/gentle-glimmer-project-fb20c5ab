@@ -718,14 +718,33 @@ serve(async (req) => {
         collaboratorUserIds = collaboratorUserIds.filter(id => id !== user.id);
 
         // Filter to only "record-only" collaborators (@internal.local)
+        // Use paginated ilike query + in-memory intersection to avoid URL length limits
         if (collaboratorUserIds.length > 0) {
-          const { data: recordOnlyProfiles } = await supabaseAdmin
-            .from('profiles')
-            .select('id, email')
-            .in('id', collaboratorUserIds)
-            .ilike('email', '%@internal.local');
-          
-          collaboratorUserIds = recordOnlyProfiles?.map(p => p.id) || [];
+          const collabSet = new Set(collaboratorUserIds);
+          const matched: string[] = [];
+          const PAGE_SIZE = 1000;
+          let from = 0;
+          // Loop until a page returns fewer rows than PAGE_SIZE
+          while (true) {
+            const { data: page, error: pageError } = await supabaseAdmin
+              .from('profiles')
+              .select('id, email')
+              .ilike('email', '%@internal.local')
+              .range(from, from + PAGE_SIZE - 1);
+
+            if (pageError) {
+              console.error('Paginated profiles fetch error:', pageError);
+              break;
+            }
+            const rows = page || [];
+            for (const p of rows) {
+              if (collabSet.has(p.id)) matched.push(p.id);
+            }
+            if (rows.length < PAGE_SIZE) break;
+            from += PAGE_SIZE;
+          }
+
+          collaboratorUserIds = matched;
           console.log('Filtered to record-only collaborators:', collaboratorUserIds.length);
         }
 
