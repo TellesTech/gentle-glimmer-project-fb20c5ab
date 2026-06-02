@@ -495,7 +495,8 @@ export default function SimplifiedReportForm() {
     },
     onError: (error) => {
       console.error('Error creating report:', error);
-      toast.error('Erro ao criar relatório');
+      const msg = error instanceof Error ? error.message : (error as any)?.message || 'Erro desconhecido';
+      toast.error('Erro ao criar relatório: ' + msg);
     },
   });
 

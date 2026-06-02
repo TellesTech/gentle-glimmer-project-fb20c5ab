@@ -1672,6 +1672,53 @@ export type Database = {
           },
         ]
       }
+      report_activity_steps: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          order_index: number
+          progress: number
+          quantity_done: number | null
+          report_id: string
+          total_quantity: number | null
+          unit: string | null
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          order_index?: number
+          progress?: number
+          quantity_done?: number | null
+          report_id: string
+          total_quantity?: number | null
+          unit?: string | null
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          order_index?: number
+          progress?: number
+          quantity_done?: number | null
+          report_id?: string
+          total_quantity?: number | null
+          unit?: string | null
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_activity_steps_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_attendance: {
         Row: {
           arrival_time: string | null
@@ -1998,12 +2045,17 @@ export type Database = {
       reports: {
         Row: {
           actual_workforce: number | null
+          ai_summary: string | null
+          ambulance_point: string | null
           amt_deviation_details: string | null
           amt_deviation_hours: number | null
           amt_deviation_reason: string | null
           approved_at: string | null
           approved_by: string | null
           archived_at: string | null
+          arrival_time_at_liberator: string | null
+          blockage_revalidation_time: string | null
+          blockage_status: string | null
           client_company: string | null
           client_name: string | null
           climatic_deviation_details: string | null
@@ -2015,21 +2067,27 @@ export type Database = {
           created_by: string | null
           daily_progress: number | null
           date: string
+          document_release_time: string | null
           end_time: string | null
           finalized_at: string | null
           id: string
+          is_emergency: boolean | null
           location: string | null
           maintenance_order_number: string | null
           maintenance_order_title: string | null
+          meeting_point: string | null
           no_activity: boolean | null
           operational_deviation_details: string | null
           operational_deviation_hours: number | null
           operational_deviation_reason: string | null
           planned_workforce: number | null
           project_id: string
+          radio_frequency_operation: string | null
+          radio_frequency_wees: string | null
           rdo_number: number | null
           real_percentage: number | null
           rejected_reason: string | null
+          routine: string | null
           sent_at: string | null
           shift: Database["public"]["Enums"]["shift_type"]
           signed_pdf_url: string | null
@@ -2042,16 +2100,22 @@ export type Database = {
           technical_responsible_role: string | null
           temperature: number | null
           updated_at: string | null
+          use_weighted_progress: boolean | null
           weather: string | null
         }
         Insert: {
           actual_workforce?: number | null
+          ai_summary?: string | null
+          ambulance_point?: string | null
           amt_deviation_details?: string | null
           amt_deviation_hours?: number | null
           amt_deviation_reason?: string | null
           approved_at?: string | null
           approved_by?: string | null
           archived_at?: string | null
+          arrival_time_at_liberator?: string | null
+          blockage_revalidation_time?: string | null
+          blockage_status?: string | null
           client_company?: string | null
           client_name?: string | null
           climatic_deviation_details?: string | null
@@ -2063,21 +2127,27 @@ export type Database = {
           created_by?: string | null
           daily_progress?: number | null
           date: string
+          document_release_time?: string | null
           end_time?: string | null
           finalized_at?: string | null
           id?: string
+          is_emergency?: boolean | null
           location?: string | null
           maintenance_order_number?: string | null
           maintenance_order_title?: string | null
+          meeting_point?: string | null
           no_activity?: boolean | null
           operational_deviation_details?: string | null
           operational_deviation_hours?: number | null
           operational_deviation_reason?: string | null
           planned_workforce?: number | null
           project_id: string
+          radio_frequency_operation?: string | null
+          radio_frequency_wees?: string | null
           rdo_number?: number | null
           real_percentage?: number | null
           rejected_reason?: string | null
+          routine?: string | null
           sent_at?: string | null
           shift?: Database["public"]["Enums"]["shift_type"]
           signed_pdf_url?: string | null
@@ -2090,16 +2160,22 @@ export type Database = {
           technical_responsible_role?: string | null
           temperature?: number | null
           updated_at?: string | null
+          use_weighted_progress?: boolean | null
           weather?: string | null
         }
         Update: {
           actual_workforce?: number | null
+          ai_summary?: string | null
+          ambulance_point?: string | null
           amt_deviation_details?: string | null
           amt_deviation_hours?: number | null
           amt_deviation_reason?: string | null
           approved_at?: string | null
           approved_by?: string | null
           archived_at?: string | null
+          arrival_time_at_liberator?: string | null
+          blockage_revalidation_time?: string | null
+          blockage_status?: string | null
           client_company?: string | null
           client_name?: string | null
           climatic_deviation_details?: string | null
@@ -2111,21 +2187,27 @@ export type Database = {
           created_by?: string | null
           daily_progress?: number | null
           date?: string
+          document_release_time?: string | null
           end_time?: string | null
           finalized_at?: string | null
           id?: string
+          is_emergency?: boolean | null
           location?: string | null
           maintenance_order_number?: string | null
           maintenance_order_title?: string | null
+          meeting_point?: string | null
           no_activity?: boolean | null
           operational_deviation_details?: string | null
           operational_deviation_hours?: number | null
           operational_deviation_reason?: string | null
           planned_workforce?: number | null
           project_id?: string
+          radio_frequency_operation?: string | null
+          radio_frequency_wees?: string | null
           rdo_number?: number | null
           real_percentage?: number | null
           rejected_reason?: string | null
+          routine?: string | null
           sent_at?: string | null
           shift?: Database["public"]["Enums"]["shift_type"]
           signed_pdf_url?: string | null
@@ -2138,6 +2220,7 @@ export type Database = {
           technical_responsible_role?: string | null
           temperature?: number | null
           updated_at?: string | null
+          use_weighted_progress?: boolean | null
           weather?: string | null
         }
         Relationships: [
