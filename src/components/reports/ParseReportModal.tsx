@@ -219,7 +219,22 @@ const matchCollaborator = (parsedName: string, profiles: ProfileBasic[]): Profil
     else if (dist === bestDist) candidates.push(p);
   }
 
-  if (candidates.length === 0) return null;
+  // Fallback: token contido em qualquer posição do nome do perfil
+  // Útil para "Erivan" -> "Francisco Erivan Alves Barros Filho"
+  // ou "Maranhão" como apelido de uma pessoa cadastrada.
+  const tokenFallback = (): ProfileBasic | null => {
+    const tokenMatches = profiles.filter((p) => {
+      if (!p.name) return false;
+      const tokens = norm(p).split(' ');
+      return tokens.some((tok) => tok.length >= 3 && damerauLevenshtein(firstName, tok) <= 1);
+    });
+    if (tokenMatches.length === 1) return tokenMatches[0];
+    return null;
+  };
+
+  if (candidates.length === 0) {
+    return tokenFallback();
+  }
 
   // Se o input tinha sobrenome, exige sobrenome compatível
   if (secondName) {
@@ -228,25 +243,16 @@ const matchCollaborator = (parsedName: string, profiles: ProfileBasic[]): Profil
       if (np.length < 2) return false;
       return np.slice(1).some((tok) => damerauLevenshtein(secondName, tok) <= 2);
     });
-    if (validated.length === 0) return null;
+    if (validated.length === 0) return tokenFallback();
     candidates = validated;
-  } else {
-    // Sem sobrenome no input: aceita match único pelo primeiro nome
-    // (Wellington -> Jose Wellington só seria pego se o "wellington" for o primeiro token;
-    // como não é, esse caso cai para o passo 4 abaixo.)
   }
 
   if (candidates.length === 1) return candidates[0];
 
-  // 4. Fallback: token contido em qualquer posição do nome do perfil
-  // Útil para "Wellington" -> "Jose Wellington Araujo de Souza"
+  // Última tentativa: token em qualquer posição
   if (parts.length === 1) {
-    const tokenMatches = profiles.filter((p) => {
-      if (!p.name) return false;
-      const tokens = norm(p).split(' ');
-      return tokens.some((tok) => damerauLevenshtein(firstName, tok) <= 1);
-    });
-    if (tokenMatches.length === 1) return tokenMatches[0];
+    const fb = tokenFallback();
+    if (fb) return fb;
   }
 
   return null;
