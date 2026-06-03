@@ -233,7 +233,7 @@ function OverviewTab() {
         { count: reportsCompletedCount },
         { count: reportsSentCount },
         { count: reportsSignedCount },
-        // Autentique signatures
+        // Approvers (assinaturas internas)
         { data: signaturesData },
         // Signatures per company
         { data: signaturesPerCompanyData },

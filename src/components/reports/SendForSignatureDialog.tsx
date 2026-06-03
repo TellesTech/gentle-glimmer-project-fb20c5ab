@@ -29,7 +29,7 @@ import type {
   Shift, DeviationType, ImpactLevel, ReportStatus,
 } from '@/types';
 
-interface SendAutentiqueDialogProps {
+interface SendForSignatureDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   report: any;
@@ -67,14 +67,14 @@ const blobToBase64 = (blob: Blob): Promise<string> =>
     reader.readAsDataURL(blob);
   });
 
-export function SendAutentiqueDialog({
+export function SendForSignatureDialog({
   open,
   onOpenChange,
   report,
   company,
   site,
   project,
-}: SendAutentiqueDialogProps) {
+}: SendForSignatureDialogProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -388,18 +388,21 @@ export function SendAutentiqueDialog({
       const rdoNumber = (report.rdo_number ?? 1).toString().padStart(3, '0');
       const fileDate = format(parseISO(report.date), 'yyyy-MM-dd');
       const safeCompany = (company?.name ?? 'empresa').replace(/[^\w\-]+/g, '_');
-      const filePath = `${company.id}/${report.id}/RDO-${rdoNumber}-${safeCompany}-${fileDate}-${Date.now()}.pdf`;
+      const filePath = `signed-report-pdfs/${company.id}/${report.id}/RDO-${rdoNumber}-${safeCompany}-${fileDate}-${Date.now()}.pdf`;
 
       const { error: uploadErr } = await supabase.storage
-        .from('report-pdfs')
+        .from('service-report-photos')
         .upload(filePath, blob, {
           contentType: 'application/pdf',
           upsert: true,
         });
-      if (uploadErr) throw uploadErr;
+      if (uploadErr) {
+        console.error('PDF upload error:', uploadErr);
+        throw new Error('Não foi possível salvar o PDF assinado. Tente novamente.');
+      }
 
       const { data: publicUrlData } = supabase.storage
-        .from('report-pdfs')
+        .from('service-report-photos')
         .getPublicUrl(filePath);
       const publicUrl = publicUrlData?.publicUrl ?? null;
 

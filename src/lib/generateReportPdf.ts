@@ -1048,9 +1048,9 @@ async function buildReportPdfDoc(
     }
   }
   
-  // === ASSINATURAS DO CLIENTE (apenas manuais, não Autentique) ===
+  // === ASSINATURAS DO CLIENTE ===
   const manualSignatures = (signatures || []).filter(
-    sig => sig.signatureData && !sig.signatureData.startsWith('autentique:')
+    sig => sig.signatureData
   );
   
   if (manualSignatures.length > 0) {
@@ -1250,7 +1250,7 @@ export async function generateReportPdf(
   doc.save(`${rdoFileName}.pdf`);
 }
 
-// === FUNCAO PARA GERAR PDF COMO BLOB (para envio ao Autentique) ===
+// === FUNCAO PARA GERAR PDF COMO BLOB (para envio ao portal do cliente) ===
 export async function generateReportPdfAsBlob(
   report: Report,
   company: Company,

@@ -907,7 +907,7 @@ export default function ClientReportView() {
         {/* Registered signatures (image + signer info) — same layout as ReportDetail */}
         {(() => {
           const manualSignatures = (signatures || []).filter(
-            (sig: any) => sig.signature_data && !String(sig.signature_data).startsWith('autentique:')
+            (sig: any) => sig.signature_data
           );
           if (manualSignatures.length === 0) return null;
           return (

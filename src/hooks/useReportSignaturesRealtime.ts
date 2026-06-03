@@ -49,7 +49,7 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
       const companyId = (report as any)?.project?.site?.company?.id || null;
       const clientCompanyName = (report as any)?.project?.site?.company?.name || null;
 
-      // WEES brand name + lista de assinantes ad-hoc considerados internos (WhatsApp/Autentique sem email)
+      // WEES brand name + lista de assinantes ad-hoc considerados internos (sem email)
       const [{ data: branding }, { data: settings }] = await Promise.all([
         (supabase as any).rpc('get_public_branding'),
         (supabase as any).from('system_settings').select('internal_signer_names').limit(1).maybeSingle(),
@@ -162,7 +162,7 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
 
       // Ad-hoc WEES signatures (signers not in responsibles list).
       // Considera interno se: email está no weesEmailSet OU o nome está em internalSignerNames
-      // (cobre assinaturas via WhatsApp/Autentique sem email — ex.: Walace Rocha).
+      // (cobre assinaturas via WhatsApp/portal sem email).
       (signatures || []).forEach((s: any) => {
         const email = (s.signer_email || '').toLowerCase();
         const nameKey = normalize(s.signer_name || '');

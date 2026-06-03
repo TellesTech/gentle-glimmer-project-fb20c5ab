@@ -263,7 +263,7 @@ export default function Reports() {
   });
 
   // Fetch RDOs effectively sent to the client portal — mesma regra do ClientDashboard:
-  // status in (sent, signed, finalized) AND (has approver OR active autentique doc).
+  // status in (sent, signed, finalized) AND has approver.
   const { data: sentToClientCount = 0 } = useQuery({
     queryKey: ['sent-to-client-count', isRestrictedAdmin ? adminProjectIds : null],
     queryFn: async () => {
@@ -281,17 +281,13 @@ export default function Reports() {
       const ids = (candidates || []).map((r: any) => r.id);
       if (!ids.length) return 0;
 
-      const [{ data: rca }, { data: rcoa }, { data: ad }] = await Promise.all([
+      const [{ data: rca }, { data: rcoa }] = await Promise.all([
         supabase.from('report_client_approvers').select('report_id').in('report_id', ids),
         supabase.from('report_company_approvers').select('report_id').in('report_id', ids),
-        supabase.from('autentique_documents').select('report_id, status').in('report_id', ids),
       ]);
       const valid = new Set<string>();
       (rca || []).forEach((r: any) => valid.add(r.report_id));
       (rcoa || []).forEach((r: any) => valid.add(r.report_id));
-      (ad || []).forEach((d: any) => {
-        if (d.status === 'pending' || d.status === 'signed') valid.add(d.report_id);
-      });
       return ids.filter((id) => valid.has(id)).length;
     },
     enabled: !isRestrictedAdmin || (adminProjectIds !== undefined),

@@ -34,7 +34,6 @@ import { ClientProtectedRoute } from "@/components/client/ClientProtectedRoute";
 import { HomeRedirect } from "@/components/HomeRedirect";
 import AdminExports from "@/pages/AdminExports";
 import AdminSignatures from "@/pages/AdminSignatures";
-import AdminClickSign from "@/pages/AdminClickSign";
 import AdminBackup from "@/pages/AdminBackup";
 import AdminDataQuality from "@/pages/AdminDataQuality";
 import ImpactMetrics from "@/pages/ImpactMetrics";
@@ -112,7 +111,6 @@ const App = () => (
                   <Route path="/home" element={<HomeRedirect />} />
                   <Route path="/admin/exports" element={<AdminExports />} />
                   <Route path="/admin/signatures" element={<AdminSignatures />} />
-                  <Route path="/admin/clicksign" element={<AdminClickSign />} />
                   <Route path="/admin/backup" element={<AdminBackup />} />
                   <Route path="/admin/data-quality" element={<AdminDataQuality />} />
                   <Route path="/admin/impact" element={<ImpactMetrics />} />

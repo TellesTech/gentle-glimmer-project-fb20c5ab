@@ -14,7 +14,7 @@ export { QuickReportFormContent } from './QuickReportFormContent';
 export { BatchExportDialog } from './BatchExportDialog';
 export { DocumentCabinet } from './DocumentCabinet';
 export type { CabinetBreadcrumbItem } from './DocumentCabinet';
-export { SendAutentiqueDialog } from './SendAutentiqueDialog';
+export { SendForSignatureDialog } from './SendForSignatureDialog';
 export { SignedDocumentsSection } from './SignedDocumentsSection';
 export { ReportProgressStepper } from './ReportProgressStepper';
 export { MilestonesEditor } from './MilestonesEditor';

@@ -13,7 +13,6 @@ export interface ClientPortalSettings {
   show_stats_cards: boolean;
   show_approval_rate: boolean;
   show_rejection_stats: boolean;
-  show_autentique_widget: boolean;
   show_supersign_alert: boolean;
   show_project_filter: boolean;
   dashboard_title: string;
@@ -40,7 +39,6 @@ const DEFAULTS: Omit<ClientPortalSettings, 'id'> = {
   show_stats_cards: true,
   show_approval_rate: true,
   show_rejection_stats: true,
-  show_autentique_widget: true,
   show_supersign_alert: true,
   show_project_filter: true,
   dashboard_title: 'Dashboard',
