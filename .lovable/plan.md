@@ -1,34 +1,32 @@
 ## Problema
 
-Ao salvar o relatório, o insert em `report_attendance` quebra com:
+Ao enviar para o portal do cliente, o insert em `report_signatures` falha com:
 
 ```
-violates foreign key constraint "report_attendance_user_id_fkey"
+Could not find the 'legal_basis' column of 'report_signatures' in the schema cache
 ```
 
-A coluna `report_attendance.user_id` é FK para `profiles(id)` (ON DELETE SET NULL). O erro indica que algum `user_id` enviado no insert não existe (mais) na tabela `profiles` — provavelmente um colaborador cujo profile foi excluído, ou um ID vindo do parser de IA / dados antigos que não corresponde a um profile real.
+O código em `src/components/reports/SendAutentiqueDialog.tsx` (linha 326-336) insere dois campos que não existem na tabela:
+- `legal_basis` (valor `'MP 2.200-2/2001'`)
+- `signer_email`
 
-Como a FK já é `ON DELETE SET NULL` e o esquema permite `user_id` nulo, a forma correta de tratar é **sanitizar antes do insert**: validar quais `user_id` existem em `profiles` e substituir os ausentes por `null` (mantendo o `user_name`, que já é gravado em texto).
+Colunas atuais de `report_signatures`: `id, report_id, access_id, signature_data, signer_name, signer_role, signed_at, ip_address, user_agent, signer_user_id`.
 
-## Mudanças
+## Solução
 
-Arquivos envolvidos (apenas frontend, sem alterar schema):
+Adicionar as duas colunas faltantes via migration (são dados úteis para rastreabilidade jurídica e contato do signatário). Ambas nullable, sem default obrigatório, sem mudança de RLS.
 
-1. `src/pages/ReportForm.tsx` — caminhos de criação (linha ~673) e atualização (linha ~571) do attendance.
-2. `src/pages/SimplifiedReportForm.tsx` — inserts em `report_attendance` (linhas ~414 e ~628).
-3. `src/components/reports/QuickReportFormContent.tsx` — se também faz insert direto, aplicar o mesmo tratamento.
+### Migration
 
-Em cada local, antes do insert/update:
+```sql
+ALTER TABLE public.report_signatures
+  ADD COLUMN IF NOT EXISTS legal_basis text,
+  ADD COLUMN IF NOT EXISTS signer_email text;
+```
 
-- Coletar todos os `userId` não-nulos do `attendance`.
-- Fazer um `select id from profiles where id in (...)` único.
-- Montar um `Set` de IDs válidos.
-- Ao mapear para o insert, se `userId` não estiver no set, enviar `user_id: null` (preservando `user_name`).
-
-Sem mudanças no banco, sem mudança de RLS, sem mudança no fluxo de UI. Apenas saneamento defensivo dos dados enviados.
+Sem mudanças de código — o insert atual passa a funcionar.
 
 ## Resultado esperado
 
-- O relatório passa a ser salvo mesmo quando algum colaborador da lista não tem profile correspondente.
-- Os nomes continuam aparecendo no efetivo (via `user_name`), só perdem o vínculo com o profile inexistente.
-- Sem mais erro de FK ao criar/editar relatório.
+- Envio para o portal do cliente conclui sem erro de schema.
+- Assinatura WEES é registrada com `legal_basis` e `signer_email` populados.
