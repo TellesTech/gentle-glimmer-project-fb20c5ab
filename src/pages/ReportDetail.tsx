@@ -21,7 +21,7 @@ import { PhotoGallery } from '@/components/reports/PhotoGallery';
 import { ApprovalTimeline } from '@/components/reports/ApprovalTimeline';
 import { ReportProgressStepper } from '@/components/reports/ReportProgressStepper';
 import { ShareReportDialog } from '@/components/client/ShareReportDialog';
-import { SendAutentiqueDialog } from '@/components/reports/SendAutentiqueDialog';
+import { SendForSignatureDialog } from '@/components/reports/SendForSignatureDialog';
 import { supabase } from '@/integrations/supabase/loose-client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -70,7 +70,7 @@ export default function ReportDetail() {
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
-  const [showAutentiqueDialog, setShowAutentiqueDialog] = useState(false);
+  const [showSendSignatureDialog, setShowSendSignatureDialog] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
   // AI Summary edit state
@@ -1396,10 +1396,10 @@ export default function ReportDetail() {
         );
       })()}
 
-      {/* Signatures Card - apenas assinaturas manuais (não Autentique) */}
+      {/* Signatures Card */}
       {(() => {
         const manualSignatures = (report.signatures || []).filter(
-          (sig: any) => sig.signature_data && !sig.signature_data.startsWith('autentique:')
+          (sig: any) => sig.signature_data
         );
         
         return manualSignatures.length > 0 ? (
@@ -1459,8 +1459,6 @@ export default function ReportDetail() {
           </Card>
         ) : null;
       })()}
-
-      {/* Autentique section removed — signatures are now native (report_signatures + signed_pdf_url) */}
 
       {/* Approval Timeline Card */}
       <Card className="border-l-4 border-l-muted-foreground/30 shadow-sm">
@@ -1562,7 +1560,7 @@ export default function ReportDetail() {
                   variant="outline" 
                   size="sm"
                   className="min-w-0 px-2 sm:px-3"
-                  onClick={() => setShowAutentiqueDialog(true)}
+                  onClick={() => setShowSendSignatureDialog(true)}
                 >
                   <Send className="w-4 h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Enviar para Assinatura</span>
@@ -1623,10 +1621,10 @@ export default function ReportDetail() {
         reportId={report.id}
       />
 
-      {/* Autentique Dialog */}
-      <SendAutentiqueDialog
-        open={showAutentiqueDialog}
-        onOpenChange={setShowAutentiqueDialog}
+      {/* Send for Signature Dialog */}
+      <SendForSignatureDialog
+        open={showSendSignatureDialog}
+        onOpenChange={setShowSendSignatureDialog}
         report={report}
         company={company}
         site={site}
