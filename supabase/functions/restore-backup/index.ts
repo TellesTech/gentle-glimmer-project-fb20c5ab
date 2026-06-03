@@ -41,8 +41,6 @@ const TABLE_ORDER = [
   'report_signatures',
   'report_company_approvers',
   'report_client_approvers',
-  'autentique_documents',
-  'clicksign_documents',
   'service_reports',
   'service_report_sections',
   'service_report_photos',

@@ -94,12 +94,11 @@ serve(async (req) => {
       tables: 0
     };
 
-    // Signed PDFs category - count only signed documents from Autentique
+    // Signed PDFs category - count reports with signed_pdf_url
     const { count: signedDocsCount } = await supabase
-      .from('autentique_documents')
+      .from('reports')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'signed')
-      .not('signed_file_url', 'is', null);
+      .not('signed_pdf_url', 'is', null);
 
     categories.signed_pdfs = {
       records: signedDocsCount || 0,
