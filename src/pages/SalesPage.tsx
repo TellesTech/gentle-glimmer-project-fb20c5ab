@@ -110,9 +110,9 @@ const heroFeatures = [
   {
     icon: PenTool,
     title: "Assinaturas Digitais",
-    desc: "Integração nativa com Autentique e ClickSign. Assinatura manual com captura de IP e geolocalização. Validade jurídica garantida pela ICP-Brasil.",
+    desc: "Assinatura interna nativa com captura de IP, geolocalização e user-agent. Validade jurídica garantida pela MP 2.200-2/2001.",
     bullets: [
-      "Autentique e ClickSign integrados",
+      "Assinatura interna integrada ao RDO",
       "Captura de IP, geolocalização e user-agent",
       "Assinatura manual no dispositivo",
       "Rastreamento completo de status",
@@ -231,7 +231,7 @@ const faqs = [
   { q: "O que é um RDO?", a: "RDO é o Relatório Diário de Obra, documento obrigatório que registra todas as atividades, condições climáticas, mão de obra e ocorrências de cada dia no canteiro." },
   { q: "Como funciona a cobrança por RDO?", a: "Cada plano inclui uma quantidade anual de RDOs. Você paga o valor fixo anual e pode gerar até o limite contratado. Precisa de mais? Fale conosco para um plano sob medida." },
   { q: "Posso testar antes de contratar?", a: "Sim! Oferecemos uma demonstração guiada para que você conheça todas as funcionalidades do RdoX antes de decidir." },
-  { q: "As assinaturas digitais têm validade jurídica?", a: "Sim. Utilizamos Autentique e ClickSign, plataformas homologadas pela ICP-Brasil, garantindo validade jurídica das assinaturas eletrônicas." },
+  { q: "As assinaturas digitais têm validade jurídica?", a: "Sim. Nossa assinatura interna captura IP, geolocalização e user-agent, atendendo à MP 2.200-2/2001, que garante validade jurídica das assinaturas eletrônicas no Brasil." },
   { q: "Como a IA ajuda no preenchimento do RDO?", a: "Nossa IA completa textos técnicos, gera resumos executivos, interpreta fotos e textos livres para extrair dados estruturados, e cria relatórios profissionais automaticamente." },
   { q: "Preciso instalar algum software?", a: "Não. O RdoX é 100% web, funciona em qualquer navegador e dispositivo — desktop, tablet ou smartphone, direto do canteiro de obras." },
 ];
@@ -661,7 +661,7 @@ const SalesPage = () => {
             {[
               { icon: Smartphone, title: "WhatsApp Integrado", desc: "Encarregados enviam dados e fotos direto pelo grupo de WhatsApp. A IA processa automaticamente e gera RDOs estruturados.", color: "hsl(142,50%,36%)" },
               { icon: FileText, title: "RDO Digital", desc: "Preenchimento simplificado direto do canteiro, com wizard inteligente e importação de texto livre.", color: navy[600] },
-              { icon: PenTool, title: "Assinaturas Digitais", desc: "Aprovações via ClickSign com captura de IP e geolocalização. Validade jurídica garantida.", color: navy[600] },
+              { icon: PenTool, title: "Assinaturas Digitais", desc: "Aprovações com assinatura interna, captura de IP e geolocalização. Validade jurídica garantida.", color: navy[600] },
               { icon: Users, title: "Portal do Cliente", desc: "Clientes acompanham a obra em tempo real, aprovam relatórios e assinam documentos.", color: navy[600] },
               { icon: BarChart3, title: "Relatórios de Serviço", desc: "Geração automática com IA, exportação em PDF padrão ABNT com fotos e gráficos.", color: navy[600] },
               { icon: HardHat, title: "Gestão de Mão de Obra", desc: "Controle de HH, produtividade e planejamento de equipes em 8 unidades simultâneas.", color: navy[600] },
