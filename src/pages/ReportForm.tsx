@@ -16,6 +16,7 @@ import { ParseReportModal } from '@/components/reports/ParseReportModal';
 import { supabase } from '@/integrations/supabase/loose-client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
+import { getValidProfileIds } from '@/lib/sanitizeAttendanceUserIds';
 import type { Activity, Deviation, Attendance, Shift } from '@/types';
 import { format, parseISO } from 'date-fns';
 
@@ -568,7 +569,9 @@ export default function ReportForm() {
         await supabase.from('report_attendance').delete().in('id', attendanceToDelete);
       }
 
+      const validProfileIdsUpdate = await getValidProfileIds(formData.attendance.map(a => a.userId));
       for (const person of formData.attendance) {
+        const safeUserId = person.userId && validProfileIdsUpdate.has(person.userId) ? person.userId : null;
         if (person.id && existingAttendanceIds.includes(person.id)) {
           await supabase.from('report_attendance').update({
             user_name: person.userName,
@@ -581,7 +584,7 @@ export default function ReportForm() {
           await supabase.from('report_attendance').insert({
             report_id: reportId,
             user_name: person.userName,
-            user_id: person.userId || null,
+            user_id: safeUserId,
             present: person.present,
             arrival_time: person.arrivalTime || null,
             departure_time: person.departureTime || null,
@@ -671,10 +674,11 @@ export default function ReportForm() {
 
       // Insert attendance
       if (formData.attendance.length > 0) {
+        const validProfileIds = await getValidProfileIds(formData.attendance.map(a => a.userId));
         const attendanceData = formData.attendance.map(person => ({
           report_id: reportId,
           user_name: person.userName,
-          user_id: person.userId || null,
+          user_id: person.userId && validProfileIds.has(person.userId) ? person.userId : null,
           present: person.present,
           arrival_time: person.arrivalTime || null,
           departure_time: person.departureTime || null,

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/loose-client';
+import { getValidProfileIds } from '@/lib/sanitizeAttendanceUserIds';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { QuickReportFormContent, ReportFormData } from '@/components/reports/QuickReportFormContent';
@@ -401,9 +402,10 @@ export default function SimplifiedReportForm() {
 
       // Insert attendance
       if (data.attendance.length > 0) {
+        const validProfileIds = await getValidProfileIds(data.attendance.map(m => m.userId));
         const attendanceData = data.attendance.map(member => ({
           report_id: report.id,
-          user_id: member.userId,
+          user_id: member.userId && validProfileIds.has(member.userId) ? member.userId : null,
           user_name: member.userName,
           present: member.present,
           arrival_time: member.arrivalTime || null,
@@ -615,9 +617,10 @@ export default function SimplifiedReportForm() {
 
       // Re-insert attendance
       if (data.attendance.length > 0) {
+        const validProfileIds = await getValidProfileIds(data.attendance.map(m => m.userId));
         const attendanceData = data.attendance.map(member => ({
           report_id: reportId,
-          user_id: member.userId,
+          user_id: member.userId && validProfileIds.has(member.userId) ? member.userId : null,
           user_name: member.userName,
           present: member.present,
           arrival_time: member.arrivalTime || null,
