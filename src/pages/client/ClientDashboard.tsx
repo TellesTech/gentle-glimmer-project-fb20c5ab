@@ -187,25 +187,16 @@ export default function ClientDashboard() {
 
       const { data, error } = await supabase
         .from('reports')
-        .select(`id, date, shift, status, rdo_number, project:projects (id, name, company:companies (id, name)), autentique_documents (status, created_at)`)
+        .select(`id, date, shift, status, rdo_number, project:projects (id, name, company:companies (id, name))`)
         .in('project_id', pIds)
         .in('status', ['signed', 'finalized'])
         .order('date', { ascending: false });
 
       if (error) throw error;
 
-      // REGRA OBRIGATÓRIA: portal do cliente exibe SOMENTE RDOs assinados.
-      // Assinado = status ∈ {signed, finalized} OU existe autentique_documents.status = 'signed'.
-      const filtered = (data || []).filter((r: any) => {
-        const docs = (r.autentique_documents || []) as Array<{ status: string }>;
-        const reportSigned = r.status === 'signed' || r.status === 'finalized';
-        const autentiqueSigned = docs.some(d => d.status === 'signed');
-        return reportSigned || autentiqueSigned;
-      });
-      return filtered.map((r: any) => {
-        const docs = (r.autentique_documents || []) as Array<{ status: string }>;
-        const autentiqueSigned = docs.some(d => d.status === 'signed');
-        const isApproved = r.status === 'signed' || r.status === 'finalized' || autentiqueSigned;
+      // REGRA OBRIGATÓRIA: portal do cliente exibe SOMENTE RDOs assinados (status ∈ {signed, finalized}).
+      return (data || []).map((r: any) => {
+        const isApproved = r.status === 'signed' || r.status === 'finalized';
         const mappedStatus = isApproved ? 'approved' : 'pending';
         return {
           id: r.id, report_id: r.id,
@@ -252,27 +243,17 @@ export default function ClientDashboard() {
       // 2) Fetch only those reports (must be signed/finalized)
       const { data: reports, error } = await supabase
         .from('reports')
-        .select(`id, date, shift, status, rdo_number, project:projects (id, name, company:companies (id, name)), autentique_documents (status)`)
+        .select(`id, date, shift, status, rdo_number, project:projects (id, name, company:companies (id, name))`)
         .in('id', reportIds)
         .in('status', ['signed', 'finalized'])
         .order('date', { ascending: false });
       if (error) throw error;
 
-      // REGRA OBRIGATÓRIA: portal do cliente exibe SOMENTE RDOs assinados.
-      // Assinado = status ∈ {signed, finalized} OU autentique_documents.status = 'signed'.
       return (reports || [])
-        .filter((r: any) => {
-          const docs = (r.autentique_documents || []) as Array<{ status: string }>;
-          const reportSigned = r.status === 'signed' || r.status === 'finalized';
-          const autentiqueSigned = docs.some(d => d.status === 'signed');
-          return reportSigned || autentiqueSigned;
-        })
         .map((r: any) => {
-          const docs = (r.autentique_documents || []) as Array<{ status: string }>;
-          const autentiqueSigned = docs.some(d => d.status === 'signed');
           const reportSigned = r.status === 'signed' || r.status === 'finalized';
           const approverRow = approverByReport.get(r.id);
-          const isApproved = approverRow?.status === 'approved' || reportSigned || autentiqueSigned;
+          const isApproved = approverRow?.status === 'approved' || reportSigned;
           const mappedStatus = isApproved ? 'approved' : 'pending';
           return {
             id: approverRow?.id || r.id,
@@ -280,7 +261,7 @@ export default function ClientDashboard() {
             status: mappedStatus,
             created_at: approverRow?.created_at || r.date,
             approved_at: approverRow?.approved_at || (isApproved ? r.date : null),
-            canSign: !!approverRow && approverRow.status !== 'approved' && !reportSigned && !autentiqueSigned,
+            canSign: !!approverRow && approverRow.status !== 'approved' && !reportSigned,
             approverRowId: approverRow?.id ?? null,
             report: {
               id: r.id,
