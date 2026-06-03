@@ -1996,9 +1996,11 @@ export type Database = {
           access_id: string | null
           id: string
           ip_address: string | null
+          legal_basis: string | null
           report_id: string
           signature_data: string
           signed_at: string | null
+          signer_email: string | null
           signer_name: string
           signer_role: string | null
           signer_user_id: string | null
@@ -2008,9 +2010,11 @@ export type Database = {
           access_id?: string | null
           id?: string
           ip_address?: string | null
+          legal_basis?: string | null
           report_id: string
           signature_data: string
           signed_at?: string | null
+          signer_email?: string | null
           signer_name: string
           signer_role?: string | null
           signer_user_id?: string | null
@@ -2020,9 +2024,11 @@ export type Database = {
           access_id?: string | null
           id?: string
           ip_address?: string | null
+          legal_basis?: string | null
           report_id?: string
           signature_data?: string
           signed_at?: string | null
+          signer_email?: string | null
           signer_name?: string
           signer_role?: string | null
           signer_user_id?: string | null
