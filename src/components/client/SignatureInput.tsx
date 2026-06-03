@@ -33,7 +33,7 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.fillStyle = '#1a1a1a';
-    ctx.font = 'italic 48px "Dancing Script", "Brush Script MT", cursive, serif';
+    ctx.font = '56px "Great Vibes", "Dancing Script", cursive';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(name, canvas.width / 2, canvas.height / 2);
@@ -175,8 +175,8 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
             {typedName.trim() && (
               <div className="w-full h-32 border-2 border-primary rounded-lg bg-white flex items-center justify-center">
                 <p 
-                  className="text-4xl text-foreground"
-                  style={{ fontFamily: '"Dancing Script", "Brush Script MT", cursive, serif', fontStyle: 'italic' }}
+                  className="text-5xl text-foreground"
+                  style={{ fontFamily: '"Great Vibes", "Dancing Script", cursive' }}
                 >
                   {typedName}
                 </p>
