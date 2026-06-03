@@ -73,10 +73,6 @@ export const departments: Department[] = [
     textColor: 'text-emerald-400',
     bgLight: 'bg-emerald-500/10',
     agents: [
-      { id: 'autentique', name: 'Fernando', role: 'Gestor de Documentos', description: 'Cria e gerencia documentos para assinatura digital via plataforma Autentique.', department: 'signatures', type: 'integracao', initials: 'FN', gender: 'm', avatarVariant: 5 },
-      { id: 'autentique-webhook', name: 'Juliana', role: 'Rastreadora de Assinaturas', description: 'Processa notificações de assinatura e atualiza status dos documentos automaticamente.', department: 'signatures', type: 'integracao', initials: 'JL', gender: 'f', avatarVariant: 0 },
-      { id: 'clicksign', name: 'Ricardo', role: 'Especialista ClickSign', description: 'Gerencia fluxo de assinaturas eletrônicas via plataforma ClickSign.', department: 'signatures', type: 'integracao', initials: 'RC', gender: 'm', avatarVariant: 1 },
-      { id: 'clicksign-webhook', name: 'Patrícia', role: 'Monitora de Eventos', description: 'Recebe e processa eventos de assinatura da plataforma ClickSign em tempo real.', department: 'signatures', type: 'integracao', initials: 'PT', gender: 'f', avatarVariant: 1 },
       { id: 'submit-signature', name: 'Gustavo', role: 'Coletor de Assinaturas', description: 'Processa assinaturas manuais de clientes com captura de IP e geolocalização.', department: 'signatures', type: 'automacao', initials: 'GS', gender: 'm', avatarVariant: 2 },
     ],
   },
