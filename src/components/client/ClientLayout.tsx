@@ -272,7 +272,7 @@ Atenciosamente,
             {clientProfile?.signature_data && (
               <div className="hidden lg:flex items-center gap-2 text-sm text-muted-foreground">
                 <PenTool className="h-4 w-4 text-primary" />
-                <span>Autentique ativo</span>
+                <span>Assinatura ativa</span>
               </div>
             )}
             <div className="hidden md:block text-sm text-muted-foreground">

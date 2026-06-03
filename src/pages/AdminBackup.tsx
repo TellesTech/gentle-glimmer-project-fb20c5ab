@@ -34,7 +34,6 @@ const LOOSE_TABLE_ORDER = [
   'reports','report_activities','report_attendance','report_deviations',
   'report_equipment','report_photos','report_signatures',
   'report_company_approvers','report_client_approvers',
-  'autentique_documents','clicksign_documents',
   'service_reports','service_report_sections','service_report_photos',
   'notifications','feature_suggestions','suggestion_votes',
 ];
@@ -317,7 +316,7 @@ const BACKUP_CATEGORIES: BackupCategory[] = [
   {
     id: 'signed_pdfs',
     label: 'RDOs Assinados',
-    description: 'PDFs com assinaturas digitais válidas do Autentique',
+    description: 'PDFs com assinaturas digitais válidas',
     icon: FileCheck,
     tables: [],
     isSignedExport: true,
@@ -341,7 +340,7 @@ const BACKUP_CATEGORIES: BackupCategory[] = [
     label: 'Outros Dados',
     description: 'Notificações, sugestões, motivos de atraso',
     icon: Settings2,
-    tables: ['notifications', 'feature_suggestions', 'suggestion_votes', 'delay_reasons', 'report_history', 'autentique_documents', 'autentique_signatures', 'clicksign_documents'],
+    tables: ['notifications', 'feature_suggestions', 'suggestion_votes', 'delay_reasons', 'report_history'],
   },
 ];
 
@@ -1149,7 +1148,6 @@ export default function AdminBackup() {
         'reports','report_activities','report_activity_steps','report_attendance','report_deviations',
         'report_equipment','report_photos','report_signatures','report_history',
         'report_company_approvers','report_client_approvers',
-        'autentique_documents','autentique_signatures','clicksign_documents',
         'service_reports','service_report_sections','service_report_photos',
         'notifications','feature_suggestions','suggestion_votes','delay_reasons',
         'backup_schedules','backup_history'
@@ -1376,7 +1374,6 @@ export default function AdminBackup() {
         'reports','report_activities','report_activity_steps','report_attendance','report_deviations',
         'report_equipment','report_photos','report_signatures','report_history',
         'report_company_approvers','report_client_approvers',
-        'autentique_documents','autentique_signatures','clicksign_documents',
         'service_reports','service_report_sections','service_report_photos',
         'notifications','feature_suggestions','suggestion_votes','delay_reasons',
         'backup_schedules','backup_history'

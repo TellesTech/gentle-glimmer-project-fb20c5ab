@@ -48,7 +48,7 @@ interface PendingReport {
    *  for this report and the approval is still pending. Drives the "Aprovar"
    *  button visibility. Read-only access (history) is granted by site link. */
   canSign?: boolean;
-  /** Row id in report_*_approvers (used by handleApproveWithAutentique). */
+  /** Row id in report_*_approvers (used by handleApproveSignature). */
   approverRowId?: string | null;
   report: {
     id: string;
@@ -88,7 +88,7 @@ function buildRdoCardImage(rdoNumber: number | null | undefined, dateLabel: stri
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-// Native portal-only flow — no Autentique types
+// Native portal-only flow
 
 export default function ClientDashboard() {
   const [approvingId, setApprovingId] = useState<string | null>(null);
@@ -486,7 +486,7 @@ export default function ClientDashboard() {
   });
 
 
-  const handleApproveWithAutentique = async (reportApproverId: string, reportId: string) => {
+  const handleApproveSignature = async (reportApproverId: string, reportId: string) => {
     if (!effectiveSignatureData) {
       toast({ title: 'Assinatura não configurada', description: 'Configure sua assinatura no perfil primeiro', variant: 'destructive' });
       navigate(`/client/profile?${searchParams.toString()}`);

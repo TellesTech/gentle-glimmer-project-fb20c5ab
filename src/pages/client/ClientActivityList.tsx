@@ -79,11 +79,10 @@ export default function ClientActivityList() {
 
       if (!reportIds.length) return [];
 
-      // 2) Fetch report data + approver counts (incluindo Autentique para refletir assinaturas
-      // que não passam pelas tabelas de approvers — alinhado com ClientDashboard)
+      // 2) Fetch report data + approver counts
       const { data: rs } = await supabase
         .from('reports')
-        .select('id, rdo_number, date, shift, status, autentique_documents (status)')
+        .select('id, rdo_number, date, shift, status')
         .in('id', reportIds)
         .order('date', { ascending: false });
 
@@ -102,18 +101,10 @@ export default function ClientActivityList() {
 
       return (rs || [])
         // REGRA OBRIGATÓRIA: portal do cliente exibe SOMENTE RDOs assinados.
-        .filter((r: any) => {
-          const docs = (r.autentique_documents || []) as Array<{ status: string }>;
-          const reportSigned = r.status === 'signed' || r.status === 'finalized';
-          const autentiqueSigned = docs.some((d) => d.status === 'signed');
-          return reportSigned || autentiqueSigned;
-        })
+        .filter((r: any) => r.status === 'signed' || r.status === 'finalized')
         .map((r: any) => {
           const c = counts.get(r.id) || { total: 0, signed: 0 };
-          const docs = (r.autentique_documents || []) as Array<{ status: string }>;
-          const reportSigned = r.status === 'signed' || r.status === 'finalized';
-          const autentiqueSigned = docs.some((d) => d.status === 'signed');
-          const externallySigned = reportSigned || autentiqueSigned;
+          const externallySigned = r.status === 'signed' || r.status === 'finalized';
 
           let approverStatus: string = 'pending';
           let signedCount = c.signed;
