@@ -164,7 +164,7 @@ const allBenefits = [
   "Gestão de equipes",
   "Portal do Cliente",
   "WhatsApp integrado",
-  "Assinaturas ClickSign",
+  "Assinaturas digitais",
   "Backup automático",
   "IA Completa",
   "Comunidade exclusiva",
@@ -186,7 +186,7 @@ const plans = [
     rdos: "1.000",
     subtitle: "Assinatura anual / 1.000 RDOs",
     featured: false,
-    included: ["RDO Digital com IA", "Exportação PDF padrão ABNT", "Gestão de equipes", "Portal do Cliente", "WhatsApp integrado", "Assinaturas ClickSign"],
+    included: ["RDO Digital com IA", "Exportação PDF padrão ABNT", "Gestão de equipes", "Portal do Cliente", "WhatsApp integrado", "Assinaturas digitais"],
   },
   {
     name: "Profissional",
@@ -197,7 +197,7 @@ const plans = [
     featured: true,
     included: [
       "RDO Digital com IA", "Exportação PDF padrão ABNT", "Gestão de equipes",
-      "Portal do Cliente", "WhatsApp integrado", "Assinaturas ClickSign",
+      "Portal do Cliente", "WhatsApp integrado", "Assinaturas digitais",
       "Backup automático", "IA Completa", "Comunidade exclusiva",
     ],
   },
@@ -210,7 +210,7 @@ const plans = [
     featured: false,
     included: [
       "RDO Digital com IA", "Exportação PDF padrão ABNT", "Gestão de equipes",
-      "Portal do Cliente", "WhatsApp integrado", "Assinaturas ClickSign",
+      "Portal do Cliente", "WhatsApp integrado", "Assinaturas digitais",
       "Backup automático", "IA Completa", "Comunidade exclusiva",
       "Onboarding personalizado", "Treinamento da equipe",
       "Personalização de relatórios", "API de integração",
@@ -615,7 +615,7 @@ const SalesPage = () => {
                 </div>
               </div>
               <p className="text-white/70 leading-relaxed">
-                O RdoX foi integrado ao WhatsApp — a ferramenta que os encarregados já usavam. Sem app novo, sem treinamento extenso. A IA processa mensagens automaticamente e gera RDOs padronizados. Assinaturas digitais com validade jurídica via ClickSign completam o fluxo.
+                O RdoX foi integrado ao WhatsApp — a ferramenta que os encarregados já usavam. Sem app novo, sem treinamento extenso. A IA processa mensagens automaticamente e gera RDOs padronizados. Assinaturas digitais internas com validade jurídica completam o fluxo.
               </p>
             </div>
           </FadeIn>
