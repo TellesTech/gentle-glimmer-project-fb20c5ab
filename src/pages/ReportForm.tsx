@@ -674,10 +674,11 @@ export default function ReportForm() {
 
       // Insert attendance
       if (formData.attendance.length > 0) {
+        const validProfileIds = await getValidProfileIds(formData.attendance.map(a => a.userId));
         const attendanceData = formData.attendance.map(person => ({
           report_id: reportId,
           user_name: person.userName,
-          user_id: person.userId || null,
+          user_id: person.userId && validProfileIds.has(person.userId) ? person.userId : null,
           present: person.present,
           arrival_time: person.arrivalTime || null,
           departure_time: person.departureTime || null,
