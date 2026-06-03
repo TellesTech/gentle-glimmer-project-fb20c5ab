@@ -569,7 +569,9 @@ export default function ReportForm() {
         await supabase.from('report_attendance').delete().in('id', attendanceToDelete);
       }
 
+      const validProfileIdsUpdate = await getValidProfileIds(formData.attendance.map(a => a.userId));
       for (const person of formData.attendance) {
+        const safeUserId = person.userId && validProfileIdsUpdate.has(person.userId) ? person.userId : null;
         if (person.id && existingAttendanceIds.includes(person.id)) {
           await supabase.from('report_attendance').update({
             user_name: person.userName,
@@ -582,7 +584,7 @@ export default function ReportForm() {
           await supabase.from('report_attendance').insert({
             report_id: reportId,
             user_name: person.userName,
-            user_id: person.userId || null,
+            user_id: safeUserId,
             present: person.present,
             arrival_time: person.arrivalTime || null,
             departure_time: person.departureTime || null,
