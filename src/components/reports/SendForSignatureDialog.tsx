@@ -394,11 +394,13 @@ export function SendForSignatureDialog({
         .from('service-report-photos')
         .upload(filePath, blob, {
           contentType: 'application/pdf',
-          upsert: true,
+          upsert: false,
         });
       if (uploadErr) {
         console.error('PDF upload error:', uploadErr);
-        throw new Error('Não foi possível salvar o PDF assinado. Tente novamente.');
+        throw new Error(
+          `Não foi possível salvar o PDF assinado: ${uploadErr.message || 'erro desconhecido'}`,
+        );
       }
 
       const { data: publicUrlData } = supabase.storage
