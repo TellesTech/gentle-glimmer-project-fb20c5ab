@@ -1,37 +1,38 @@
-# Correção: fotos do WhatsApp não salvam no RDO
+## Análise: outros erros do mesmo tipo (buckets inexistentes)
 
-## Causa raiz
+Após a troca do banco para o Supabase atual, só existem 4 buckets:
+`avatars`, `service-report-photos`, `temp-backups`, `company-photos`.
 
-A edge function `zapi-webhook` faz upload das fotos recebidas via Z-API para um bucket chamado **`report-photos`**, mas esse bucket **não existe** no projeto. Os buckets reais são:
+Encontrei 3 buckets referenciados no código que **não existem** no Supabase, causando falhas silenciosas semelhantes à das fotos do WhatsApp:
 
-- `avatars`
-- `service-report-photos` ← usado pelo restante do app para fotos de RDO/serviço
-- `temp-backups`
-- `company-photos`
+### 1. `suggestion-screenshots` — quebra upload de sugestões
+- `src/components/suggestions/NewSuggestionDialog.tsx` (linhas 71, 77, 108, 114): faz upload do screenshot da sugestão nesse bucket. Falha silenciosa ao anexar imagem em uma nova sugestão.
 
-Resultado: o upload falha silenciosamente (o código só insere em `report_photos` quando `uploadError` é falsy), nenhum registro é criado em `report_photos` e a foto nunca aparece no RDO.
+### 2. `project-photos` — quebra foto de capa do projeto
+- `src/components/reports/ProjectSelector.tsx` (linha 2351): `<ImageUploader bucketName="project-photos" />` para a foto do projeto. Upload falha.
 
-Confirmação no código (`supabase/functions/zapi-webhook/index.ts`):
-- linha 303-307 — anexar fotos pendentes
-- linha 878-882 — foto isolada anexada a um RDO recente
-- linha 1394-1397 — foto dentro do fluxo principal de RDO
+### 3. `report-photos` (legado) — backup/restore/estatísticas inconsistentes
+- `supabase/functions/generate-backup/index.ts`: tenta baixar de `report-photos` e `project-photos` e `suggestion-screenshots`.
+- `supabase/functions/restore-backup/index.ts`: lista os mesmos buckets para restaurar.
+- `supabase/functions/get-storage-stats/index.ts`: mostra estatísticas de buckets inexistentes (sempre vazios).
 
-Todas usam `.from("report-photos")`.
+> Observação: `src/lib/generateReportPdf.ts` já trata `report-photos` como legado para URLs antigas — pode permanecer como fallback de leitura.
 
-## O que será alterado
+---
 
-Trocar nas 3 ocorrências o nome do bucket de `report-photos` para `service-report-photos`, alinhando com o resto do sistema (formulário de RDO, `PhotoUploader`, etc.). Nenhuma outra lógica muda.
+## Plano de correção
 
-Arquivo alterado:
-- `supabase/functions/zapi-webhook/index.ts`
+**Opção A (recomendada): criar os buckets faltantes**
+1. Migration para criar os buckets públicos `suggestion-screenshots` e `project-photos` no `storage.buckets` com políticas de leitura pública e upload por usuários autenticados (mesmo padrão de `service-report-photos`).
+2. Não criar `report-photos` (é apenas legado). Remover referências em:
+   - `get-storage-stats/index.ts` → remover entrada `report-photos`.
+   - `generate-backup/index.ts` → remover linha do bucket `report-photos`.
+   - `restore-backup/index.ts` → remover `'report-photos'` da lista.
 
-## Validação
+**Opção B: redirecionar tudo para buckets existentes**
+- Trocar `suggestion-screenshots` e `project-photos` por `service-report-photos` (mistura conteúdos de domínios diferentes — não recomendado).
 
-1. Enviar uma foto no grupo monitorado junto com um texto de RDO (como o exemplo do CSN/Serra).
-2. Verificar nos logs da função `zapi-webhook` que não há erro de upload e aparece `Attached N pending photos to RDO #...` ou inserção em `report_photos`.
-3. Abrir o RDO correspondente no app e conferir se a foto aparece na galeria.
+### Itens fora do escopo desse erro
+- Demais usos do client (`.from("reports")`, `.from("profiles")` etc.) são tabelas e estão corretas conforme o schema atual.
 
-## Observações
-
-- Não é necessário criar bucket novo nem mexer em RLS — `service-report-photos` já é público e já é usado para fotos de relatório no app.
-- Fotos anteriores enviadas pelo WhatsApp que falharam não serão recuperadas automaticamente (o binário não foi salvo em lugar nenhum). Apenas mensagens futuras passarão a funcionar.
+Confirma seguir com a **Opção A**?
