@@ -2771,7 +2771,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      _export_workforce_link_report: { Args: never; Returns: Json }
       can_create_company: { Args: { _user_id: string }; Returns: boolean }
       client_has_role: {
         Args: {
