@@ -1,58 +1,50 @@
-## Auditoria de Edge Functions — referências quebradas pós-migração
+## Objetivo
 
-Buckets que **existem** no Storage: `avatars`, `service-report-photos`, `temp-backups`, `company-photos` + os recém-criados `project-photos` e `suggestion-screenshots`.
+Varrer todas as presenças (`report_attendance`) e lançamentos manuais (`workforce_database`) com `user_id` nulo e tentar vincular ao colaborador correto em `profiles`, usando match seguro por nome. Entregar o resultado com log do que foi vinculado, do que ficou ambíguo e do que não tem match.
 
-Tabelas existentes conforme o schema injetado em contexto (lista em `<supabase-tables>`).
+## Estado atual
 
-### 1. Buckets inexistentes ainda referenciados
+- `profiles`: 220 cadastros (217 com função).
+- `report_attendance`: 164 presenças, **18 sem `user_id`**, 146 já vinculadas.
+- `workforce_database`: vazia (sem lançamentos manuais para processar).
+- Conclusão: o trabalho real está sobre as 18 presenças órfãs (e qualquer nova que apareça).
 
-| Bucket | Onde | Impacto |
+## Estratégia de match (3 níveis, mais seguro → menos seguro)
+
+Normalização aplicada a todos os nomes antes de comparar:
+1. `lower()` + `unaccent()` (remove acentos)
+2. Colapsa espaços múltiplos e trim
+3. Remove pontuação
+
+| Nível | Critério | Ação |
 |---|---|---|
-| `report-pdfs` | `generate-backup/index.ts:70`, `restore-backup/index.ts:334`, `src/pages/AdminBackup.tsx:1260-1479` | Backup nunca inclui PDFs assinados; restore tenta restaurar bucket inexistente. Os PDFs reais ficam em `service-report-photos/signed-report-pdfs/...` |
+| **1. Exato** | nome normalizado idêntico, 1 único profile | Vincula automaticamente |
+| **2. Primeiro + último nome** | mesmo primeiro nome E mesmo último nome, 1 único profile | Vincula automaticamente |
+| **3. Similaridade pg_trgm ≥ 0.85** | `similarity(name_norm, profile_norm) >= 0.85`, 1 único profile | Vincula automaticamente |
+| **Ambíguo** | match em mais de 1 profile em qualquer nível acima | **Não vincula**, registra no log para revisão manual |
+| **Sem match** | nenhum profile com similaridade ≥ 0.85 | **Não vincula**, registra como "novo colaborador a cadastrar" |
 
-### 2. Tabelas referenciadas que NÃO existem no schema atual
+Casos como "Elvis" ou "Maranhão" (só primeiro nome / apelido) cairão em ambíguo ou sem match — são exatamente os que não devem ser vinculados automaticamente.
 
-| Tabela | Função | Observação |
-|---|---|---|
-| `api_keys` | `admin-api-keys/index.ts:55,68` | Função inteira quebrada |
-| `ai_alert_notifications` | `critical-activities-notification/index.ts:285,337` | Inserts/leituras falham |
-| `backup_schedules` | `scheduled-backup/index.ts:55,176,211`, listado em `generate-backup` TABLE_ORDER:57 | Agendamento de backup quebrado |
-| `backup_history` | `scheduled-backup/index.ts:66,162,196`, `generate-backup` TABLE_ORDER:58 | Histórico de backup não persiste |
-| `client_wallet`, `client_wallet_transactions`, `rewards_catalog`, `reward_redemptions` | `generate-backup` TABLE_ORDER:27-30 | Backup loga erro nessas tabelas (mas continua) |
-| `report_history` | `generate-backup` TABLE_ORDER:47 | Idem |
-| `delay_reasons` | `generate-backup` TABLE_ORDER:56 | Nome correto é `delay_reason_options` |
-| `data_corrections_log` | `health-check/index.ts:117` | Health check reporta falso negativo |
-| `time_clock_imports`, `time_clock_records` | `parse-afd/index.ts:186,229` | Importação de AFD não persiste |
+## Execução
 
-### 3. Itens OK
-- Buckets `service-report-photos`, `company-photos`, `avatars`, `project-photos`, `suggestion-screenshots` agora estão íntegros.
-- Demais `.from("...")` apontam para tabelas existentes.
-- Path interno `signed-report-pdfs/...` dentro do bucket `service-report-photos` funciona.
+1. **Migração**: garantir extensões `unaccent` e `pg_trgm` habilitadas (são extensões padrão Supabase, normalmente já estão).
+2. **Função SQL `link_workforce_to_profiles()`** (SECURITY DEFINER, idempotente):
+   - Aplica os 3 níveis em ordem.
+   - Faz `UPDATE report_attendance SET user_id = ...` e `UPDATE workforce_database SET worker_id = ...` (se a coluna existir; conferir antes).
+   - Retorna tabela com: `source`, `record_id`, `nome_original`, `nome_match`, `profile_id`, `nivel_match`, `acao` ('vinculado' | 'ambiguo' | 'sem_match').
+3. **Executar a função uma vez** via `supabase--insert` chamando `SELECT * FROM link_workforce_to_profiles()`.
+4. **Exportar log completo** para `/mnt/documents/vinculacao_hh_<timestamp>.csv` com todas as linhas (vinculados + ambíguos + sem match).
+5. **Entregar resumo no chat**: quantos vinculados em cada nível, quantos ambíguos, quantos sem match, com a lista dos ambíguos/sem match em tabela markdown para ação humana.
 
----
+## O que NÃO vou fazer (segurança)
 
-## Plano de correção
+- Não vinculo automaticamente em casos ambíguos ou de baixa similaridade — eles vão para o log de revisão manual.
+- Não crio profiles novos automaticamente.
+- A função fica disponível para re-execução sempre que novos RDOs forem criados (idempotente — só toca em registros com `user_id` nulo).
 
-### A. Backup/restore — alinhar com Storage real
-1. Em `generate-backup/index.ts`:
-   - Remover entrada `bucket: 'report-pdfs'` de `FILE_SOURCES` (PDFs assinados já estão em `service-report-photos/signed-report-pdfs/...` e serão incluídos pela linha do `service_report_photos`? **não** — vou adicionar uma entrada que aponta para `service-report-photos` com folder `signed-report-pdfs/` lendo de `reports.signed_pdf_url`).
-   - Remover de `TABLE_ORDER` as tabelas inexistentes: `client_wallet`, `client_wallet_transactions`, `rewards_catalog`, `reward_redemptions`, `report_history`.
-   - Corrigir `delay_reasons` → `delay_reason_options`.
-2. Em `restore-backup/index.ts:334`: remover `'report-pdfs'` da lista de buckets a restaurar.
-3. Em `src/pages/AdminBackup.tsx`: trocar referências a bucket `report-pdfs` por leitura do bucket `service-report-photos` no prefixo `signed-report-pdfs/`.
+## Entregável
 
-### B. Health check
-- Em `health-check/index.ts:117`: remover/condicionar a checagem de `data_corrections_log` (tabela ausente), ou criar a tabela se ela faz parte de um recurso vivo. Como ela não aparece em nenhum outro lugar do código, **remover** a checagem.
-
-### C. Funções que dependem de tabelas faltantes — decisão necessária
-As funções abaixo estão quebradas porque suas tabelas não existem no banco atual. Preciso de orientação:
-
-- **`admin-api-keys`** (tabela `api_keys`) — recriar a tabela ou desativar a função?
-- **`critical-activities-notification`** (tabela `ai_alert_notifications`) — recriar ou desativar?
-- **`scheduled-backup`** + entradas em `generate-backup` (tabelas `backup_schedules`, `backup_history`) — recriar ou desativar?
-- **`parse-afd`** (tabelas `time_clock_imports`, `time_clock_records`) — recriar ou desativar?
-
-Para cada uma, posso (1) criar uma migration recriando a tabela com RLS/grants padrão, ou (2) marcar a função como descontinuada (retornando 410 e ocultando a UI que a chama).
-
-### Resposta esperada
-Responda apenas com a lista das funções a **recriar** e a **desativar**, ex.: "recriar: scheduled-backup, parse-afd; desativar: admin-api-keys, critical-activities-notification". Os itens A e B eu executo direto após aprovação do plano.
+- 1 migração (função SQL).
+- 1 arquivo CSV em `/mnt/documents/` com o log completo.
+- Resumo no chat com contagens e lista de pendências de revisão manual.
