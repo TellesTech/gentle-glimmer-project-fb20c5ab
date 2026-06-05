@@ -1257,8 +1257,8 @@ export default function AdminBackup() {
 
       let pdfsRestored = 0;
       const pdfTargets: { folder: string; bucket: string }[] = [
-        { folder: 'RDOs', bucket: 'report-pdfs' },
-        { folder: 'RDOs_Assinados', bucket: 'report-pdfs' },
+        { folder: 'RDOs', bucket: 'service-report-photos' },
+        { folder: 'RDOs_Assinados', bucket: 'service-report-photos' },
       ];
 
       for (const { folder, bucket } of pdfTargets) {
@@ -1274,9 +1274,10 @@ export default function AdminBackup() {
         for (let i = 0; i < total; i++) {
           try {
             const blob = await entries[i].file.async('blob');
+            const targetPath = `signed-report-pdfs/${entries[i].path}`;
             const { error: upErr } = await supabase.storage
               .from(bucket)
-              .upload(entries[i].path, blob, { upsert: true, contentType: 'application/pdf' });
+              .upload(targetPath, blob, { upsert: true, contentType: 'application/pdf' });
             if (!upErr) pdfsRestored++;
             else console.warn(`PDF ${entries[i].path}:`, upErr.message);
           } catch (e: any) {
@@ -1464,7 +1465,7 @@ export default function AdminBackup() {
         }
       }
 
-      // ============ FASE 3: PDFs (RDOs e RDOs_Assinados → report-pdfs) ============
+      // ============ FASE 3: PDFs (RDOs e RDOs_Assinados → service-report-photos/signed-report-pdfs) ============
       setProgress(80);
       setProgressMessage('Restaurando PDFs...');
 
@@ -1475,9 +1476,10 @@ export default function AdminBackup() {
         for (let i = 0; i < pdfEntries.length; i++) {
           const { file, innerPath } = pdfEntries[i];
           try {
+            const targetPath = `signed-report-pdfs/${innerPath}`;
             const { error: upErr } = await supabase.storage
-              .from('report-pdfs')
-              .upload(innerPath, file, { upsert: true, contentType: 'application/pdf' });
+              .from('service-report-photos')
+              .upload(targetPath, file, { upsert: true, contentType: 'application/pdf' });
             if (!upErr) pdfsRestored++;
             else console.warn(`PDF ${innerPath}:`, upErr.message);
           } catch (e: any) {
