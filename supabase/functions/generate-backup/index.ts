@@ -53,9 +53,7 @@ const TABLE_ORDER = [
   'notifications',
   'feature_suggestions',
   'suggestion_votes',
-  'delay_reasons',
-  'backup_schedules',
-  'backup_history'
+  'delay_reason_options'
 ];
 
 // File sources mapping for downloading actual files
@@ -67,7 +65,7 @@ const FILE_SOURCES = [
   { table: 'profiles', column: 'avatar_url', bucket: 'avatars', folder: 'avatars' },
   { table: 'feature_suggestions', column: 'screenshot_url', bucket: 'suggestion-screenshots', folder: 'suggestion-screenshots' },
   { table: 'service_report_photos', column: 'url', bucket: 'service-report-photos', folder: 'service-report-photos' },
-  { table: 'reports', column: 'signed_pdf_url', bucket: 'report-pdfs', folder: 'report-pdfs' },
+  { table: 'reports', column: 'signed_pdf_url', bucket: 'service-report-photos', folder: 'signed-report-pdfs' },
 ];
 
 serve(async (req) => {
