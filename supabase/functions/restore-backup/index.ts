@@ -330,8 +330,7 @@ serve(async (req) => {
         // We iterate through buckets we know
         const bucketsToRestore = bucket ? [bucket] : [
           'company-photos', 'project-photos',
-          'avatars', 'suggestion-screenshots', 'service-report-photos',
-          'report-pdfs'
+          'avatars', 'suggestion-screenshots', 'service-report-photos'
         ];
 
         for (const b of bucketsToRestore) {
