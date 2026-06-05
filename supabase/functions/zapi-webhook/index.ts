@@ -300,11 +300,11 @@ async function attachPendingPhotos(
 
         const fileName = `whatsapp_${reportId}_${Date.now()}_${attachedCount}.jpg`;
         const { error: uploadError } = await supabase.storage
-          .from("report-photos")
+          .from("service-report-photos")
           .upload(fileName, imageData, { contentType: "image/jpeg" });
 
         if (!uploadError) {
-          const { data: publicUrl } = supabase.storage.from("report-photos").getPublicUrl(fileName);
+          const { data: publicUrl } = supabase.storage.from("service-report-photos").getPublicUrl(fileName);
           await supabase.from("report_photos").insert({
             report_id: reportId,
             url: publicUrl.publicUrl,
@@ -875,11 +875,11 @@ Deno.serve(async (req) => {
         if (imageData) {
           const fileName = `whatsapp_${targetReportId}_${Date.now()}.jpg`;
           const { error: uploadError } = await supabase.storage
-            .from("report-photos")
+            .from("service-report-photos")
             .upload(fileName, imageData, { contentType: "image/jpeg" });
 
           if (!uploadError) {
-            const { data: publicUrl } = supabase.storage.from("report-photos").getPublicUrl(fileName);
+            const { data: publicUrl } = supabase.storage.from("service-report-photos").getPublicUrl(fileName);
             await supabase.from("report_photos").insert({
               report_id: targetReportId,
               url: publicUrl.publicUrl,
@@ -1391,10 +1391,10 @@ Deno.serve(async (req) => {
         if (imageData) {
           const fileName = `whatsapp_${reportId}_${Date.now()}.jpg`;
           const { error: uploadError } = await supabase.storage
-            .from("report-photos")
+            .from("service-report-photos")
             .upload(fileName, imageData, { contentType: "image/jpeg" });
           if (!uploadError) {
-            const { data: publicUrl } = supabase.storage.from("report-photos").getPublicUrl(fileName);
+            const { data: publicUrl } = supabase.storage.from("service-report-photos").getPublicUrl(fileName);
             await supabase.from("report_photos").insert({
               report_id: reportId,
               url: publicUrl.publicUrl,
