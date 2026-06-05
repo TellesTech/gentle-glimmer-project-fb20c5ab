@@ -2852,6 +2852,21 @@ export type Database = {
       is_client: { Args: { _user_id: string }; Returns: boolean }
       is_company_contact: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      link_workforce_to_profiles: {
+        Args: never
+        Returns: {
+          acao: string
+          nivel_match: string
+          nome_match: string
+          nome_original: string
+          profile_id: string
+          record_id: string
+          source: string
+        }[]
+      }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
       client_role: "viewer" | "approver" | "admin"
