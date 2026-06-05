@@ -107,11 +107,11 @@ serve(async (req) => {
 
     // === Get storage stats ===
     const buckets = [
-      { id: 'report-photos', label: 'Fotos de RDOs' },
       { id: 'company-photos', label: 'Logos de Empresas' },
       { id: 'project-photos', label: 'Fotos de Projetos' },
       { id: 'avatars', label: 'Avatares' },
       { id: 'suggestion-screenshots', label: 'Screenshots de Sugestões' },
+      { id: 'service-report-photos', label: 'Fotos de RDOs' },
     ];
 
     const breakdown: Record<string, BucketStats & { label: string }> = {};

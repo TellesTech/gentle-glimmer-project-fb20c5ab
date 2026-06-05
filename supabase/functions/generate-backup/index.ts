@@ -60,7 +60,6 @@ const TABLE_ORDER = [
 
 // File sources mapping for downloading actual files
 const FILE_SOURCES = [
-  { table: 'report_photos', column: 'url', bucket: 'report-photos', folder: 'report-photos' },
   { table: 'companies', column: 'logo_url', bucket: 'company-photos', folder: 'company-photos' },
   { table: 'companies', column: 'photo_url', bucket: 'company-photos', folder: 'company-photos' },
   { table: 'sites', column: 'photo_url', bucket: 'company-photos', folder: 'company-photos' },
