@@ -1465,7 +1465,7 @@ export default function AdminBackup() {
         }
       }
 
-      // ============ FASE 3: PDFs (RDOs e RDOs_Assinados → report-pdfs) ============
+      // ============ FASE 3: PDFs (RDOs e RDOs_Assinados → service-report-photos/signed-report-pdfs) ============
       setProgress(80);
       setProgressMessage('Restaurando PDFs...');
 
@@ -1476,9 +1476,10 @@ export default function AdminBackup() {
         for (let i = 0; i < pdfEntries.length; i++) {
           const { file, innerPath } = pdfEntries[i];
           try {
+            const targetPath = `signed-report-pdfs/${innerPath}`;
             const { error: upErr } = await supabase.storage
-              .from('report-pdfs')
-              .upload(innerPath, file, { upsert: true, contentType: 'application/pdf' });
+              .from('service-report-photos')
+              .upload(targetPath, file, { upsert: true, contentType: 'application/pdf' });
             if (!upErr) pdfsRestored++;
             else console.warn(`PDF ${innerPath}:`, upErr.message);
           } catch (e: any) {
