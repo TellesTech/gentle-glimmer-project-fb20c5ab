@@ -112,10 +112,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Corrections log count
-    const { count: correctionsCount } = await adminClient
-      .from('data_corrections_log')
-      .select('id', { count: 'exact', head: true });
+    // Corrections log table was removed from schema; report 0.
+    const correctionsCount = 0;
 
     return new Response(JSON.stringify({
       counts: {
