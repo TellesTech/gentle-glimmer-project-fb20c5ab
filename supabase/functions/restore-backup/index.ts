@@ -329,7 +329,7 @@ serve(async (req) => {
       if (filesFolder) {
         // We iterate through buckets we know
         const bucketsToRestore = bucket ? [bucket] : [
-          'report-photos', 'company-photos', 'project-photos',
+          'company-photos', 'project-photos',
           'avatars', 'suggestion-screenshots', 'service-report-photos',
           'report-pdfs'
         ];
