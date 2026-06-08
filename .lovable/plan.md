@@ -1,58 +1,49 @@
-## PRD WEES — Diário de Obra Pro
+# Corrigir "Sem permissão para gerar relatório nesta unidade"
 
-Vou gerar um **PRD detalhado** como artefato Markdown + PDF em `/mnt/documents/`, baseado na exploração real do código (rotas em `App.tsx`, design system em `index.css`, edge functions, hooks, e tabelas Supabase já existentes).
+## Causa raiz
 
-### Estrutura do documento
+As tabelas `service_reports`, `service_report_sections` e `service_report_photos` têm RLS habilitado, mas:
 
-1. **Visão geral do produto**
-   - Propósito (Diário de Obra digital — RDO), público-alvo (construtoras, engenharia, gestores de obra, clientes finais), proposta de valor, principais KPIs.
-   - Stack: React 18 + Vite + TS + Tailwind + shadcn/ui + Supabase (Lovable Cloud) + Edge Functions + IA Gateway.
+- `service_reports` tem apenas **1 policy de SELECT** (`Users can view service reports from their company`).
+- `service_report_sections` e `service_report_photos` **não têm policy nenhuma**.
 
-2. **Personas & papéis**
-   - `super_admin`, `admin`, `collaborator`, `client_contact`, `portal_admin` — permissões, jornadas-chave.
+Como não existe nenhuma policy de `INSERT/UPDATE/DELETE`, qualquer tentativa de criar um Relatório de Serviço (manual ou via IA) falha com `permission denied / 42501`. O front-end traduz isso para "Sem permissão para gerar relatório nesta unidade", mas o problema não é da unidade — é falta de policy.
 
-3. **Arquitetura de informação & mapa de telas**
-   - Diagrama da hierarquia: Empresa → Site → Projeto → Relatório (RDO) → Atividades / Mão de Obra / Fotos / Assinaturas.
-   - Mapa completo de rotas (de `App.tsx`), agrupadas em: Públicas, Auth, App interno, Portal do Cliente, Super Admin.
+Isso também afeta:
+- Edição/exclusão de relatórios existentes.
+- Inserir/editar seções e fotos em qualquer relatório.
 
-4. **Design System — "Project Phoenix / Wees Edition"**
-   - Tokens completos extraídos de `index.css` e `tailwind.config.ts`: cores HSL (light/dark), gradientes, sombras, raio, tipografia (Inter / Open Sans / JetBrains Mono), escala modular StarkType, animações (float, shimmer, pulse-glow), glassmorphism.
-   - Componentes shadcn customizados, padrões de badge de status, navegação (Sidebar fixa desktop / BottomNav mobile / ManagementDrawer).
-   - Regras de acessibilidade, breakpoints, padrões de espaçamento e elevação.
+## O que vou fazer
 
-5. **PRD tela por tela** (≈ 35 telas)
-   Para cada tela: objetivo, usuário-alvo, rota, componentes principais, estados (loading/empty/error), regras de negócio, integrações (Supabase tables + edge functions), eventos analytics. Telas cobertas:
+Criar uma migration adicionando as policies que faltam, escopadas por empresa (mesma regra já usada no SELECT), e mantendo super_admin com acesso total.
 
-   - **Públicas / Auth**: SalesPage (`/pv`), Login, Register, ForgotPassword, ResetPassword, InitialSetup, Diagnostico, NotFound.
-   - **Portal do Cliente**: ClientLogin (slug), ClientDashboard, ClientReports, ClientReportView, ClientActivityList, ClientProfile, ClientPortalUsers, ClientPortalPicker.
-   - **App interno (MainLayout)**: HomeRedirect, Reports, QuickReportWizard, SimplifiedReportForm, ReportForm completo, ReportDetail, ServiceReportBuilder, ServiceReportEditor, ProjectCalendar, SiteDashboard, CompanyDashboard, Teams, TeamDetails, Users, WorkforceDatabase, AIAssistant, SuggestionsRoadmap, Settings.
-   - **Admin**: AdminExports, AdminSignatures, AdminBackup, AdminDataQuality, ImpactMetrics, ApiKeys.
-   - **Super Admin**: SuperAdminPanel, SystemAgents.
+### service_reports
 
-6. **Fluxos críticos (com diagramas ASCII)**
-   - Criação de RDO (Wizard → Simplified → ReportDetail → Assinatura → PDF).
-   - Vinculação de HH (workforce → profiles, com base no que já foi auditado).
-   - Portal do cliente (slug → login → assinatura).
-   - Geração de Service Report assistido por IA.
+- `INSERT`: permitido quando `company_id = get_user_company_id(auth.uid())` ou `has_role(auth.uid(),'super_admin')` e `created_by = auth.uid()`.
+- `UPDATE`: mesma regra (USING + WITH CHECK por empresa / super_admin).
+- `DELETE`: mesma regra.
 
-7. **Modelo de dados resumido**
-   Lista das principais tabelas (`profiles`, `user_roles`, `companies`, `sites`, `projects`, `reports`, `report_attendance`, `workforce_database`, `service_reports`, `signatures`, `portal_admin_access`, `client_contacts`, `suggestions`, etc.) com propósito e relações.
+### service_report_sections e service_report_photos
 
-8. **Edge functions & integrações**
-   Tabela com cada função (`generate-report-summary`, `generate-service-report`, `ai-assistant`, `parse-afd`, `zapi-*`, `submit-signature`, `bulk-import-collaborators`, `chat-onboarding`, etc.), propósito, entradas/saídas, secrets necessários.
+Como ambas pertencem a um `service_report`, todas as policies (SELECT/INSERT/UPDATE/DELETE) usarão `EXISTS` para validar que o `report_id` (ou o `section_id → report_id`) pertence a um `service_report` visível pelo usuário pela mesma regra (empresa ou super_admin).
 
-9. **Roadmap & métricas de sucesso** (placeholder com base em `SuggestionsRoadmap` e `ImpactMetrics`).
+### GRANTs
 
-10. **Anexos**: glossário, convenções de nomenclatura, política de RLS/segurança (user_roles + has_role), padrão de slugs reservados.
+Conferir e, se faltarem, garantir:
+```
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.service_reports        TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.service_report_sections TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.service_report_photos   TO authenticated;
+GRANT ALL ON public.service_reports, public.service_report_sections, public.service_report_photos TO service_role;
+```
 
-### Entrega
+## Verificação após aplicar
 
-Dois arquivos em `/mnt/documents/`:
-- `PRD_WEES_DiarioDeObraPro.md` (fonte editável)
-- `PRD_WEES_DiarioDeObraPro.pdf` (gerado via pandoc/weasyprint)
+1. Recarregar `/service-reports` e clicar em "Gerar Relatório com IA" no mesmo projeto onde deu erro — deve criar o rascunho e abrir o editor.
+2. Editar/salvar uma seção do relatório gerado.
+3. Como super_admin, validar que continua funcionando em qualquer empresa.
 
-Sem alterações no código da aplicação — apenas leitura de arquivos existentes para extrair informação fiel.
+## Fora do escopo
 
-### Observação
-
-Documento estimado em 25–40 páginas. Se preferir um recorte (ex.: só o design system, ou só o portal do cliente), me diga antes que eu inicie a geração.
+- Não vou alterar o fluxo do `AIReportGeneratorDialog` nem a Edge Function `generate-service-report` — eles estão corretos; o bloqueio é puramente RLS.
+- Não vou mexer em `reports` (RDOs) nem em colaboradores nesta tarefa.
