@@ -124,8 +124,23 @@ Deno.serve(async (req) => {
     const payload = await req.json();
     console.log("Evolution webhook payload:", JSON.stringify(payload).slice(0, 1500));
 
-    const event = payload.event || payload.type;
-    if (event && event !== "messages.upsert" && event !== "MESSAGES_UPSERT") {
+    // Em "Webhook by Events", a Evolution envia para sub-paths como
+    // /evolution-webhook/messages-upsert, /evolution-webhook/connection-update, etc.
+    // e o body pode NÃO conter o campo `event`. Inferimos o evento pelo path.
+    const url = new URL(req.url);
+    const lastSegment = url.pathname.split("/").filter(Boolean).pop() || "";
+    const pathEvent = lastSegment.replace(/-/g, ".").toLowerCase();
+
+    const rawEvent = (payload.event || payload.type || pathEvent || "").toString();
+    const event = rawEvent.toLowerCase().replace(/_/g, ".");
+
+    // Aceita tanto o path raiz (/evolution-webhook) quanto /messages-upsert
+    const isMessagesUpsert =
+      event === "messages.upsert" ||
+      lastSegment === "evolution-webhook" ||
+      lastSegment === "";
+
+    if (event && event !== "messages.upsert" && !isMessagesUpsert) {
       return new Response(JSON.stringify({ status: "ignored", reason: `event=${event}` }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
