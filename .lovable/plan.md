@@ -1,56 +1,20 @@
-# Ajuste da resposta automática do RDO via WhatsApp
+# Corrigir "RDO #?" e confirmação quando foto vem com o texto
 
-## Problema
-Hoje, quando o usuário envia o texto do RDO no grupo, o bot responde com um bloco enorme: lista de campos preenchidos + resumo técnico da IA + pedido de fotos. As fotos enviadas em seguida são anexadas, mas a mensagem de "registrado com sucesso" nunca é dada de forma clara — só aparece "📸 Foto N anexada ao RDO #X".
+## Diagnóstico (confirmado nos logs e no banco)
 
-O usuário quer:
-1. Resposta inicial (após parser do texto) curta e objetiva.
-2. Mensagem "RDO registrado com sucesso" apenas **depois** que as fotos forem recebidas.
+1. **RDO #?**: a mensagem caiu no branch de **atualização** de um RDO existente (mesmo remetente + data + turno). Esse branch não calcula `rdo_number`, e há **43 RDOs com número nulo** no banco — quando atualiza um deles, a consulta retorna `null` e a mensagem mostra `#?`.
+2. **Imagem com texto não conclui**: quando a foto vem **junto com o texto** do RDO, a foto até é anexada, mas o bot ainda responde "RDO recebido. Envie as fotos agora…" em vez de "concluído e salvo".
 
-## Mudanças em `supabase/functions/uazapi-webhook/index.ts`
+## Mudanças
 
-### 1. Resposta após parsing do texto do RDO (linhas ~1637-1672)
-Substituir o bloco que monta `confirmMsg` (lista de campos + resumo técnico da IA + "envie as fotos") por uma mensagem enxuta:
+### 1. Edge function `uazapi-webhook`
+- **Branch de atualização**: antes do `update`, verificar se o RDO existente tem `rdo_number` nulo; se sim, calcular `max(rdo_number)+1` do projeto e incluir no update. Nunca mais aparecerá `#?`.
+- **Foto junto com texto**: se a mensagem trouxe imagem e ela foi anexada com sucesso, responder direto com `✅ RDO #X concluído e salvo no sistema (N foto(s) anexada(s))` em vez de pedir as fotos.
 
-```
-📝 RDO #<rdoCode> recebido. Envie as fotos agora — confirmarei o registro assim que forem anexadas.
-```
-
-- Remover a montagem de `filledFields`.
-- Remover a concatenação do `aiSummaryText` na mensagem do WhatsApp (o resumo da IA continua sendo gerado e salvo no banco normalmente, apenas não vai mais para o grupo).
-- Manter a indicação de atividade (`📁 Atividade: ...`) somente quando houver auto-criação ou múltiplas atividades, em uma linha curta.
-
-### 2. Confirmação após anexar fotos
-Hoje há dois caminhos que anexam fotos:
-
-**a) `attachPendingPhotos` (linha ~326-329)** — usado quando o texto chega depois das fotos.  
-Trocar:
-```
-📸 N fotos anexadas ao RDO #X
-```
-por:
-```
-✅ RDO #X registrado com sucesso (N foto(s) anexada(s))
-```
-
-**b) Fluxo de foto isolada após RDO existente (linha ~1013-1016)** — usado quando a foto chega depois do texto.  
-Trocar:
-```
-📸 Foto N anexada ao RDO #X
-```
-por:
-```
-✅ RDO #X registrado com sucesso (N foto(s) anexada(s))
-```
-
-Em ambos os casos, `N` é o total de fotos do report após o anexo (já calculado via `count` no fluxo b; no fluxo a, calcular `count` em `report_photos` após o loop).
-
-## Fora de escopo
-- Geração do resumo técnico pela IA (continua salvando em `reports`).
-- Lógica de parsing, mapeamento de grupos, normalização de `group_id`.
-- UI do app web.
+### 2. Migração (backfill)
+- Preencher `rdo_number` dos 43 RDOs nulos, numerando em sequência por projeto a partir do maior número existente.
 
 ## Validação
-1. Enviar texto de RDO no grupo "RDO - TESTE" → bot deve responder apenas `📝 RDO #X recebido. Envie as fotos agora...`.
-2. Enviar 2 fotos → bot deve responder `✅ RDO #X registrado com sucesso (2 foto(s) anexada(s))`.
-3. Confirmar via logs da função que o `aiSummaryText` continua sendo persistido na coluna correspondente de `reports`.
+- Enviar no grupo "RDO - TESTE":
+  - Texto + foto na mesma mensagem → resposta `✅ RDO #X concluído e salvo…` com número real e foto registrada.
+  - Texto sozinho → `📝 RDO #X recebido…`, depois foto → `✅ RDO #X concluído…`.
