@@ -2770,10 +2770,12 @@ export type Database = {
           created_by: string | null
           date: string
           delay_hours: number
+          delay_source: string | null
           delay_type: Database["public"]["Enums"]["delay_type"]
           description: string | null
           id: string
           project_id: string | null
+          report_id: string | null
         }
         Insert: {
           activity_name: string
@@ -2782,10 +2784,12 @@ export type Database = {
           created_by?: string | null
           date: string
           delay_hours?: number
+          delay_source?: string | null
           delay_type?: Database["public"]["Enums"]["delay_type"]
           description?: string | null
           id?: string
           project_id?: string | null
+          report_id?: string | null
         }
         Update: {
           activity_name?: string
@@ -2794,10 +2798,12 @@ export type Database = {
           created_by?: string | null
           date?: string
           delay_hours?: number
+          delay_source?: string | null
           delay_type?: Database["public"]["Enums"]["delay_type"]
           description?: string | null
           id?: string
           project_id?: string | null
+          report_id?: string | null
         }
         Relationships: [
           {
@@ -2812,6 +2818,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workforce_delays_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
             referencedColumns: ["id"]
           },
         ]
