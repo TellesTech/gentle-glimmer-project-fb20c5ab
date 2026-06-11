@@ -713,6 +713,56 @@ export type Database = {
           },
         ]
       }
+      impact_settings: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          document_search_time: number
+          hh_calculation_time: number
+          hourly_salary: number
+          id: string
+          manual_time_per_rdo: number
+          system_time_per_rdo: number
+          updated_at: string
+          work_days_per_month: number
+          work_hours_per_day: number
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          document_search_time?: number
+          hh_calculation_time?: number
+          hourly_salary?: number
+          id?: string
+          manual_time_per_rdo?: number
+          system_time_per_rdo?: number
+          updated_at?: string
+          work_days_per_month?: number
+          work_hours_per_day?: number
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          document_search_time?: number
+          hh_calculation_time?: number
+          hourly_salary?: number
+          id?: string
+          manual_time_per_rdo?: number
+          system_time_per_rdo?: number
+          updated_at?: string
+          work_days_per_month?: number
+          work_hours_per_day?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impact_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           company: string | null
