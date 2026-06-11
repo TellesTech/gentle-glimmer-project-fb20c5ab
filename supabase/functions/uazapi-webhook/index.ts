@@ -821,7 +821,12 @@ Deno.serve(async (req) => {
 
     // Detect group vs DM
     const isGroup = payload.isGroup || payload.chatId?.includes("@g.us");
-    const messageText = payload.text?.message || payload.body || payload.message || "";
+    const rawText =
+      (typeof payload.text === "string" ? payload.text : payload.text?.message) ||
+      (typeof payload.body === "string" ? payload.body : payload.body?.text) ||
+      (typeof payload.message === "string" ? payload.message : payload.message?.text) ||
+      "";
+    const messageText = typeof rawText === "string" ? rawText : "";
     const isImage =
       payload.isMedia ||
       payload.type === "image" ||
