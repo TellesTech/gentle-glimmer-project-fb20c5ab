@@ -1352,6 +1352,15 @@ export default function WorkforceDatabase() {
       </Tabs>
 
       <ConfirmDialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null); }} title="Excluir registro" description="Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita." confirmText="Excluir" variant="destructive" onConfirm={handleDeleteRecord} isLoading={deleting} />
+      <ConfirmDialog
+        open={showSyncConfirm}
+        onOpenChange={open => { if (!open && !syncing) setShowSyncConfirm(false); }}
+        title="Sincronizar com RDOs"
+        description={`Isso vai materializar todas as presenças e atrasos dos RDOs do período (${startDate} a ${endDate}) nas tabelas workforce_database e workforce_delays. Registros já sincronizados serão atualizados. Continuar?`}
+        confirmText="Sincronizar"
+        onConfirm={syncFromRdos}
+        isLoading={syncing}
+      />
     </div>
   );
 }
