@@ -528,8 +528,22 @@ export function PropertiesPanel({
 
   // ===== Render: Mode A (section selected) or Mode B (cover) =====
   return (
-    <ScrollArea className="w-64 border-l border-border bg-card shrink-0">
-      <div className="p-3 space-y-4">
+    <div className="relative shrink-0 border-l border-border bg-card" style={{ width: panelWidth }}>
+      {/* Handle de redimensionamento */}
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        onMouseDown={startResize}
+        className={
+          'absolute inset-y-0 -left-1 w-2 z-20 cursor-col-resize group ' +
+          (resizing ? 'bg-primary/40' : 'hover:bg-primary/30')
+        }
+        title="Arraste para redimensionar"
+      >
+        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-border group-hover:bg-primary/60 transition-colors" />
+      </div>
+      <ScrollArea className="h-full w-full">
+        <div className="p-3 space-y-4">
         {selectedSection ? (
           <>
             {sectionBlock}
@@ -560,8 +574,9 @@ export function PropertiesPanel({
             {reportMetadataBlock}
           </>
         )}
-      </div>
-    </ScrollArea>
+        </div>
+      </ScrollArea>
+    </div>
   );
 }
 
