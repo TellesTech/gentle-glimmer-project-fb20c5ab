@@ -1,32 +1,64 @@
+## Análise da base de dados de HH (Homem-Hora)
 
-# Painel de Propriedades redimensionável (arrastar para a esquerda)
+Auditei tabelas, hook de métricas e telas relacionadas. Encontrei **5 problemas concretos**, do mais grave ao menor.
 
-## Diagnóstico
+### Problemas encontrados
 
-Hoje o painel direito (`PropertiesPanel`) tem largura fixa `w-64` (256 px) em `src/components/service-reports/PropertiesPanel.tsx:496`. Não há handle de drag. Por isso o usuário não consegue "puxar mais pro lado" para ver legendas/títulos compridos.
+**1. Tabela `impact_settings` não existe no banco (CRÍTICO)**
+- O hook `useImpactSettings` em `src/hooks/useImpactMetrics.ts` faz `from('impact_settings').select(...).single()`.
+- A tabela nunca foi criada. A consulta falha silenciosamente; toda a tela `/admin/impact` e a aba "Métricas de Impacto" em Configurações ficam quebradas (loading infinito ou usando defaults sem persistir).
+- A função `useUpdateImpactSettings` tenta salvar e dá erro ao usuário.
 
-## Solução
+**2. 24 de 262 registros em `report_attendance` estão sem `user_id`**
+- Todos são pessoas com nome curto/ambíguo ("Manoel", "Ricardo", "Luciano", "Elvis", "Jocivan"...) que não bateram unicamente com `profiles` pela função `link_workforce_to_profiles()`.
+- Consequência: o cálculo de HH baseado em `user_id` perde gente. Worker-months por `user_id` = 59, por nome normalizado = 77 (≈23% subcontado).
 
-Tornar a largura do painel ajustável pelo usuário via drag na borda esquerda.
+**3. Mês de referência usa `created_at` em vez de `date` do RDO**
+- Em `useImpactStats`, o agrupamento mensal e os pares (worker, mês) usam `reportDateMap` com `r.created_at`.
+- RDO de obra do dia 30/05 lançado em 02/06 conta no mês errado, distorcendo o gráfico de horas economizadas.
 
-### Mudanças
+**4. Tabelas `workforce_database`, `workforce_delays` e `project_daily_workforce` estão vazias (0 linhas)**
+- A página `/workforce-database` consulta essas tabelas, então abas Dashboard/Relatórios/IA aparecem vazias mesmo havendo 262 presenças registradas.
+- Os dados existem em `report_attendance` mas nunca foram propagados para `workforce_database`.
 
-**`src/components/service-reports/PropertiesPanel.tsx`**
-- Substituir `w-64` por largura controlada via state (px), com padrão 256 px e limites 240–560 px.
-- Persistir o valor escolhido em `localStorage` (`service-report:properties-width`) para não resetar a cada navegação.
-- Adicionar um **handle vertical de 4 px** na borda esquerda do painel (`absolute inset-y-0 -left-0.5 w-1 cursor-col-resize hover:bg-primary/40`).
-- Lógica: `onMouseDown` registra `startX` e `startW`; `mousemove` calcula `newW = clamp(startW + (startX - clientX), 240, 560)`; `mouseup` solta listeners.
-- Manter `shrink-0` para não ser comprimido pelo flex pai.
+**5. Normalização de nomes inconsistente**
+- `useImpactMetrics` faz `(user_name || '').trim().toUpperCase()` — não remove acentos nem múltiplos espaços. "José" vira diferente de "Jose"; "Maria  Silva" diferente de "Maria Silva". Cria worker-months fantasmas.
 
-### Fora do escopo
+### Correções propostas
 
-- Não mexer no painel esquerdo nem na área central de preview.
-- Não alterar comportamento do `PdfPagePreview`, geração de PDF, ou layout do `ServiceReportEditor` em si.
-- Sem responsividade automática para mobile — o editor já é desktop-only.
+**A. Migration — criar `impact_settings` (resolve 1)**
 
-## Validação
+```sql
+CREATE TABLE public.impact_settings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id uuid REFERENCES public.companies(id) ON DELETE CASCADE,
+  manual_time_per_rdo integer NOT NULL DEFAULT 10,
+  system_time_per_rdo integer NOT NULL DEFAULT 1,
+  hourly_salary numeric NOT NULL DEFAULT 25,
+  work_hours_per_day integer NOT NULL DEFAULT 8,
+  work_days_per_month integer NOT NULL DEFAULT 22,
+  document_search_time integer NOT NULL DEFAULT 60,
+  hh_calculation_time integer NOT NULL DEFAULT 30,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+-- GRANTs + RLS (admins editam, todos autenticados leem) + trigger updated_at
+-- Seed da linha global (company_id NULL)
+```
 
-1. Abrir o editor → arrastar a borda esquerda do painel → largura aumenta/diminui suavemente.
-2. Recarregar a página → largura escolhida é mantida.
-3. Tentar arrastar além dos limites → trava em 240 px / 560 px.
-4. Conteúdo do painel (campos, fotos) acompanha a nova largura sem quebrar.
+**B. Backfill de `user_id` em `report_attendance` (resolve 2)**
+- Rodar `SELECT public.link_workforce_to_profiles()` (já existe) e relatar quantos foram vinculados.
+- Para os ambíguos remanescentes (Manoel/Ricardo/...), deixar como está e mostrar aviso na UI — não dá pra adivinhar sem confirmação humana.
+
+**C. Hook `useImpactMetrics` (resolve 3 e 5)**
+- Buscar `date` (data real do RDO) em vez de só `created_at` e usar ela no `monthKey` e nos pares (worker, mês).
+- Substituir `normalizeName` por versão que faz `unaccent + lower + collapse spaces` (espelhando a função SQL `link_workforce_to_profiles`).
+- Fallback: quando `user_id` está nulo, usar nome normalizado como chave do worker-month (assim os 24 sem vínculo entram no cálculo sem duplicar quem já tem id).
+
+**D. População de `workforce_database` (resolve 4) — opcional, requer decisão**
+- Posso criar um botão "Sincronizar com RDOs" na página `/workforce-database` que copia presenças de `report_attendance` calculando horas via `calculateWorkHours` já existente. **Confirme se quer isso agora ou em outra rodada** — é o escopo maior dos 5.
+
+### Fora de escopo
+- Não vou alterar layout/cores das telas.
+- Não vou mexer em `report_attendance` apagando duplicatas — só preenchendo `user_id` via função existente.
+- Item D só faço se você confirmar (impacto em outra tela, não estritamente "erro").
