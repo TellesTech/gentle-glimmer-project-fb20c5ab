@@ -323,16 +323,6 @@ async function attachPendingPhotos(
         .eq("id", log.id);
     }
 
-    if (attachedCount > 0 && uazapiToken && groupId) {
-      const { count: totalPhotos } = await supabase
-        .from("report_photos")
-        .select("id", { count: "exact", head: true })
-        .eq("report_id", reportId);
-      const n = totalPhotos ?? attachedCount;
-      await sendUazapiText(uazapiToken, groupId,
-        `✅ RDO #${rdoCode} concluído e salvo no sistema (${n} foto${n > 1 ? "s" : ""} anexada${n > 1 ? "s" : ""})`);
-    }
-
     console.log(`Attached ${attachedCount} pending photos to RDO #${rdoCode}`);
   } catch (error) {
     console.error("Error in attachPendingPhotos:", error);
@@ -1019,12 +1009,8 @@ Deno.serve(async (req) => {
               .eq("id", targetReportId)
               .single();
 
-            const rdoNum = rInfo?.rdo_number || "?";
-            if (UAZAPI_TOKEN && groupId) {
-              const n = count || 1;
-              await sendUazapiText(UAZAPI_TOKEN, groupId,
-                `✅ RDO #${rdoNum} concluído e salvo no sistema (${n} foto${n > 1 ? "s" : ""} anexada${n > 1 ? "s" : ""})`);
-            }
+            // Bot silencioso: não envia resposta no grupo.
+            void rInfo;
           }
         }
       } catch (photoError) {
@@ -1231,14 +1217,7 @@ Deno.serve(async (req) => {
             message_id: messageId, group_id: groupId, sender_phone: senderPhone, sender_name: senderName,
             status: "error", error_message: "IA não conseguiu identificar a atividade (múltiplas ativas)", raw_payload: payload,
           });
-          if (UAZAPI_TOKEN) {
-            const projectList = activeProjects.map((p, i) => {
-              const emoji = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"][i] || `${i + 1}.`;
-              return `${emoji} ${p.name}${p.code ? ` (${p.code})` : ""}`;
-            }).join("\n");
-            await sendUazapiText(UAZAPI_TOKEN, groupId,
-              `🤔 Esta unidade tem ${activeProjects.length} atividades ativas e não consegui identificar a qual atividade este RDO pertence.\n\nAtividades ativas:\n${projectList}\n\nPor favor, inclua o nome ou código da atividade na mensagem e envie novamente.`);
-          }
+          // Bot silencioso: não envia resposta no grupo.
           return new Response(JSON.stringify({ status: "error", reason: "multiple_projects_unresolved" }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
@@ -1676,30 +1655,7 @@ Deno.serve(async (req) => {
       console.error("Error generating AI summary (non-blocking):", aiError);
     }
 
-    // Send confirmation
-    if (UAZAPI_TOKEN) {
-      // Count attached photos to decide final wording
-      const { count: photoCount } = await supabase
-        .from("report_photos")
-        .select("id", { count: "exact", head: true })
-        .eq("report_id", reportId);
-      const n = photoCount || 0;
-
-      let confirmMsg: string;
-      if (n > 0) {
-        confirmMsg = `✅ RDO #${rdoCode} concluído e salvo no sistema (${n} foto(s) anexada(s)).`;
-      } else {
-        confirmMsg = `📝 RDO #${rdoCode} recebido. Envie as fotos agora — confirmarei o registro assim que forem anexadas.`;
-      }
-
-      if (autoCreatedProject && projectName) {
-        confirmMsg += `\n📁 Nova atividade criada: ${projectName}`;
-      } else if (activeProjects.length > 1 && projectName) {
-        confirmMsg += `\n📁 Atividade: ${projectName}`;
-      }
-
-      await sendUazapiText(UAZAPI_TOKEN, groupId, confirmMsg);
-    }
+    // Bot silencioso: não envia confirmação no grupo.
 
     return new Response(
       JSON.stringify({ status: "success", action: actionType, reportId, rdoNumber: rdoCode }),
