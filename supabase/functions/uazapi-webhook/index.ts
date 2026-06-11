@@ -346,8 +346,20 @@ async function sendUazapiText(token: string, phone: string, message: string) {
   }
 }
 
-async function downloadUazapiMedia(mediaUrlOrBase64: string, token?: string): Promise<Uint8Array | null> {
+async function downloadUazapiMedia(
+  mediaUrlOrBase64: string | undefined | null,
+  token?: string,
+  messageId?: string | null
+): Promise<Uint8Array | null> {
   try {
+    // WhatsApp encrypted media (.enc on mmg.whatsapp.net) can't be fetched directly —
+    // request the decrypted binary from UAZAPI by message id instead.
+    const isEncrypted = !!mediaUrlOrBase64 && /\.enc(\?|$)|mmg\.whatsapp\.net/i.test(mediaUrlOrBase64);
+    if ((!mediaUrlOrBase64 || isEncrypted) && messageId && token) {
+      const dl = await downloadUazapiMediaById(messageId, token);
+      if (dl) return dl;
+    }
+    if (!mediaUrlOrBase64) return null;
     // Base64 data URL or raw base64
     if (mediaUrlOrBase64.startsWith("data:")) {
       const b64 = mediaUrlOrBase64.split(",")[1] || "";
@@ -369,6 +381,49 @@ async function downloadUazapiMedia(mediaUrlOrBase64: string, token?: string): Pr
     return new Uint8Array(buffer);
   } catch (error) {
     console.error("Error downloading UAZAPI media:", error);
+    return null;
+  }
+}
+
+// Ask UAZAPI to download/decrypt the media of a message and return its bytes.
+async function downloadUazapiMediaById(messageId: string, token: string): Promise<Uint8Array | null> {
+  try {
+    const response = await fetch(`${UAZAPI_BASE_URL}/message/download`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", token },
+      body: JSON.stringify({ id: messageId, return_base64: true }),
+    });
+    if (!response.ok) {
+      console.error(`UAZAPI media download failed (${response.status}) for message ${messageId}`);
+      return null;
+    }
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      const json = await response.json();
+      let b64: string | undefined =
+        json.fileBase64 || json.base64 || json.data || json.file || json.media;
+      if (typeof b64 === "string" && b64.length > 0) {
+        if (b64.startsWith("data:")) b64 = b64.split(",")[1] || "";
+        try {
+          return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+        } catch {
+          console.error("UAZAPI download: invalid base64 in JSON response");
+          return null;
+        }
+      }
+      // Some versions return a temporary fileURL instead
+      const fileUrl: string | undefined = json.fileURL || json.fileUrl || json.url;
+      if (fileUrl && /^https?:\/\//i.test(fileUrl)) {
+        const r2 = await fetch(fileUrl, { headers: { token } });
+        if (r2.ok) return new Uint8Array(await r2.arrayBuffer());
+      }
+      console.error("UAZAPI download: JSON response had no media field. Keys:", Object.keys(json));
+      return null;
+    }
+    const buffer = await response.arrayBuffer();
+    return buffer.byteLength > 0 ? new Uint8Array(buffer) : null;
+  } catch (error) {
+    console.error("Error in downloadUazapiMediaById:", error);
     return null;
   }
 }
