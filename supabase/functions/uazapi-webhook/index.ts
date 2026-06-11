@@ -330,7 +330,7 @@ async function attachPendingPhotos(
         .eq("report_id", reportId);
       const n = totalPhotos ?? attachedCount;
       await sendUazapiText(uazapiToken, groupId,
-        `✅ RDO #${rdoCode} registrado com sucesso (${n} foto${n > 1 ? "s" : ""} anexada${n > 1 ? "s" : ""})`);
+        `✅ RDO #${rdoCode} concluído e salvo no sistema (${n} foto${n > 1 ? "s" : ""} anexada${n > 1 ? "s" : ""})`);
     }
 
     console.log(`Attached ${attachedCount} pending photos to RDO #${rdoCode}`);
@@ -1023,7 +1023,7 @@ Deno.serve(async (req) => {
             if (UAZAPI_TOKEN && groupId) {
               const n = count || 1;
               await sendUazapiText(UAZAPI_TOKEN, groupId,
-                `✅ RDO #${rdoNum} registrado com sucesso (${n} foto${n > 1 ? "s" : ""} anexada${n > 1 ? "s" : ""})`);
+                `✅ RDO #${rdoNum} concluído e salvo no sistema (${n} foto${n > 1 ? "s" : ""} anexada${n > 1 ? "s" : ""})`);
             }
           }
         }
