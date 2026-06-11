@@ -1462,9 +1462,28 @@ Deno.serve(async (req) => {
     let actionType: "created" | "updated";
 
     if (existingReportId) {
+      // Ensure existing report has an rdo_number; backfill if null so confirmation never shows #?
+      const { data: existingRow } = await supabase
+        .from("reports")
+        .select("rdo_number")
+        .eq("id", existingReportId)
+        .maybeSingle();
+      let updatePayload: any = reportData;
+      if (!existingRow?.rdo_number) {
+        const { data: maxRowU } = await supabase
+          .from("reports")
+          .select("rdo_number")
+          .eq("project_id", projectId)
+          .not("rdo_number", "is", null)
+          .order("rdo_number", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const nextRdoNumberU = ((maxRowU?.rdo_number as number) || 0) + 1;
+        updatePayload = { ...reportData, rdo_number: nextRdoNumberU };
+      }
       const { error: updateError } = await supabase
         .from("reports")
-        .update(reportData)
+        .update(updatePayload)
         .eq("id", existingReportId);
       if (updateError) throw new Error(`Erro ao atualizar RDO: ${updateError.message}`);
       reportId = existingReportId;
@@ -1513,6 +1532,7 @@ Deno.serve(async (req) => {
     }
 
     // Handle photos
+    let photoAttachedWithText = false;
     if (payload.image?.imageUrl || payload.mediaUrl) {
       const mediaUrl = payload.image?.imageUrl || payload.mediaUrl;
       try {
@@ -1528,6 +1548,7 @@ Deno.serve(async (req) => {
               report_id: reportId,
               url: publicUrl.publicUrl,
             });
+            photoAttachedWithText = true;
           }
         }
       } catch (photoError) {
@@ -1657,7 +1678,19 @@ Deno.serve(async (req) => {
 
     // Send confirmation
     if (UAZAPI_TOKEN) {
-      let confirmMsg = `📝 RDO #${rdoCode} recebido. Envie as fotos agora — confirmarei o registro assim que forem anexadas.`;
+      // Count attached photos to decide final wording
+      const { count: photoCount } = await supabase
+        .from("report_photos")
+        .select("id", { count: "exact", head: true })
+        .eq("report_id", reportId);
+      const n = photoCount || 0;
+
+      let confirmMsg: string;
+      if (n > 0) {
+        confirmMsg = `✅ RDO #${rdoCode} concluído e salvo no sistema (${n} foto(s) anexada(s)).`;
+      } else {
+        confirmMsg = `📝 RDO #${rdoCode} recebido. Envie as fotos agora — confirmarei o registro assim que forem anexadas.`;
+      }
 
       if (autoCreatedProject && projectName) {
         confirmMsg += `\n📁 Nova atividade criada: ${projectName}`;
