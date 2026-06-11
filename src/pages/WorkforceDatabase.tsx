@@ -1014,6 +1014,18 @@ export default function WorkforceDatabase() {
                 {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
                 {importing ? 'Importando...' : 'Importar Planilha'}
               </Button>
+              {(role === 'admin' || role === 'super_admin') && (
+                <Button
+                  variant="default"
+                  onClick={() => setShowSyncConfirm(true)}
+                  disabled={syncing}
+                  className="flex-1"
+                  title="Materializa os RDOs do período filtrado em workforce_database/workforce_delays"
+                >
+                  {syncing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                  {syncing ? 'Sincronizando...' : 'Sincronizar com RDOs'}
+                </Button>
+              )}
             </div>
           </div>
 
