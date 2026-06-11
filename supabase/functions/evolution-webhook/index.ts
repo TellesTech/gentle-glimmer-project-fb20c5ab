@@ -1,6 +1,6 @@
 // Evolution API → Z-API adapter
 // Recebe webhooks da Evolution API (Hostinger), normaliza o payload para o
-// formato esperado pela função `zapi-webhook` (que já contém toda a lógica
+// formato esperado pela função `uazapi-webhook` (que já contém toda a lógica
 // de processamento de RDOs) e encaminha a requisição.
 //
 // Eventos tratados: messages.upsert (mensagens recebidas).
@@ -22,7 +22,7 @@ const EVOLUTION_API_URL = (Deno.env.get("EVOLUTION_API_URL") || "").replace(/\/+
 const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY") || "";
 const EVOLUTION_INSTANCE_NAME = Deno.env.get("EVOLUTION_INSTANCE_NAME") || "";
 
-const ZAPI_WEBHOOK_URL = `${SUPABASE_URL}/functions/v1/zapi-webhook`;
+const UAZAPI_WEBHOOK_URL = `${SUPABASE_URL}/functions/v1/uazapi-webhook`;
 
 function extractText(message: any): string {
   if (!message) return "";
@@ -46,7 +46,7 @@ function detectImage(message: any): boolean {
   );
 }
 
-// Faz download de mídia via Evolution API e faz upload pública para reutilizar no zapi-webhook
+// Faz download de mídia via Evolution API e faz upload pública para reutilizar no uazapi-webhook
 async function fetchMediaPublicUrl(rawData: any): Promise<string | null> {
   if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY || !EVOLUTION_INSTANCE_NAME) {
     console.error("Evolution credentials missing — cannot fetch media");
@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
       _evolution: data,
     };
 
-    const forwardRes = await fetch(ZAPI_WEBHOOK_URL, {
+    const forwardRes = await fetch(UAZAPI_WEBHOOK_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -207,7 +207,7 @@ Deno.serve(async (req) => {
     });
 
     const forwardText = await forwardRes.text();
-    console.log(`Forwarded to zapi-webhook [${forwardRes.status}]: ${forwardText.slice(0, 300)}`);
+    console.log(`Forwarded to uazapi-webhook [${forwardRes.status}]: ${forwardText.slice(0, 300)}`);
 
     return new Response(
       JSON.stringify({

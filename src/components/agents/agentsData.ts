@@ -59,9 +59,9 @@ export const departments: Department[] = [
     agents: [
       { id: 'send-welcome-email', name: 'Beatriz', role: 'Coordenadora de Boas-Vindas', description: 'Envia e-mails de boas-vindas personalizados para novos usuários do sistema.', department: 'communication', type: 'automacao', initials: 'BT', gender: 'f', avatarVariant: 3 },
       { id: 'send-client-invitation', name: 'Thiago', role: 'Especialista em Convites', description: 'Gerencia envio de convites para clientes acessarem o portal de acompanhamento.', department: 'communication', type: 'automacao', initials: 'TG', gender: 'm', avatarVariant: 3 },
-      { id: 'zapi-webhook', name: 'Carla', role: 'Operadora de WhatsApp', description: 'Processa mensagens recebidas via WhatsApp e executa ações automatizadas.', department: 'communication', type: 'integracao', initials: 'CR', gender: 'f', avatarVariant: 4 },
-      { id: 'zapi-status', name: 'André', role: 'Monitor de Conexão', description: 'Verifica o status da conexão WhatsApp e reporta disponibilidade em tempo real.', department: 'communication', type: 'integracao', initials: 'AD', gender: 'm', avatarVariant: 4 },
-      { id: 'zapi-health-check', name: 'Priscila', role: 'Analista de Saúde', description: 'Monitora a saúde da integração WhatsApp e alerta sobre problemas de conectividade.', department: 'communication', type: 'integracao', initials: 'PR', gender: 'f', avatarVariant: 5 },
+      { id: 'uazapi-webhook', name: 'Carla', role: 'Operadora de WhatsApp', description: 'Processa mensagens recebidas via WhatsApp (UAZAPI) e executa ações automatizadas.', department: 'communication', type: 'integracao', initials: 'CR', gender: 'f', avatarVariant: 4 },
+      { id: 'uazapi-status', name: 'André', role: 'Monitor de Conexão', description: 'Verifica o status da conexão WhatsApp (UAZAPI) e reporta disponibilidade em tempo real.', department: 'communication', type: 'integracao', initials: 'AD', gender: 'm', avatarVariant: 4 },
+      { id: 'uazapi-health-check', name: 'Priscila', role: 'Analista de Saúde', description: 'Monitora a saúde da integração WhatsApp (UAZAPI) e alerta sobre problemas de conectividade.', department: 'communication', type: 'integracao', initials: 'PR', gender: 'f', avatarVariant: 5 },
     ],
   },
   {
