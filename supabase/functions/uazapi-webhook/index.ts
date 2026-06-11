@@ -995,7 +995,7 @@ Deno.serve(async (req) => {
         payload.imageMessage?.url ||
         payload.mediaUrl ||
         payload.url;
-      if (!mediaUrl) {
+      if (!mediaUrl && !messageId) {
         console.warn("Image detected but no mediaUrl found. Payload keys:", Object.keys(payload));
         return new Response(JSON.stringify({ status: "ignored", reason: "image_no_url" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -1038,7 +1038,7 @@ Deno.serve(async (req) => {
       const targetReportId = recentRdo.report_id;
 
       try {
-        const imageData = await downloadUazapiMedia(mediaUrl, UAZAPI_TOKEN);
+        const imageData = await downloadUazapiMedia(mediaUrl, UAZAPI_TOKEN, messageId);
         if (imageData) {
           const fileName = `whatsapp_${targetReportId}_${Date.now()}.jpg`;
           const { error: uploadError } = await supabase.storage
