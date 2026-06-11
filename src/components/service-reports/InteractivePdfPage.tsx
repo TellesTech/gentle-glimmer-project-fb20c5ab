@@ -239,7 +239,12 @@ export function paginateAllSections(sections: { id: string; title: string; secti
     return h + 24; // +24 for photo upload button area
   };
 
-  const estimatePhotoRowH = (photo: PhotoItem) => (photo.customHeight ?? 160) + 20 + ROW_GAP;
+  // Clamp da estimativa: uma única linha de foto nunca pode exceder o orçamento
+  // total de uma página fresca, ou a foto seria descartada pela paginação
+  // (era a causa real de fotos sumirem do preview mesmo aparecendo no PDF).
+  const MAX_ROW_H = TOTAL_BUDGET - TITLE_H - 4;
+  const estimatePhotoRowH = (photo: PhotoItem) =>
+    Math.min(MAX_ROW_H, (photo.customHeight ?? 160) + 24 + ROW_GAP);
 
   const estimatePhotosH = (photos: PhotoItem[]): number => {
     let h = 0, i = 0;
@@ -260,7 +265,6 @@ export function paginateAllSections(sections: { id: string; title: string; secti
   };
 
   const splitPhotos = (photos: PhotoItem[], budget: number): [PhotoItem[], PhotoItem[]] => {
-    if (budget < 60) return [[], photos];
     let used = 0, i = 0;
     while (i < photos.length) {
       const p = photos[i];
@@ -272,7 +276,18 @@ export function paginateAllSections(sections: { id: string; title: string; secti
         const nw = next.widthPercent ?? (next.layout === 'full' ? 100 : 50);
         if (nw <= 50) { rowH = Math.max(rowH, estimatePhotoRowH(next)); consumed = 2; }
       }
-      if (used + rowH > budget) break;
+      if (used + rowH > budget) {
+        // Garante progresso: se nem a primeira foto cabe no orçamento atual,
+        // força a entrada dela aqui (em vez de descartar silenciosamente).
+        // Quando i === 0 e budget é pequeno, devolve-se vazio para que o
+        // chamador faça flush e tente em página fresca; lá MAX_ROW_H garante
+        // que sempre caberá.
+        if (i === 0 && budget >= MAX_ROW_H) {
+          used = budget;
+          i += consumed;
+        }
+        break;
+      }
       used += rowH;
       i += consumed;
     }
@@ -298,7 +313,23 @@ export function paginateAllSections(sections: { id: string; title: string; secti
       const effectiveBudget = contBudget > 60 ? contBudget : TOTAL_BUDGET - TITLE_H;
       if (contBudget <= 60) flushPage();
       const [fit, rest] = splitPhotos(leftover, effectiveBudget);
-      if (fit.length === 0) break;
+      if (fit.length === 0) {
+        // Fallback de segurança: se mesmo em página fresca não couber nada
+        // (foto patologicamente alta), forçamos a primeira foto sozinha
+        // para não perdê-la. MAX_ROW_H garante que isso quase nunca ocorre.
+        if (remaining >= TOTAL_BUDGET - TITLE_H) {
+          currentPage.push({
+            section: sec as any, sectionIndex: sIdx,
+            photosSlice: [leftover[0]],
+            isContinuation: true, showText: false,
+          });
+          leftover = leftover.slice(1);
+          flushPage();
+          continue;
+        }
+        flushPage();
+        continue;
+      }
       currentPage.push({
         section: sec as any, sectionIndex: sIdx,
         photosSlice: fit,
