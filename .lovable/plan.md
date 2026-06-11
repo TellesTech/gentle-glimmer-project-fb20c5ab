@@ -1,51 +1,56 @@
-## Diagnóstico
+# Ajuste da resposta automática do RDO via WhatsApp
 
-Todos os 6 grupos já estavam mapeados em `whatsapp_group_projects`, mas todos com `group_id` no formato antigo da Evolution API: `120363425129092506-group`. A UAZAPI envia o JID nativo do WhatsApp: `120363425129092506@g.us`. O webhook compara string literal, então **nenhum** grupo bate — daí o "Não mapeado" no log de hoje (`120363425129092506@g.us`).
+## Problema
+Hoje, quando o usuário envia o texto do RDO no grupo, o bot responde com um bloco enorme: lista de campos preenchidos + resumo técnico da IA + pedido de fotos. As fotos enviadas em seguida são anexadas, mas a mensagem de "registrado com sucesso" nunca é dada de forma clara — só aparece "📸 Foto N anexada ao RDO #X".
 
-Grupos atualmente mapeados (todos sem `project_id`, só com `site_id`):
+O usuário quer:
+1. Resposta inicial (após parser do texto) curta e objetiva.
+2. Mensagem "RDO registrado com sucesso" apenas **depois** que as fotos forem recebidas.
 
-| group_id (banco)                  | grupo                       | unidade           |
-| --------------------------------- | --------------------------- | ----------------- |
-| 120363425129092506-group          | RDO - TESTE                 | Aperam Timóteo    |
-| 120363409082781666-group          | RDO PEDRO LEOPOLDO 02.2026  | CSN Pedro Leopoldo|
-| 120363358148265977-group          | CSN SERRA                   | CSN - Serra       |
-| 120363425703983453-group          | CSN PARANA                  | CSN Paraná        |
-| 120363425835827088-group          | RDO Nexa Três marias        | Três Marias       |
-| 120363408746728542-group          | RDO - PG BRACELL            | Bahia             |
+## Mudanças em `supabase/functions/uazapi-webhook/index.ts`
 
-## Solução
+### 1. Resposta após parsing do texto do RDO (linhas ~1637-1672)
+Substituir o bloco que monta `confirmMsg` (lista de campos + resumo técnico da IA + "envie as fotos") por uma mensagem enxuta:
 
-Padronizar `group_id` em **um formato canônico único** em todo o sistema: apenas o número (`120363425129092506`), sem `-group` e sem `@g.us`. Toda comparação no webhook passa por uma função `normalizeGroupId()`.
+```
+📝 RDO #<rdoCode> recebido. Envie as fotos agora — confirmarei o registro assim que forem anexadas.
+```
 
-### 1. Migração de dados (não-destrutiva)
-- `UPDATE whatsapp_group_projects SET group_id = regexp_replace(regexp_replace(group_id, '-group$', ''), '@g.us$', '')`
-- Mesma normalização em `whatsapp_rdo_logs.group_id` (para histórico ficar consistente)
+- Remover a montagem de `filledFields`.
+- Remover a concatenação do `aiSummaryText` na mensagem do WhatsApp (o resumo da IA continua sendo gerado e salvo no banco normalmente, apenas não vai mais para o grupo).
+- Manter a indicação de atividade (`📁 Atividade: ...`) somente quando houver auto-criação ou múltiplas atividades, em uma linha curta.
 
-### 2. `supabase/functions/uazapi-webhook/index.ts`
-- Adicionar helper:
-  ```ts
-  const normalizeGroupId = (id: string | null) =>
-    id ? id.replace(/@g\.us$/, '').replace(/-group$/, '') : id;
-  ```
-- Aplicar em todos os pontos onde `groupId` é usado para `.eq("group_id", ...)` ou para INSERT em `whatsapp_rdo_logs` / `whatsapp_group_projects` (linhas 281, 851, 947, 965, 1030, 1036, 1057, 1085, 1119, 1165, 1215, 1237, 1417, 1528).
-- Em `sendUazapiText` continua passando o número puro (`groupId.split("@")[0]`) — o helper já lida bem; manter como está.
+### 2. Confirmação após anexar fotos
+Hoje há dois caminhos que anexam fotos:
 
-### 3. `supabase/functions/uazapi-status/index.ts` (list-groups)
-- Ao retornar a lista de grupos da UAZAPI para a UI, devolver `group_id` já normalizado, para que ao salvar mapeamento via `WhatsAppSettingsTab` o registro novo entre canônico desde o início.
+**a) `attachPendingPhotos` (linha ~326-329)** — usado quando o texto chega depois das fotos.  
+Trocar:
+```
+📸 N fotos anexadas ao RDO #X
+```
+por:
+```
+✅ RDO #X registrado com sucesso (N foto(s) anexada(s))
+```
 
-### 4. `src/components/settings/WhatsAppSettingsTab.tsx`
-- Ao buscar grupos e salvar `whatsapp_group_projects`, gravar `group_id` normalizado (sem `@g.us`, sem `-group`). Sem mudança de UX, só do valor persistido.
-- Na visualização "Grupos mapeados" / log, exibir `group_id` cru — funciona pois agora é canônico.
+**b) Fluxo de foto isolada após RDO existente (linha ~1013-1016)** — usado quando a foto chega depois do texto.  
+Trocar:
+```
+📸 Foto N anexada ao RDO #X
+```
+por:
+```
+✅ RDO #X registrado com sucesso (N foto(s) anexada(s))
+```
 
-### 5. Validação
-Após deploy:
-- Verificar via `whatsapp_rdo_logs` que a próxima mensagem do grupo `RDO - TESTE` é processada (sai do status `error: Grupo não mapeado` e passa para `success` ou `pending_photo`).
-- Conferir que `Buscar Grupos` na UI ainda funciona e novos mapeamentos salvam canônicos.
+Em ambos os casos, `N` é o total de fotos do report após o anexo (já calculado via `count` no fluxo b; no fluxo a, calcular `count` em `report_photos` após o loop).
 
 ## Fora de escopo
-- Vincular `project_id` aos grupos (continua opcional, hoje só `site_id`); a UI já permite isso.
-- Mudanças na lógica de RDO/parsing/AMT — intactas.
-- Limpeza de logs antigos (apenas normalização do `group_id` neles, mantém histórico).
+- Geração do resumo técnico pela IA (continua salvando em `reports`).
+- Lógica de parsing, mapeamento de grupos, normalização de `group_id`.
+- UI do app web.
 
-## Riscos
-- Se houver código de cliente filtrando logs por `group_id` exato no formato antigo (`...-group`), pode quebrar — fiz `rg` no frontend e o único consumo é exibição textual + filtro pelo valor salvo no próprio `whatsapp_group_projects`, então tudo continua coerente após a normalização em massa.
+## Validação
+1. Enviar texto de RDO no grupo "RDO - TESTE" → bot deve responder apenas `📝 RDO #X recebido. Envie as fotos agora...`.
+2. Enviar 2 fotos → bot deve responder `✅ RDO #X registrado com sucesso (2 foto(s) anexada(s))`.
+3. Confirmar via logs da função que o `aiSummaryText` continua sendo persistido na coluna correspondente de `reports`.

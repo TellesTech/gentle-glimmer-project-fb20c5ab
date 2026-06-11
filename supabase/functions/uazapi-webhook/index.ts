@@ -1636,37 +1636,13 @@ Deno.serve(async (req) => {
 
     // Send confirmation
     if (UAZAPI_TOKEN) {
-      // Count filled fields for confirmation message
-      const filledFields: string[] = [];
-      if (parsedData.data) filledFields.push("📆 Data");
-      if (parsedData.turno) filledFields.push("🔄 Turno");
-      if (parsedData.localAtividade) filledFields.push("📍 Local");
-      if (parsedData.horaInicio) filledFields.push("⏰ Horários");
-      if (parsedData.atividades?.length) filledFields.push(`🛠️ ${parsedData.atividades.length} atividades`);
-      if (parsedData.efetivo?.length) filledFields.push(`👷 ${parsedData.efetivo.length} colaboradores`);
-      if (parsedData.tituloOM || parsedData.numeroOM) filledFields.push("📄 OM");
-      if (parsedData.supervisor) filledFields.push("👨‍💼 Supervisor");
-      if (parsedData.desvios?.length) filledFields.push(`⚠️ ${parsedData.desvios.length} desvios`);
-
-      let confirmMsg = actionType === "created"
-        ? `✅ RDO #${rdoCode} registrado com sucesso`
-        : `✅ RDO #${rdoCode} atualizado com sucesso`;
+      let confirmMsg = `📝 RDO #${rdoCode} recebido. Envie as fotos agora — confirmarei o registro assim que forem anexadas.`;
 
       if (autoCreatedProject && projectName) {
-        confirmMsg += `\n📁 *Nova atividade criada:* ${projectName}`;
+        confirmMsg += `\n📁 Nova atividade criada: ${projectName}`;
       } else if (activeProjects.length > 1 && projectName) {
         confirmMsg += `\n📁 Atividade: ${projectName}`;
       }
-
-      if (filledFields.length > 0) {
-        confirmMsg += `\n\n${filledFields.join("\n")}`;
-      }
-
-      if (aiSummaryText) {
-        confirmMsg += `\n\n📋 *Resumo Técnico:*\n${aiSummaryText}`;
-      }
-
-      confirmMsg += "\n\n📸 Envie as fotos agora — serão anexadas automaticamente a este RDO.";
 
       await sendUazapiText(UAZAPI_TOKEN, groupId, confirmMsg);
     }
