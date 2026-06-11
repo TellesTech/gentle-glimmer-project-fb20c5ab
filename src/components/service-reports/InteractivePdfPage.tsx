@@ -1450,7 +1450,7 @@ export function InteractivePdfPage({
                       fitMode === 'contain' ? 'object-contain' : 'object-cover',
                       activeTool === 'cursor' && 'cursor-pointer'
                     )}
-                    style={{ height: `${photoHeight}px` }}
+                    style={{ height: `${photoHeight}px`, maxHeight: '520px' }}
                     title={activeTool === 'cursor' ? 'Duplo-clique para ajustar (recortar, girar, brilho)' : undefined}
                     onDoubleClick={(e) => {
                       if (activeTool !== 'cursor') return;
