@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfMonth, endOfMonth, subMonths, subDays, parseISO } from 'date-fns';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Database, Loader2, FileSpreadsheet, FileText, Trash2, Upload, BarChart3, Brain, AlertTriangle, ClipboardList, Factory } from 'lucide-react';
+import { Database, Loader2, FileSpreadsheet, FileText, Trash2, Upload, BarChart3, Brain, AlertTriangle, ClipboardList, Factory, RefreshCw } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import { normalizeFunction, JOB_FUNCTIONS, getBaseFunction } from '@/lib/jobFunctions';
@@ -81,6 +81,8 @@ export default function WorkforceDatabase() {
   const [lastReportDate, setLastReportDate] = useState<string | null>(null);
   
   const [importing, setImporting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [showSyncConfirm, setShowSyncConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
   const [editValue, setEditValue] = useState('');
