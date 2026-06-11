@@ -264,8 +264,13 @@ export function WhatsAppSettingsTab() {
   const addMapping = useMutation({
     mutationFn: async () => {
       if (!newGroupId || !selectedSiteId) throw new Error('Preencha todos os campos');
+      // Canonical group_id: only the numeric JID prefix (no "@g.us", no legacy "-group")
+      const canonicalGroupId = newGroupId
+        .trim()
+        .replace(/@g\.us$/i, '')
+        .replace(/-group$/i, '');
       const { error } = await supabase.from('whatsapp_group_projects').upsert({
-        group_id: newGroupId,
+        group_id: canonicalGroupId,
         group_name: newGroupName || null,
         site_id: selectedSiteId,
       } as any, { onConflict: 'group_id' });
