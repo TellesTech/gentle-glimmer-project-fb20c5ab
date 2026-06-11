@@ -106,6 +106,7 @@ interface SiteFolder {
   id: string;
   name: string;
   photo_url: string | null;
+  company_logo_url: string | null;
   reports: Report[];
   totalCount: number;
   years: YearFolder[];
@@ -646,6 +647,7 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
           id: site.id, 
           name: site.name, 
           photo_url: site.photo_url,
+          company_logo_url: company.logo_url || company.photo_url || null,
           reports: [], 
           totalCount: 0, 
           years: [] 
@@ -714,6 +716,7 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
           id: site.id,
           name: site.name,
           photo_url: site.photo_url,
+          company_logo_url: folder.logo_url || folder.photo_url || null,
           reports: [],
           totalCount: 0,
           years: [],
@@ -739,6 +742,7 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
           id: site.id,
           name: site.name,
           photo_url: site.photo_url,
+          company_logo_url: folder.logo_url || folder.photo_url || null,
           reports: [],
           totalCount: 0,
           years: [],
@@ -1272,8 +1276,13 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                 onClick={() => setOpenSiteId(siteFolder.id)}
                 icon={
                    <div className="w-20 h-[4.2rem] rounded-lg overflow-hidden flex items-center justify-center" style={{ backgroundColor: '#ffffff' }}>
-                    {siteFolder.photo_url ? (
-                      <img src={siteFolder.photo_url} alt={siteFolder.name} className="w-full h-full object-cover" />
+                    {(siteFolder.photo_url || siteFolder.company_logo_url) ? (
+                      <img
+                        src={siteFolder.photo_url || siteFolder.company_logo_url!}
+                        alt={siteFolder.name}
+                        className={siteFolder.photo_url ? "w-full h-full object-cover" : "max-h-full max-w-full object-contain p-1"}
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
                     ) : (
                       <MapPin className="h-7 w-7 text-muted-foreground" />
                     )}
