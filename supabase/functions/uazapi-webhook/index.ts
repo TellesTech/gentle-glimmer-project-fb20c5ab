@@ -972,7 +972,7 @@ Deno.serve(async (req) => {
       const targetReportId = recentRdo.report_id;
 
       try {
-        const imageData = await downloadZapiMedia(mediaUrl);
+        const imageData = await downloadUazapiMedia(mediaUrl, UAZAPI_TOKEN);
         if (imageData) {
           const fileName = `whatsapp_${targetReportId}_${Date.now()}.jpg`;
           const { error: uploadError } = await supabase.storage
@@ -1210,12 +1210,12 @@ Deno.serve(async (req) => {
             message_id: messageId, group_id: groupId, sender_phone: senderPhone, sender_name: senderName,
             status: "error", error_message: "IA não conseguiu identificar a atividade (múltiplas ativas)", raw_payload: payload,
           });
-          if (ZAPI_INSTANCE_ID && ZAPI_TOKEN) {
+          if (UAZAPI_TOKEN) {
             const projectList = activeProjects.map((p, i) => {
               const emoji = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"][i] || `${i + 1}.`;
               return `${emoji} ${p.name}${p.code ? ` (${p.code})` : ""}`;
             }).join("\n");
-            await sendZapiMessage(ZAPI_INSTANCE_ID, ZAPI_TOKEN, groupId,
+            await sendUazapiText(UAZAPI_TOKEN, groupId,
               `🤔 Esta unidade tem ${activeProjects.length} atividades ativas e não consegui identificar a qual atividade este RDO pertence.\n\nAtividades ativas:\n${projectList}\n\nPor favor, inclua o nome ou código da atividade na mensagem e envie novamente.`);
           }
           return new Response(JSON.stringify({ status: "error", reason: "multiple_projects_unresolved" }), {
@@ -1517,7 +1517,7 @@ Deno.serve(async (req) => {
     // Enrich report_history entry created by trigger — mark as WhatsApp automation
     const whatsappAction = actionType === "created" ? "whatsapp_created" : "whatsapp_updated";
     const whatsappDetails = {
-      method: "whatsapp_zapi",
+      method: "whatsapp_uazapi",
       sender_name: senderName || "Desconhecido",
       sender_phone: senderPhone || "",
       group_id: groupId || "",
@@ -1558,7 +1558,7 @@ Deno.serve(async (req) => {
 
     // Attach any pending photos that arrived before the RDO was processed
     const rdoCodeForPhotos = reportInfo?.rdo_number || rdoCode || "?";
-    await attachPendingPhotos(supabase, groupId, senderPhone, reportId, rdoCodeForPhotos, ZAPI_INSTANCE_ID || null, ZAPI_TOKEN || null);
+    await attachPendingPhotos(supabase, groupId, senderPhone, reportId, rdoCodeForPhotos, UAZAPI_TOKEN || null);
 
     // Generate AI summary automatically
     let aiSummaryText = "";
@@ -1625,7 +1625,7 @@ Deno.serve(async (req) => {
     }
 
     // Send confirmation
-    if (ZAPI_INSTANCE_ID && ZAPI_TOKEN) {
+    if (UAZAPI_TOKEN) {
       // Count filled fields for confirmation message
       const filledFields: string[] = [];
       if (parsedData.data) filledFields.push("📆 Data");
@@ -1658,7 +1658,7 @@ Deno.serve(async (req) => {
 
       confirmMsg += "\n\n📸 Envie as fotos agora — serão anexadas automaticamente a este RDO.";
 
-      await sendZapiMessage(ZAPI_INSTANCE_ID, ZAPI_TOKEN, groupId, confirmMsg);
+      await sendUazapiText(UAZAPI_TOKEN, groupId, confirmMsg);
     }
 
     return new Response(
