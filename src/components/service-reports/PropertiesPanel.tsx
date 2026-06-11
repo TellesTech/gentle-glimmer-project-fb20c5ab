@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -88,6 +88,41 @@ export function PropertiesPanel({
 }: PropertiesPanelProps) {
   const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
   const [uploadingIrata, setUploadingIrata] = useState<'brasil' | 'international' | null>(null);
+
+  // Largura redimensionável (drag na borda esquerda)
+  const MIN_W = 240;
+  const MAX_W = 560;
+  const STORAGE_KEY = 'service-report:properties-width';
+  const [panelWidth, setPanelWidth] = useState<number>(() => {
+    if (typeof window === 'undefined') return 256;
+    const saved = Number(window.localStorage.getItem(STORAGE_KEY));
+    return Number.isFinite(saved) && saved >= MIN_W && saved <= MAX_W ? saved : 256;
+  });
+  const [resizing, setResizing] = useState(false);
+  useEffect(() => {
+    try { window.localStorage.setItem(STORAGE_KEY, String(panelWidth)); } catch { /* noop */ }
+  }, [panelWidth]);
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = panelWidth;
+    setResizing(true);
+    const onMove = (ev: MouseEvent) => {
+      const next = Math.min(MAX_W, Math.max(MIN_W, startW + (startX - ev.clientX)));
+      setPanelWidth(next);
+    };
+    const onUp = () => {
+      setResizing(false);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const handleSlotUpload = async (slotIndex: number, file: File) => {
@@ -493,8 +528,22 @@ export function PropertiesPanel({
 
   // ===== Render: Mode A (section selected) or Mode B (cover) =====
   return (
-    <ScrollArea className="w-64 border-l border-border bg-card shrink-0">
-      <div className="p-3 space-y-4">
+    <div className="relative shrink-0 border-l border-border bg-card" style={{ width: panelWidth }}>
+      {/* Handle de redimensionamento */}
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        onMouseDown={startResize}
+        className={
+          'absolute inset-y-0 -left-1 w-2 z-20 cursor-col-resize group ' +
+          (resizing ? 'bg-primary/40' : 'hover:bg-primary/30')
+        }
+        title="Arraste para redimensionar"
+      >
+        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-border group-hover:bg-primary/60 transition-colors" />
+      </div>
+      <ScrollArea className="h-full w-full">
+        <div className="p-3 space-y-4">
         {selectedSection ? (
           <>
             {sectionBlock}
@@ -525,8 +574,9 @@ export function PropertiesPanel({
             {reportMetadataBlock}
           </>
         )}
-      </div>
-    </ScrollArea>
+        </div>
+      </ScrollArea>
+    </div>
   );
 }
 
