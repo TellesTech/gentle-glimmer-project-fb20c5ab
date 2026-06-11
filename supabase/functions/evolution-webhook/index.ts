@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
       _evolution: data,
     };
 
-    const forwardRes = await fetch(ZAPI_WEBHOOK_URL, {
+    const forwardRes = await fetch(UAZAPI_WEBHOOK_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -207,7 +207,7 @@ Deno.serve(async (req) => {
     });
 
     const forwardText = await forwardRes.text();
-    console.log(`Forwarded to zapi-webhook [${forwardRes.status}]: ${forwardText.slice(0, 300)}`);
+    console.log(`Forwarded to uazapi-webhook [${forwardRes.status}]: ${forwardText.slice(0, 300)}`);
 
     return new Response(
       JSON.stringify({
