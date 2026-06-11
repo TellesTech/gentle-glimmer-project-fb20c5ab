@@ -383,6 +383,11 @@ async function downloadUazapiMedia(mediaUrlOrBase64: string, token?: string): Pr
 function parseUazapiPayload(raw: any): any {
   if (!raw || typeof raw !== "object") return {};
 
+  // Pass-through: payload already in legacy/normalized shape (e.g. from evolution-webhook bridge)
+  if (raw.chatId && (typeof raw.text === "object" || raw.body || raw.image || raw.messageId)) {
+    return raw;
+  }
+
   // The actual message envelope can be at the root or nested under message/data/messages[0]
   const m = raw.message || raw.data || (Array.isArray(raw.messages) ? raw.messages[0] : null) || raw;
 
