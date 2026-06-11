@@ -101,7 +101,13 @@ function monthKey(d: Date | string): string {
 }
 
 function normalizeName(n: string | null | undefined): string {
-  return (n || '').trim().toUpperCase();
+  // unaccent + lower + collapse de espaços — espelha link_workforce_to_profiles
+  return (n || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 export function useImpactStats(period: PeriodFilter, scope: ScopeFilter = 'completed', settings?: ImpactSettings | null) {
@@ -127,7 +133,7 @@ export function useImpactStats(period: PeriodFilter, scope: ScopeFilter = 'compl
       // 2) Period-filtered reports
       let query = supabase
         .from('reports')
-        .select('id, status, project_id, created_at, daily_progress');
+        .select('id, status, project_id, created_at, date, daily_progress');
 
       if (start) query = query.gte('created_at', start);
       query = query.lte('created_at', end);
@@ -157,7 +163,8 @@ export function useImpactStats(period: PeriodFilter, scope: ScopeFilter = 'compl
         .filter(r => completedProjectIds.has(r.project_id))
         .map(r => r.id);
       const reportDateMap = new Map<string, string>();
-      allReports.forEach(r => reportDateMap.set(r.id, r.created_at));
+      // Preferimos `date` (data do RDO) sobre `created_at` (lançamento)
+      allReports.forEach((r: any) => reportDateMap.set(r.id, r.date || r.created_at));
 
       let workerMonths = 0;
       const workerMonthSet = new Set<string>();
@@ -169,7 +176,7 @@ export function useImpactStats(period: PeriodFilter, scope: ScopeFilter = 'compl
         while (true) {
           const { data: page, error: attErr } = await (supabase as any)
             .from('report_attendance')
-            .select('report_id, user_name')
+            .select('report_id, user_id, user_name')
             .in('report_id', finalizedReportIds)
             .range(from, from + pageSize - 1);
           if (attErr) throw attErr;
@@ -177,8 +184,12 @@ export function useImpactStats(period: PeriodFilter, scope: ScopeFilter = 'compl
           for (const row of page) {
             const reportDate = reportDateMap.get(row.report_id);
             if (!reportDate) continue;
-            const key = `${normalizeName(row.user_name)}|${monthKey(reportDate)}`;
-            if (key === '|' || key.startsWith('|')) continue;
+            // Chave: prioriza user_id; fallback para nome normalizado quando o id está nulo
+            const workerKey = row.user_id
+              ? `id:${row.user_id}`
+              : `name:${normalizeName(row.user_name)}`;
+            if (workerKey === 'name:') continue;
+            const key = `${workerKey}|${monthKey(reportDate)}`;
             workerMonthSet.add(key);
           }
           if (page.length < pageSize) break;
@@ -190,7 +201,8 @@ export function useImpactStats(period: PeriodFilter, scope: ScopeFilter = 'compl
       // 5) Monthly breakdown (RDO count per month) + per-category savings curve
       const monthMap = new Map<string, number>();
       reports.forEach(r => {
-        monthMap.set(monthKey(r.created_at), (monthMap.get(monthKey(r.created_at)) || 0) + 1);
+        const d = (r as any).date || r.created_at;
+        monthMap.set(monthKey(d), (monthMap.get(monthKey(d)) || 0) + 1);
       });
       const monthlyBreakdown = Array.from(monthMap.entries())
         .sort(([a], [b]) => a.localeCompare(b))
@@ -200,7 +212,7 @@ export function useImpactStats(period: PeriodFilter, scope: ScopeFilter = 'compl
       const monthFinalizedSet = new Map<string, Set<string>>();
       allReports.forEach(r => {
         if (!completedProjectIds.has(r.project_id)) return;
-        const k = monthKey(r.created_at);
+        const k = monthKey((r as any).date || r.created_at);
         if (!monthFinalizedSet.has(k)) monthFinalizedSet.set(k, new Set());
         monthFinalizedSet.get(k)!.add(r.project_id);
       });
