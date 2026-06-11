@@ -494,6 +494,170 @@ export default function WorkforceDatabase() {
     if (!error) { setRecords([]); toast({ title: 'Registros removidos' }); }
   };
 
+  // Materializa RDOs do período filtrado em workforce_database e workforce_delays
+  const syncFromRdos = async () => {
+    setSyncing(true);
+    try {
+      // 1) Buscar presenças do período (com paginação) respeitando filtros
+      const attendanceData: any[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      while (true) {
+        let q = supabase
+          .from('report_attendance')
+          .select(`
+            id, user_name, arrival_time, departure_time, present, user_id, report_id,
+            reports!inner(id, date, project_id, projects!inner(id, name, site_id, sites!inner(company_id)))
+          `)
+          .eq('present', true)
+          .gte('reports.date', startDate)
+          .lte('reports.date', endDate)
+          .order('id', { ascending: true })
+          .range(from, from + pageSize - 1);
+
+        if (selectedProject !== 'all') {
+          q = q.eq('reports.project_id', selectedProject);
+        } else if (selectedSite !== 'all') {
+          const siteProjectIds = projects.filter(p => p.site_id === selectedSite).map(p => p.id);
+          if (siteProjectIds.length === 0) break;
+          q = q.in('reports.project_id', siteProjectIds);
+        }
+
+        const { data: page, error } = await q;
+        if (error) throw error;
+        if (!page || page.length === 0) break;
+        attendanceData.push(...page);
+        if (page.length < pageSize) break;
+        from += pageSize;
+      }
+
+      // 2) Agrupar por (worker+date) — mesma chave usada em loadRecords
+      const groups = new Map<string, any[]>();
+      for (const att of attendanceData) {
+        const report = (att as any).reports;
+        const date = report?.date || '';
+        const name = ((att as any).user_name || 'Sem nome').trim().toUpperCase();
+        const key = `${name}|${date}`;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key)!.push(att);
+      }
+
+      // 3) Upsert em workforce_database
+      const rows: any[] = [];
+      const orphanIds: string[] = [];
+      for (const [, group] of groups) {
+        const first = group[0];
+        const report = first.reports as any;
+        const project = report?.projects as any;
+        const shifts = group
+          .filter((a: any) => a.arrival_time && a.departure_time)
+          .map((a: any) => ({ start: a.arrival_time, end: a.departure_time }));
+        const hours = shifts.length > 1
+          ? mergeAndCalculateWorkHours(shifts)
+          : calculateWorkHours(first.arrival_time, first.departure_time);
+        const mergedStart = group.reduce((earliest: string | null, a: any) =>
+          !a.arrival_time ? earliest : (!earliest || a.arrival_time < earliest ? a.arrival_time : earliest), null);
+        const mergedEnd = group.reduce((latest: string | null, a: any) =>
+          !a.departure_time ? latest : (!latest || a.departure_time > latest ? a.departure_time : latest), null);
+
+        rows.push({
+          report_id: report?.id,
+          project_id: report?.project_id,
+          attendance_id: first.id,
+          company_id: project?.sites?.company_id ?? null,
+          activity_name: project?.name || 'Sem projeto',
+          date: report?.date,
+          worker_name: first.user_name || 'Sem nome',
+          function_role: null,
+          start_time: mergedStart,
+          end_time: mergedEnd,
+          normal_hours: hours.normalHours,
+          compensation_hours: hours.compensationHours,
+          overtime_75: hours.overtime75,
+          overtime_100: hours.overtime100,
+          night_bonus: hours.nightBonus,
+          processed_by_ai: false,
+        });
+        for (let i = 1; i < group.length; i++) orphanIds.push(group[i].id);
+      }
+
+      let presencasUpserted = 0;
+      for (let i = 0; i < rows.length; i += 500) {
+        const batch = rows.slice(i, i + 500);
+        const { error } = await supabase
+          .from('workforce_database')
+          .upsert(batch, { onConflict: 'attendance_id' });
+        if (error) throw error;
+        presencasUpserted += batch.length;
+      }
+
+      // Remove linhas órfãs (turnos secundários do mesmo grupo que possam ter sido gravados antes)
+      if (orphanIds.length > 0) {
+        await supabase.from('workforce_database').delete().in('attendance_id', orphanIds);
+      }
+
+      // 4) Sincronizar atrasos (deviations) dos reports
+      let reportsQ = supabase
+        .from('reports')
+        .select('id, date, project_id, operational_deviation_hours, operational_deviation_details, operational_deviation_reason, climatic_deviation_hours, climatic_deviation_details, climatic_deviation_reason, amt_deviation_hours, amt_deviation_details, amt_deviation_reason, projects!inner(id, name, site_id, sites!inner(company_id))')
+        .gte('date', startDate)
+        .lte('date', endDate);
+      if (selectedProject !== 'all') {
+        reportsQ = reportsQ.eq('project_id', selectedProject);
+      } else if (selectedSite !== 'all') {
+        const siteProjectIds = projects.filter(p => p.site_id === selectedSite).map(p => p.id);
+        if (siteProjectIds.length > 0) reportsQ = reportsQ.in('project_id', siteProjectIds);
+      }
+      const { data: reportRows, error: rErr } = await reportsQ;
+      if (rErr) throw rErr;
+
+      const delayRows: any[] = [];
+      const sources = [
+        { src: 'operational', h: 'operational_deviation_hours', d: 'operational_deviation_details', r: 'operational_deviation_reason', enum: 'outro' },
+        { src: 'climatic', h: 'climatic_deviation_hours', d: 'climatic_deviation_details', r: 'climatic_deviation_reason', enum: 'clima' },
+        { src: 'amt', h: 'amt_deviation_hours', d: 'amt_deviation_details', r: 'amt_deviation_reason', enum: 'outro' },
+      ];
+      for (const rep of (reportRows || []) as any[]) {
+        for (const s of sources) {
+          const hrs = parseFloat(rep[s.h] || 0);
+          if (!hrs || hrs <= 0) continue;
+          delayRows.push({
+            report_id: rep.id,
+            delay_source: s.src,
+            project_id: rep.project_id,
+            company_id: rep.projects?.sites?.company_id ?? null,
+            activity_name: rep.projects?.name || 'Sem projeto',
+            date: rep.date,
+            description: rep[s.d] || rep[s.r] || s.src,
+            delay_type: s.enum,
+            delay_hours: hrs,
+          });
+        }
+      }
+      let atrasosUpserted = 0;
+      for (let i = 0; i < delayRows.length; i += 500) {
+        const batch = delayRows.slice(i, i + 500);
+        const { error } = await supabase
+          .from('workforce_delays')
+          .upsert(batch, { onConflict: 'report_id,delay_source' });
+        if (error) throw error;
+        atrasosUpserted += batch.length;
+      }
+
+      toast({
+        title: 'Sincronização concluída',
+        description: `${presencasUpserted} presença(s) e ${atrasosUpserted} atraso(s) materializados.`,
+      });
+      await Promise.all([loadRecords(), loadDelays()]);
+    } catch (err: any) {
+      console.error('Erro ao sincronizar:', err);
+      toast({ title: 'Erro ao sincronizar', description: err.message || String(err), variant: 'destructive' });
+    } finally {
+      setSyncing(false);
+      setShowSyncConfirm(false);
+    }
+  };
+
   const numericFields = ['normal_hours', 'compensation_hours', 'overtime_75', 'overtime_100', 'night_bonus'];
 
   const startEditing = (id: string, field: string, currentValue: string | number | null) => {
