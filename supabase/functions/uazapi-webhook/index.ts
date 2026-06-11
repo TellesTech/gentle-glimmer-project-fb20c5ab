@@ -293,10 +293,11 @@ async function attachPendingPhotos(
 
     for (const log of pendingPhotos) {
       const mediaUrl = log.raw_payload?.mediaUrl;
-      if (!mediaUrl) continue;
+      const pendingMessageId = log.raw_payload?.messageId || log.raw_payload?.id?.id || null;
+      if (!mediaUrl && !pendingMessageId) continue;
 
       try {
-        const imageData = await downloadUazapiMedia(mediaUrl);
+        const imageData = await downloadUazapiMedia(mediaUrl, uazapiToken || undefined, pendingMessageId);
         if (!imageData) continue;
 
         const fileName = `whatsapp_${reportId}_${Date.now()}_${attachedCount}.jpg`;
