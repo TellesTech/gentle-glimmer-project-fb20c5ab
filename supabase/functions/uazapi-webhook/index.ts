@@ -1568,10 +1568,10 @@ Deno.serve(async (req) => {
 
     // Handle photos
     let photoAttachedWithText = false;
-    if (payload.image?.imageUrl || payload.mediaUrl) {
+    if (payload.image?.imageUrl || payload.mediaUrl || (payload.isMedia && messageId)) {
       const mediaUrl = payload.image?.imageUrl || payload.mediaUrl;
       try {
-        const imageData = await downloadUazapiMedia(mediaUrl, UAZAPI_TOKEN);
+        const imageData = await downloadUazapiMedia(mediaUrl, UAZAPI_TOKEN, messageId);
         if (imageData) {
           const fileName = `whatsapp_${reportId}_${Date.now()}.jpg`;
           const { error: uploadError } = await supabase.storage
