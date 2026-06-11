@@ -330,7 +330,7 @@ async function attachPendingPhotos(
         .eq("report_id", reportId);
       const n = totalPhotos ?? attachedCount;
       await sendUazapiText(uazapiToken, groupId,
-        `✅ RDO #${rdoCode} registrado com sucesso (${n} foto${n > 1 ? "s" : ""} anexada${n > 1 ? "s" : ""})`);
+        `✅ RDO #${rdoCode} concluído e salvo no sistema (${n} foto${n > 1 ? "s" : ""} anexada${n > 1 ? "s" : ""})`);
     }
 
     console.log(`Attached ${attachedCount} pending photos to RDO #${rdoCode}`);
@@ -821,7 +821,12 @@ Deno.serve(async (req) => {
 
     // Detect group vs DM
     const isGroup = payload.isGroup || payload.chatId?.includes("@g.us");
-    const messageText = payload.text?.message || payload.body || payload.message || "";
+    const rawText =
+      (typeof payload.text === "string" ? payload.text : payload.text?.message) ||
+      (typeof payload.body === "string" ? payload.body : payload.body?.text) ||
+      (typeof payload.message === "string" ? payload.message : payload.message?.text) ||
+      "";
+    const messageText = typeof rawText === "string" ? rawText : "";
     const isImage =
       payload.isMedia ||
       payload.type === "image" ||
@@ -1018,7 +1023,7 @@ Deno.serve(async (req) => {
             if (UAZAPI_TOKEN && groupId) {
               const n = count || 1;
               await sendUazapiText(UAZAPI_TOKEN, groupId,
-                `✅ RDO #${rdoNum} registrado com sucesso (${n} foto${n > 1 ? "s" : ""} anexada${n > 1 ? "s" : ""})`);
+                `✅ RDO #${rdoNum} concluído e salvo no sistema (${n} foto${n > 1 ? "s" : ""} anexada${n > 1 ? "s" : ""})`);
             }
           }
         }
@@ -1469,9 +1474,19 @@ Deno.serve(async (req) => {
       await upsertDeviations(supabase, reportId, parsedData, true);
       await upsertAttendance(supabase, reportId, parsedData, allProfiles, true, preferredIds);
     } else {
+      // Compute next rdo_number for this project (no DB trigger handles it)
+      const { data: maxRow } = await supabase
+        .from("reports")
+        .select("rdo_number")
+        .eq("project_id", projectId)
+        .not("rdo_number", "is", null)
+        .order("rdo_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const nextRdoNumber = ((maxRow?.rdo_number as number) || 0) + 1;
       const { data: newReport, error: insertError } = await supabase
         .from("reports")
-        .insert(reportData)
+        .insert({ ...reportData, rdo_number: nextRdoNumber })
         .select("id, rdo_number")
         .single();
       if (insertError) throw new Error(`Erro ao criar RDO: ${insertError.message}`);
