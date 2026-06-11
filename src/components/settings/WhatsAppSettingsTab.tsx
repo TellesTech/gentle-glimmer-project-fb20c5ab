@@ -57,7 +57,7 @@ export function WhatsAppSettingsTab() {
     };
   }, []);
 
-  const edgeFnUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/zapi-status`;
+  const edgeFnUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/uazapi-status`;
 
   // Fetch QR Code
   const fetchQrCode = useCallback(async () => {
@@ -322,7 +322,7 @@ export function WhatsAppSettingsTab() {
     try {
       const session = await (supabase as any).auth.getSession();
       const res = await fetch(
-        `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/zapi-status`,
+        `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/uazapi-status`,
         {
           method: 'GET',
           headers: {
@@ -368,7 +368,7 @@ export function WhatsAppSettingsTab() {
     setGroupsDialogOpen(true);
     try {
       const res = await fetch(
-        `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/zapi-status?action=list-groups`,
+        `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/uazapi-status?action=list-groups`,
         { headers: { 'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, 'Authorization': `Bearer ${(await (supabase as any).auth.getSession()).data.session?.access_token}` } }
       );
       const result = await res.json();
@@ -389,7 +389,7 @@ export function WhatsAppSettingsTab() {
 
   const mappedGroupIds = new Set(mappings?.map((m: any) => m.group_id) || []);
 
-  const webhookUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/zapi-webhook`;
+  const webhookUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/uazapi-webhook`;
 
   return (
     <div className="space-y-6">
