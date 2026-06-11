@@ -784,30 +784,28 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const ZAPI_CLIENT_TOKEN = Deno.env.get("ZAPI_CLIENT_TOKEN");
-    const ZAPI_INSTANCE_ID = Deno.env.get("ZAPI_INSTANCE_ID");
-    const ZAPI_TOKEN = Deno.env.get("ZAPI_INSTANCE_TOKEN") || Deno.env.get("ZAPI_TOKEN");
+    const UAZAPI_TOKEN = Deno.env.get("UAZAPI_TOKEN") || "";
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Validate client token
-    const clientToken = req.headers.get("z-api-token") || req.headers.get("client-token") || req.headers.get("Client-Token") || req.headers.get("CLIENT-TOKEN");
+    const rawPayload = await req.json();
+    console.log("UAZAPI webhook raw:", JSON.stringify(rawPayload));
 
-    if (ZAPI_CLIENT_TOKEN && (!clientToken || clientToken.trim() !== ZAPI_CLIENT_TOKEN.trim())) {
-      // TEMP DEBUG: log masked values to diagnose token mismatch
-      const mask = (v: string | null | undefined) =>
-        v ? `${v.slice(0, 6)}...${v.slice(-4)} (len=${v.length})` : "null";
-      console.log(`WARN: client token mismatch. incoming=${mask(clientToken)} stored=${mask(ZAPI_CLIENT_TOKEN)}`);
-      const allHeaders: Record<string, string> = {};
-      req.headers.forEach((v, k) => {
-        const lk = k.toLowerCase();
-        allHeaders[k] = (lk.includes("token") || lk.includes("auth")) ? mask(v) : v;
+    // Ignore non-message events (connection, presence, etc.)
+    const eventType = (rawPayload?.EventType || rawPayload?.event || rawPayload?.type || "").toString().toLowerCase();
+    if (eventType && !/^messages?(_update)?$/.test(eventType)) {
+      return new Response(JSON.stringify({ status: "ignored", reason: `event_${eventType}` }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-      console.log("DEBUG webhook headers:", JSON.stringify(allHeaders));
     }
 
-    const payload = await req.json();
-    console.log("Z-API webhook payload:", JSON.stringify(payload));
+    const payload = parseUazapiPayload(rawPayload);
+    // Ignore messages from self
+    if (payload.fromMe) {
+      return new Response(JSON.stringify({ status: "ignored", reason: "from_me" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -1002,11 +1000,8 @@ Deno.serve(async (req) => {
               .single();
 
             const rdoNum = rInfo?.rdo_number || "?";
-            const ZAPI_INSTANCE_ID = Deno.env.get("ZAPI_INSTANCE_ID");
-            const ZAPI_TOKEN = Deno.env.get("ZAPI_INSTANCE_TOKEN") || Deno.env.get("ZAPI_TOKEN");
-
-            if (ZAPI_INSTANCE_ID && ZAPI_TOKEN && groupId) {
-              await sendZapiMessage(ZAPI_INSTANCE_ID, ZAPI_TOKEN, groupId,
+            if (UAZAPI_TOKEN && groupId) {
+              await sendUazapiText(UAZAPI_TOKEN, groupId,
                 `📸 Foto ${count || 1} anexada ao RDO #${rdoNum}`);
             }
           }
@@ -1490,7 +1485,7 @@ Deno.serve(async (req) => {
     if (payload.image?.imageUrl || payload.mediaUrl) {
       const mediaUrl = payload.image?.imageUrl || payload.mediaUrl;
       try {
-        const imageData = await downloadZapiMedia(mediaUrl);
+        const imageData = await downloadUazapiMedia(mediaUrl, UAZAPI_TOKEN);
         if (imageData) {
           const fileName = `whatsapp_${reportId}_${Date.now()}.jpg`;
           const { error: uploadError } = await supabase.storage
