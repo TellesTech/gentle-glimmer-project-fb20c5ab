@@ -49,9 +49,10 @@ Deno.serve(async (req) => {
     const webhookData = await webhookRes.json().catch(() => ({}));
     logDetails.webhookData = webhookData;
 
-    const currentUrl: string = webhookData?.url || webhookData?.webhook?.url || webhookData?.webhookUrl || "";
-    const enabled: boolean = webhookData?.enabled ?? webhookData?.webhook?.enabled ?? false;
-    const needsFix = !enabled || !currentUrl || !currentUrl.includes("uazapi-webhook");
+    // UAZAPI returns an array of webhooks (one per saved config)
+    const hooks = Array.isArray(webhookData) ? webhookData : (webhookData ? [webhookData] : []);
+    const ours = hooks.find((h: any) => (h?.url || "").includes("uazapi-webhook") && h?.enabled);
+    const needsFix = !ours;
 
     if (needsFix) {
       console.log("UAZAPI webhook needs fix; reconfiguring");
