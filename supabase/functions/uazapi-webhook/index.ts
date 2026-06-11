@@ -324,8 +324,13 @@ async function attachPendingPhotos(
     }
 
     if (attachedCount > 0 && uazapiToken && groupId) {
+      const { count: totalPhotos } = await supabase
+        .from("report_photos")
+        .select("id", { count: "exact", head: true })
+        .eq("report_id", reportId);
+      const n = totalPhotos ?? attachedCount;
       await sendUazapiText(uazapiToken, groupId,
-        `📸 ${attachedCount} foto${attachedCount > 1 ? "s" : ""} anexada${attachedCount > 1 ? "s" : ""} ao RDO #${rdoCode}`);
+        `✅ RDO #${rdoCode} registrado com sucesso (${n} foto${n > 1 ? "s" : ""} anexada${n > 1 ? "s" : ""})`);
     }
 
     console.log(`Attached ${attachedCount} pending photos to RDO #${rdoCode}`);
