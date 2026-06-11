@@ -1016,8 +1016,9 @@ Deno.serve(async (req) => {
 
             const rdoNum = rInfo?.rdo_number || "?";
             if (UAZAPI_TOKEN && groupId) {
+              const n = count || 1;
               await sendUazapiText(UAZAPI_TOKEN, groupId,
-                `📸 Foto ${count || 1} anexada ao RDO #${rdoNum}`);
+                `✅ RDO #${rdoNum} registrado com sucesso (${n} foto${n > 1 ? "s" : ""} anexada${n > 1 ? "s" : ""})`);
             }
           }
         }
