@@ -57,7 +57,7 @@ export function WhatsAppSettingsTab() {
     };
   }, []);
 
-  const edgeFnUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/zapi-status`;
+  const edgeFnUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/uazapi-status`;
 
   // Fetch QR Code
   const fetchQrCode = useCallback(async () => {
@@ -322,7 +322,7 @@ export function WhatsAppSettingsTab() {
     try {
       const session = await (supabase as any).auth.getSession();
       const res = await fetch(
-        `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/zapi-status`,
+        `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/uazapi-status`,
         {
           method: 'GET',
           headers: {
@@ -368,7 +368,7 @@ export function WhatsAppSettingsTab() {
     setGroupsDialogOpen(true);
     try {
       const res = await fetch(
-        `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/zapi-status?action=list-groups`,
+        `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/uazapi-status?action=list-groups`,
         { headers: { 'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, 'Authorization': `Bearer ${(await (supabase as any).auth.getSession()).data.session?.access_token}` } }
       );
       const result = await res.json();
@@ -389,7 +389,7 @@ export function WhatsAppSettingsTab() {
 
   const mappedGroupIds = new Set(mappings?.map((m: any) => m.group_id) || []);
 
-  const webhookUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/zapi-webhook`;
+  const webhookUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/uazapi-webhook`;
 
   return (
     <div className="space-y-6">
@@ -401,14 +401,14 @@ export function WhatsAppSettingsTab() {
             <CardTitle>WhatsApp → RDO</CardTitle>
           </div>
           <CardDescription>
-            Configure a integração Z-API para receber RDOs automaticamente via WhatsApp.
+            Configure a integração UAZAPI (chatwees.uazapi.com) para receber RDOs automaticamente via WhatsApp.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert className="border-warning/30 bg-warning/10">
             <AlertCircle className="h-4 w-4 text-warning" />
             <AlertDescription className="text-xs text-foreground">
-              Configure o <strong>ID da instância</strong> e o <strong>Token da instância</strong> (painel Z-API → CREDENCIAIS) para ativar a integração. O webhook é configurado automaticamente ao conectar.
+              Configure o <strong>Instance Token</strong> da UAZAPI (secret <code>UAZAPI_TOKEN</code>) para ativar a integração. O webhook é configurado automaticamente ao conectar.
             </AlertDescription>
           </Alert>
 
@@ -416,29 +416,22 @@ export function WhatsAppSettingsTab() {
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-xs space-y-1">
-                <p className="font-semibold">⛔ Credenciais Z-API inválidas — conexão bloqueada</p>
-                {credentialsDiagnostic.tokenLooksLikeInstanceId ? (
+                <p className="font-semibold">⛔ Credenciais UAZAPI inválidas — conexão bloqueada</p>
+                {credentialsDiagnostic.tokenLooksLikeUrl ? (
                   <p>
-                    O <strong>Token da instância</strong> está com o <strong>mesmo valor</strong> do{' '}
-                    <strong>ID da instância</strong>. Você copiou o ID no lugar do Token.
-                  </p>
-                ) : credentialsDiagnostic.tokenLooksLikeUrl ? (
-                  <p>
-                    Você colou a <strong>"API da instância"</strong> (URL completa, ex.:{' '}
-                    <code>https://api.z-api.io/instances/.../token/...</code>) no lugar do{' '}
-                    <strong>Token da instância</strong>. Cole apenas a parte final, após <code>/token/</code>.
+                    Você colou uma <strong>URL</strong> no lugar do <strong>Instance Token</strong>.
+                    Cole apenas o token (UUID, ex.: <code>0e93a34d-37d9-4c40-9ec5-8b465f3b8a03</code>).
                   </p>
                 ) : (
                   <p>
-                    O <strong>Token da instância</strong> tem{' '}
-                    <strong>{credentialsDiagnostic.tokenLength} caracteres</strong>, mas o token correto tem{' '}
-                    <strong>{credentialsDiagnostic.expectedTokenLength ?? '23 ou 24'} caracteres</strong>.
+                    O <strong>Instance Token</strong> da UAZAPI tem{' '}
+                    <strong>{credentialsDiagnostic.tokenLength} caracteres</strong>. Esperado: UUID
+                    com ~36 caracteres.
                   </p>
                 )}
                 <p className="pt-1">
-                  No painel Z-API → <strong>CREDENCIAIS</strong>, copie o campo{' '}
-                  <strong>"Token da instância"</strong> (logo abaixo do <strong>"ID da instância"</strong>) e atualize o
-                  secret <code>ZAPI_INSTANCE_TOKEN</code>.
+                  No painel UAZAPI, copie o <strong>Instance Token</strong> da instância conectada
+                  e atualize o secret <code>UAZAPI_TOKEN</code>.
                 </p>
               </AlertDescription>
             </Alert>
@@ -507,10 +500,10 @@ export function WhatsAppSettingsTab() {
               </AccordionTrigger>
               <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
                 <ol className="list-decimal list-inside space-y-1.5">
-                  <li>Acesse o painel da <strong>Z-API</strong> → Instâncias → sua instância</li>
-                  <li>Vá em <strong>"Webhooks"</strong> e cole a URL do webhook (acima) no campo <strong>"Ao receber"</strong></li>
-                  <li>Para obter o ID do grupo: envie uma mensagem no grupo e veja o campo <code className="bg-muted px-1 rounded">chatId</code> nos logs da Z-API, ou use o endpoint <code className="bg-muted px-1 rounded">GET /chats</code></li>
-                  <li>Cole o ID do grupo (formato <code className="bg-muted px-1 rounded">5511999…@g.us</code>) no campo "ID do Grupo" abaixo</li>
+                  <li>Acesse o painel da <strong>UAZAPI</strong> (chatwees.uazapi.com) → sua instância</li>
+                  <li>Clique em <strong>"Conectar WhatsApp"</strong> acima para escanear o QR Code — o webhook é configurado automaticamente</li>
+                  <li>Use o botão <strong>"Buscar Grupos"</strong> abaixo para listar grupos do WhatsApp e selecionar</li>
+                  <li>Ou cole o ID do grupo (formato <code className="bg-muted px-1 rounded">5511999…@g.us</code>) no campo "ID do Grupo"</li>
                   <li>Selecione a unidade correspondente e clique em <strong>"Adicionar"</strong></li>
                 </ol>
               </AccordionContent>
