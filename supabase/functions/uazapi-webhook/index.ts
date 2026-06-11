@@ -258,14 +258,15 @@ function matchCollaborator(
   return candidates[0];
 }
 
+const UAZAPI_BASE_URL = "https://chatwees.uazapi.com";
+
 async function attachPendingPhotos(
   supabase: any,
   groupId: string | null,
   senderPhone: string | null,
   reportId: string,
   rdoCode: string | number,
-  zapiInstanceId: string | null,
-  zapiToken: string | null
+  uazapiToken: string | null
 ) {
   try {
     const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
@@ -295,7 +296,7 @@ async function attachPendingPhotos(
       if (!mediaUrl) continue;
 
       try {
-        const imageData = await downloadZapiMedia(mediaUrl);
+        const imageData = await downloadUazapiMedia(mediaUrl);
         if (!imageData) continue;
 
         const fileName = `whatsapp_${reportId}_${Date.now()}_${attachedCount}.jpg`;
@@ -322,8 +323,8 @@ async function attachPendingPhotos(
         .eq("id", log.id);
     }
 
-    if (attachedCount > 0 && zapiInstanceId && zapiToken && groupId) {
-      await sendZapiMessage(zapiInstanceId, zapiToken, groupId,
+    if (attachedCount > 0 && uazapiToken && groupId) {
+      await sendUazapiText(uazapiToken, groupId,
         `📸 ${attachedCount} foto${attachedCount > 1 ? "s" : ""} anexada${attachedCount > 1 ? "s" : ""} ao RDO #${rdoCode}`);
     }
 
@@ -333,34 +334,136 @@ async function attachPendingPhotos(
   }
 }
 
-async function sendZapiMessage(instanceId: string, token: string, phone: string, message: string) {
+async function sendUazapiText(token: string, phone: string, message: string) {
   try {
-    const response = await fetch(
-      `https://api.z-api.io/instances/${instanceId}/token/${token}/send-text`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, message }),
-      }
-    );
-    const data = await response.json();
-    console.log("Z-API send response:", data);
+    // Normalize: UAZAPI accepts the JID or bare number. Strip the @suffix when present.
+    const number = phone.includes("@") ? phone.split("@")[0] : phone;
+    const response = await fetch(`${UAZAPI_BASE_URL}/send/text`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", token },
+      body: JSON.stringify({ number, text: message }),
+    });
+    const data = await response.json().catch(() => ({}));
+    console.log("UAZAPI send response:", JSON.stringify(data));
     return data;
   } catch (error) {
-    console.error("Error sending Z-API message:", error);
+    console.error("Error sending UAZAPI message:", error);
   }
 }
 
-async function downloadZapiMedia(mediaUrl: string): Promise<Uint8Array | null> {
+async function downloadUazapiMedia(mediaUrlOrBase64: string, token?: string): Promise<Uint8Array | null> {
   try {
-    const response = await fetch(mediaUrl);
+    // Base64 data URL or raw base64
+    if (mediaUrlOrBase64.startsWith("data:")) {
+      const b64 = mediaUrlOrBase64.split(",")[1] || "";
+      return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    }
+    if (!/^https?:\/\//i.test(mediaUrlOrBase64) && mediaUrlOrBase64.length > 200) {
+      // Looks like raw base64
+      try {
+        return Uint8Array.from(atob(mediaUrlOrBase64), (c) => c.charCodeAt(0));
+      } catch { /* fall through */ }
+    }
+    const headers: Record<string, string> = {};
+    if (token && mediaUrlOrBase64.includes(new URL(UAZAPI_BASE_URL).host)) {
+      headers.token = token;
+    }
+    const response = await fetch(mediaUrlOrBase64, { headers });
     if (!response.ok) return null;
     const buffer = await response.arrayBuffer();
     return new Uint8Array(buffer);
   } catch (error) {
-    console.error("Error downloading media:", error);
+    console.error("Error downloading UAZAPI media:", error);
     return null;
   }
+}
+
+// Normalize a UAZAPI webhook payload into the shape the RDO pipeline already consumes.
+// UAZAPI events come in several shapes depending on server version; we accept all common ones.
+function parseUazapiPayload(raw: any): any {
+  if (!raw || typeof raw !== "object") return {};
+
+  // The actual message envelope can be at the root or nested under message/data/messages[0]
+  const m = raw.message || raw.data || (Array.isArray(raw.messages) ? raw.messages[0] : null) || raw;
+
+  const chatId: string | undefined =
+    m.chatid || m.chatId || m.remoteJid || m.key?.remoteJid || m.from || raw.chatid || raw.chatId;
+  const fromMe: boolean = !!(m.fromMe ?? m.fromme ?? m.key?.fromMe);
+  const isGroup: boolean = !!(m.isGroup ?? m.isgroup) || (chatId?.includes("@g.us") ?? false);
+
+  const sender: string | undefined =
+    m.sender || m.participant || m.author || m.key?.participant || (isGroup ? undefined : chatId);
+  const senderPhone = sender ? sender.split("@")[0].replace(/\D/g, "") : undefined;
+
+  const senderName: string =
+    m.senderName || m.sendername || m.pushName || m.pushname || m.notifyName || m.participant_name || "";
+
+  // Text resolution across message types
+  const text: string =
+    m.text ||
+    m.content ||
+    m.body ||
+    m.message?.conversation ||
+    m.message?.extendedTextMessage?.text ||
+    m.message?.imageMessage?.caption ||
+    m.message?.videoMessage?.caption ||
+    m.conversation ||
+    "";
+
+  // Media detection
+  const messageType: string = m.messageType || m.messagetype || m.type || "";
+  const isImage =
+    /image/i.test(messageType) ||
+    !!m.image ||
+    !!m.message?.imageMessage ||
+    !!(m.mediaUrl && /image/i.test(m.mimetype || "")) ||
+    (typeof m.mimetype === "string" && m.mimetype.startsWith("image/"));
+
+  const mediaUrl: string | undefined =
+    m.mediaUrl ||
+    m.mediaurl ||
+    m.image?.url ||
+    m.image?.imageUrl ||
+    m.message?.imageMessage?.url ||
+    m.fileUrl ||
+    m.url;
+
+  const messageId: string | undefined =
+    m.id || m.messageId || m.messageid || m.key?.id;
+
+  // Return an object whose key names match what the existing RDO pipeline reads from `payload`.
+  return {
+    // Channel routing
+    isGroup,
+    chatId,
+    phone: chatId, // for DM lookups
+    participantPhone: senderPhone,
+    senderPhone,
+    // Identity
+    senderName,
+    pushName: senderName,
+    notifyName: senderName,
+    fromMe,
+    // Text
+    text: { message: text },
+    body: text,
+    message: text,
+    // Media
+    isMedia: isImage,
+    type: isImage ? "image" : messageType,
+    messageType,
+    mimetype: m.mimetype,
+    image: isImage ? { imageUrl: mediaUrl, url: mediaUrl } : undefined,
+    imageMessage: m.message?.imageMessage,
+    mediaUrl,
+    url: mediaUrl,
+    // Ids
+    messageId,
+    id: { id: messageId },
+    // Original for debugging
+    _raw: raw,
+    _eventType: raw.EventType || raw.event || raw.type,
+  };
 }
 
 // Deterministic project matching: tries code, contract number, and keywords before calling AI
