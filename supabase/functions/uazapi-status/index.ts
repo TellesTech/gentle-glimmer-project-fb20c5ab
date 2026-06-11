@@ -86,7 +86,9 @@ Deno.serve(async (req) => {
         const data = await res.json().catch(() => ([]));
         const arr = Array.isArray(data) ? data : data?.groups || data?.data || [];
         groups = arr.map((g: any) => ({
-          id: g.id || g.jid || g.chatid || g.groupId,
+          id: String(g.id || g.jid || g.chatid || g.groupId || "")
+            .replace(/@g\.us$/i, "")
+            .replace(/-group$/i, ""),
           name: g.subject || g.name || g.title || "Sem nome",
         })).filter((g: any) => g.id);
       } else {

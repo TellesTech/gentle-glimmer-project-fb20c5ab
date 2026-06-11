@@ -834,7 +834,12 @@ Deno.serve(async (req) => {
     }
 
     const messageId = payload.messageId || payload.id?.id;
-    const groupId = payload.chatId || payload.from || (isGroup ? payload.phone : null);
+    const rawGroupId = payload.chatId || payload.from || (isGroup ? payload.phone : null);
+    // Canonical group_id: only the numeric JID prefix (no "@g.us", no legacy "-group" suffix).
+    // All matches in whatsapp_group_projects and whatsapp_rdo_logs use this canonical form.
+    const groupId = rawGroupId
+      ? String(rawGroupId).replace(/@g\.us$/i, "").replace(/-group$/i, "")
+      : rawGroupId;
     const senderPhone = payload.participantPhone || payload.senderPhone || payload.author?.replace("@c.us", "") || payload.phone;
     const rawSenderName = (payload.senderName || payload.notifyName || payload.pushName || payload.participant?.name || "").trim();
     const isValidSenderName = rawSenderName.length >= 2 && /[a-zA-ZÀ-ú]/.test(rawSenderName);
