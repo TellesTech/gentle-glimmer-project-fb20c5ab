@@ -49,6 +49,10 @@ export function WhatsAppSettingsTab() {
   const [qrMessage, setQrMessage] = useState('');
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Reconnect / change number
+  const [reconnectDialogOpen, setReconnectDialogOpen] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
+
   const getAuthHeaders = useCallback(async () => {
     const session = await (supabase as any).auth.getSession();
     return {
@@ -140,6 +144,36 @@ export function WhatsAppSettingsTab() {
     await fetchQrCode();
   }, [fetchQrCode]);
 
+  // Disconnect current WhatsApp session then immediately start QR flow for the new number
+  const handleReconnect = useCallback(async () => {
+    setReconnecting(true);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${edgeFnUrl}?action=disconnect`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error || data?.result?.error || 'Falha ao desconectar a instância');
+      }
+      setConnectionStatus('disconnected');
+      setConnectionMessage('Instância desconectada — escaneie o QR Code para reconectar');
+      toast({ title: 'Sessão encerrada', description: 'Abrindo QR Code do novo número...' });
+      setReconnectDialogOpen(false);
+      await startQrFlow();
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao desconectar',
+        description: err.message || 'Tente novamente ou use "Conectar WhatsApp".',
+        variant: 'destructive',
+      });
+    } finally {
+      setReconnecting(false);
+    }
+  }, [getAuthHeaders, edgeFnUrl, startQrFlow, toast]);
+
   // Polling effect
   useEffect(() => {
     if (!qrDialogOpen || qrStatus === 'done' || qrStatus === 'error' || qrStatus === 'configuring' || qrStatus === 'connected') {
@@ -179,6 +213,14 @@ export function WhatsAppSettingsTab() {
       }
     };
   }, [qrDialogOpen, qrStatus, checkStatus, configureWebhook, fetchQrCode]);
+
+  // When QR flow finishes successfully, refresh the connection badge
+  useEffect(() => {
+    if (qrStatus === 'done') {
+      testConnection();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qrStatus]);
 
   // Auto-run diagnostic on mount
   useEffect(() => {
