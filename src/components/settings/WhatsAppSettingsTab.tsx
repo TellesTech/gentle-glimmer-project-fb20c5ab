@@ -219,6 +219,8 @@ export function WhatsAppSettingsTab() {
       const { data, error } = await supabase
         .from('whatsapp_rdo_logs')
         .select('*')
+        .not('group_id', 'is', null)
+        .not('group_id', 'ilike', '%@s.whatsapp.net')
         .order('created_at', { ascending: false })
         .limit(20);
       if (error) throw error;
