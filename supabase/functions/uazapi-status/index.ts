@@ -32,8 +32,27 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const expectedWebhookUrl = `${supabaseUrl}/functions/v1/uazapi-webhook`;
 
+    const url = new URL(req.url);
+    const action = url.searchParams.get("action");
+
     // POST → configura/atualiza o webhook
     if (req.method === "POST") {
+      if (action === "disconnect") {
+        const res = await uaFetch("/instance/disconnect", token, {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+        const data = await res.json().catch(() => ({}));
+        console.log("UAZAPI disconnect response:", JSON.stringify(data).slice(0, 200));
+        return new Response(
+          JSON.stringify({ disconnected: res.ok, result: data }),
+          {
+            status: res.ok ? 200 : 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
       const body = await req.json().catch(() => ({}));
       const webhookUrl: string = body.webhookUrl || expectedWebhookUrl;
 
@@ -54,9 +73,6 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const url = new URL(req.url);
-    const action = url.searchParams.get("action");
 
     if (action === "qr-code") {
       // UAZAPI: POST /instance/connect retorna QR base64 (campo "qrcode" ou "base64")
