@@ -695,9 +695,7 @@ export function WhatsAppSettingsTab() {
             <div className="space-y-2 max-h-[400px] overflow-y-auto">
               {logs.map((log: any) => {
                 const gid: string | null = log.group_id || null;
-                const isPrivate = !!gid && gid.includes('@s.whatsapp.net');
-                const isGroup = !!gid && !isPrivate;
-                const mapping = isGroup
+                const mapping = gid
                   ? (mappings || []).find((m: any) => {
                       const canon = (gid || '')
                         .replace(/@g\.us$/i, '')
@@ -720,20 +718,14 @@ export function WhatsAppSettingsTab() {
                       <Badge variant="outline" className="text-[10px]">
                         {statusLabel(log.status)}
                       </Badge>
-                      {isPrivate && (
-                        <Badge variant="secondary" className="text-[10px]">Conversa privada</Badge>
-                      )}
-                      {isGroup && mapping && (
+                      {mapping && (
                         <Badge className="text-[10px]">Grupo mapeado</Badge>
                       )}
-                      {isGroup && !mapping && (
+                      {!mapping && (
                         <Badge variant="destructive" className="text-[10px]">Grupo não mapeado</Badge>
                       )}
-                      {!gid && (
-                        <Badge variant="outline" className="text-[10px]">Origem desconhecida</Badge>
-                      )}
                     </div>
-                    {isGroup && mapping && (
+                    {mapping && (
                       <div className="mt-0.5">
                         <span className="font-medium">{groupName || 'Grupo sem nome'}</span>
                         {(siteName || companyName) && (
@@ -748,7 +740,7 @@ export function WhatsAppSettingsTab() {
                     {gid && (
                       <div className="flex items-center gap-1 mt-0.5">
                         <span className="text-muted-foreground font-mono text-[10px] truncate">{gid}</span>
-                        {isGroup && !mapping && (
+                        {!mapping && (
                           <Button
                             variant="ghost"
                             size="sm"
