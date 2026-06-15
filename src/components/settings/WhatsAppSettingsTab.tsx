@@ -691,31 +691,67 @@ export function WhatsAppSettingsTab() {
             <p className="text-sm text-muted-foreground">Carregando...</p>
           ) : logs?.length ? (
             <div className="space-y-2 max-h-[400px] overflow-y-auto">
-              {logs.map((log: any) => (
+              {logs.map((log: any) => {
+                const gid: string | null = log.group_id || null;
+                const isPrivate = !!gid && gid.includes('@s.whatsapp.net');
+                const isGroup = !!gid && !isPrivate;
+                const mapping = isGroup
+                  ? (mappings || []).find((m: any) => {
+                      const canon = (gid || '')
+                        .replace(/@g\.us$/i, '')
+                        .replace(/-group$/i, '');
+                      return m.group_id === gid || m.group_id === canon;
+                    })
+                  : null;
+                const groupName = mapping?.group_name as string | undefined;
+                const siteName = mapping?.sites?.name as string | undefined;
+                const companyName = mapping?.sites?.companies?.name as string | undefined;
+                return (
                 <div
                   key={log.id}
                   className="flex items-start gap-3 p-2 rounded-lg border text-xs"
                 >
                   {statusIcon(log.status)}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium">{log.sender_name || log.sender_phone || '?'}</span>
                       <Badge variant="outline" className="text-[10px]">
                         {statusLabel(log.status)}
                       </Badge>
-                      {log.group_id && !mappedGroupIds.has(log.group_id) && (
-                        <Badge variant="destructive" className="text-[10px]">Não mapeado</Badge>
+                      {isPrivate && (
+                        <Badge variant="secondary" className="text-[10px]">Conversa privada</Badge>
+                      )}
+                      {isGroup && mapping && (
+                        <Badge className="text-[10px]">Grupo mapeado</Badge>
+                      )}
+                      {isGroup && !mapping && (
+                        <Badge variant="destructive" className="text-[10px]">Grupo não mapeado</Badge>
+                      )}
+                      {!gid && (
+                        <Badge variant="outline" className="text-[10px]">Origem desconhecida</Badge>
                       )}
                     </div>
-                    {log.group_id && (
+                    {isGroup && mapping && (
+                      <div className="mt-0.5">
+                        <span className="font-medium">{groupName || 'Grupo sem nome'}</span>
+                        {(siteName || companyName) && (
+                          <span className="text-muted-foreground">
+                            {' · '}
+                            {siteName}
+                            {companyName ? ` — ${companyName}` : ''}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {gid && (
                       <div className="flex items-center gap-1 mt-0.5">
-                        <span className="text-muted-foreground font-mono text-[10px] truncate">{log.group_id}</span>
-                        {!mappedGroupIds.has(log.group_id) && (
+                        <span className="text-muted-foreground font-mono text-[10px] truncate">{gid}</span>
+                        {isGroup && !mapping && (
                           <Button
                             variant="ghost"
                             size="sm"
                             className="h-5 px-1.5 text-[10px]"
-                            onClick={() => useGroupFromLog(log.group_id, log.sender_name)}
+                            onClick={() => useGroupFromLog(gid!, log.sender_name)}
                           >
                             <ArrowUpRight className="h-3 w-3 mr-0.5" />
                             Usar
@@ -733,7 +769,8 @@ export function WhatsAppSettingsTab() {
                       : ''}
                   </span>
                 </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-4">
