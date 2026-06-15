@@ -1,16 +1,29 @@
-# Corrigir logos em branco nas pastas
+## Objetivo
 
-## Causa encontrada
-As fotos das unidades (CSN - Serra, Pedro Leopoldo, etc.) apontam para um projeto Supabase antigo (`knubzymetllizsgeoikh.supabase.co`) que não existe mais — as URLs estão mortas (14 unidades afetadas). O `onError` esconde a imagem quebrada, deixando o quadrado em branco. Como `photo_url` da unidade não é nulo, o fallback para a logo da empresa nunca é acionado.
+No card **Log de Mensagens** (Configurações → WhatsApp), exibir a **identificação do grupo** em todas as mensagens, não só o ID numérico cru.
 
-A foto da empresa CSN está no projeto atual e funciona normalmente.
+## O que muda (apenas frontend)
 
-## Solução
+Arquivo: `src/components/settings/WhatsAppSettingsTab.tsx` — bloco da lista de logs (linhas ~694–736).
 
-1. **Migração no banco**: limpar (definir como NULL) o `photo_url` das unidades cujas URLs apontam para o domínio antigo `knubzymetllizsgeoikh.supabase.co` (14 registros).
-2. Com isso, o fallback já implementado no `FolderCard` passará a exibir a logo/foto da empresa CSN automaticamente em todas as unidades.
+Para cada item do log, montar um rótulo de grupo com a seguinte lógica, usando o `mappings` já carregado:
 
-## Detalhes técnicos
-- SQL: `UPDATE sites SET photo_url = NULL WHERE photo_url LIKE '%knubzymetllizsgeoikh%';`
-- Nenhuma mudança de código frontend necessária — o fallback já existe.
-- As fotos originais das unidades foram perdidas na migração do projeto; se quiser fotos específicas por unidade, será preciso reenviá-las pelo app.
+1. Construir um `Map<group_id, { group_name, site_name, company_name }>` a partir de `mappings` (já vem com `sites(name, companies(name))`).
+2. Para cada `log`:
+   - Se `log.group_id` termina com `@s.whatsapp.net` (ou não contém dígitos de grupo): exibir badge **"Conversa privada"** + número do telefone formatado.
+   - Se `log.group_id` está mapeado: exibir em destaque o **nome do grupo** + **unidade / empresa** vinculada (ex.: `Grupo Obra Central · CSN – Volta Redonda`), e abaixo o ID em fonte mono pequena.
+   - Se `log.group_id` existe mas não está mapeado: exibir **"Grupo não mapeado"** + ID em mono + manter botão **"Usar"** já existente para cadastrar.
+   - Se não houver `group_id`: exibir **"Origem desconhecida"**.
+3. Manter status, data, mensagem de erro e botão "Usar" como já estão.
+
+## Detalhes visuais
+
+- Linha 1: nome do remetente · badge de status · badge de origem (Grupo mapeado / Não mapeado / Conversa privada).
+- Linha 2 (nova): **nome do grupo** em `font-medium` quando mapeado, com sufixo `· {unidade}` em `text-muted-foreground`.
+- Linha 3: ID em `font-mono text-[10px]` + botão "Usar" (somente para grupos não mapeados).
+
+## Fora de escopo
+
+- Não altera webhook nem schema do banco.
+- Não altera lógica de processamento de RDOs.
+- Não mexe em outras seções da página.
