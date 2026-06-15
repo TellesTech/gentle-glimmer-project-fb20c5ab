@@ -516,6 +516,20 @@ export function WhatsAppSettingsTab() {
               <QrCode className="h-4 w-4 mr-1" />
               Conectar WhatsApp
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setReconnectDialogOpen(true)}
+              disabled={!!credentialsDiagnostic && !credentialsDiagnostic.credentialsValid}
+              title={
+                credentialsDiagnostic && !credentialsDiagnostic.credentialsValid
+                  ? 'Corrija o Token da instância antes de reconectar'
+                  : 'Desconectar a sessão atual e escanear o QR do novo número'
+              }
+            >
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Trocar número / Reconectar
+            </Button>
             {connectionStatus === 'connected' && (
               <Badge variant="default" className="bg-green-600 text-white text-xs">
                 ✅ {connectionMessage}
