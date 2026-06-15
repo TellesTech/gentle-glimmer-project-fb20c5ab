@@ -959,6 +959,18 @@ export function WhatsAppSettingsTab() {
         description="Tem certeza que deseja remover este mapeamento? Mensagens deste grupo não serão mais processadas."
         onConfirm={() => deleteId && deleteMapping.mutate(deleteId)}
       />
+
+      <ConfirmDialog
+        open={reconnectDialogOpen}
+        onOpenChange={(open) => !reconnecting && setReconnectDialogOpen(open)}
+        title="Trocar número de WhatsApp?"
+        description="A sessão atual será encerrada na UAZAPI. Em seguida, abriremos o QR Code para você escanear com o novo número/aparelho. Os mapeamentos de grupos existentes continuam válidos para grupos cujo ID não mudou; grupos novos precisarão ser remapeados."
+        confirmText="Desconectar e reconectar"
+        cancelText="Cancelar"
+        variant="destructive"
+        isLoading={reconnecting}
+        onConfirm={handleReconnect}
+      />
     </div>
   );
 }
