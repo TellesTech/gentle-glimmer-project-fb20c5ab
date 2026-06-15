@@ -569,6 +569,9 @@ export function WhatsAppSettingsTab() {
                   <li>Ou cole o ID do grupo (formato <code className="bg-muted px-1 rounded">5511999…@g.us</code>) no campo "ID do Grupo"</li>
                   <li>Selecione a unidade correspondente e clique em <strong>"Adicionar"</strong></li>
                 </ol>
+                <p className="pt-1">
+                  Para trocar o número conectado, use <strong>"Trocar número / Reconectar"</strong> — ele encerra a sessão atual e abre o QR Code do novo número automaticamente.
+                </p>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
