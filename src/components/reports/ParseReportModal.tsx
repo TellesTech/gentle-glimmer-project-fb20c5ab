@@ -356,7 +356,18 @@ export function ParseReportModal({ onDataParsed, teamMembers = [], allProfiles =
       });
 
       if (error) {
-        throw new Error(error.message || 'Erro ao processar relatório');
+        const status = (error as any)?.context?.status ?? (error as any)?.status;
+        const serverMsg =
+          (error as any)?.context?.body?.error ||
+          (error as any)?.context?.error ||
+          error.message;
+        if (status === 429) {
+          throw new Error('Muitas requisições à IA. Aguarde alguns segundos e tente novamente.');
+        }
+        if (status === 402) {
+          throw new Error('Créditos de IA esgotados. Adicione créditos em Configurações da Workspace.');
+        }
+        throw new Error(serverMsg || 'Erro ao processar relatório');
       }
 
       if (!data.success || !data.data) {
