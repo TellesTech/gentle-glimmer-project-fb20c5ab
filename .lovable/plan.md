@@ -1,51 +1,28 @@
-## Objetivo
+## Verificação
 
-Permitir trocar o número de WhatsApp conectado direto pela tela de Configurações → WhatsApp, com um fluxo guiado: confirmar desconexão → desconectar a instância na UAZAPI → abrir o QR do novo número → confirmar que a reconexão (e webhook) terminou.
+Testei a edge function `parse-report-text` diretamente com um trecho do efetivo e ela respondeu **200 OK**, extraindo `Rafael` e `Wellington` corretamente. Os logs mostram "Successfully parsed and normalized report data" sem erros.
 
-## Mudanças
+Ou seja: o serviço está funcionando agora. O erro do screenshot ("Edge Function returned a non-2xx status code") foi pontual — provavelmente um dos seguintes:
 
-### 1) Edge function `supabase/functions/uazapi-status/index.ts`
+- **429** rate limit do Lovable AI Gateway (muitas requisições seguidas)
+- **402** créditos da workspace esgotados
+- timeout/erro transitório do gateway
 
-Adicionar uma nova ação `action=disconnect` (via `POST`, separada da configuração de webhook que já usa POST sem action):
+## O que proponho
 
-- Chama `POST /instance/disconnect` na UAZAPI com o `UAZAPI_TOKEN`.
-- Retorna `{ disconnected: true, result }` em sucesso ou erro detalhado.
-- Mantém o comportamento atual de `POST` sem `action` (configura webhook) — o roteamento passa a olhar `url.searchParams.get("action")` também no POST.
+Como não há bug reproduzível no momento, não há código para alterar. Sugiro apenas melhorar a mensagem de erro no front para o usuário entender a causa real quando acontecer:
 
-### 2) UI em `src/components/settings/WhatsAppSettingsTab.tsx`
+1. Em `src/components/reports/ParseReportModal.tsx`, no `catch` do `supabase.functions.invoke('parse-report-text', ...)`, ler `error.context?.status` (ou o body de erro retornado) e exibir mensagens específicas:
+   - 429 → "Muitas requisições. Aguarde alguns segundos e tente novamente."
+   - 402 → "Créditos de IA esgotados. Adicione créditos em Configurações da Workspace."
+   - Outros → manter a mensagem atual genérica.
+2. Em `supabase/functions/parse-report-text/index.ts`, garantir que o `response.status` do gateway (429/402) seja repassado no retorno HTTP (status + JSON com `error`), para o front conseguir distinguir.
 
-Na seção "Testar Conexão / Conectar WhatsApp" (linhas ~447–492), adicionar um terceiro botão:
-
-- **"Trocar número / Reconectar"** (variant outline, ícone `RefreshCw`).
-- Habilitado sempre que as credenciais forem válidas (independente de `connected`), porque o usuário pode querer reconectar mesmo com status indefinido.
-
-Fluxo ao clicar:
-
-1. Abre um `ConfirmDialog` (já existe em `@/components/shared/ConfirmDialog`):
-   - Título: "Trocar número de WhatsApp?"
-   - Descrição: explica que a sessão atual será encerrada, será necessário escanear um novo QR Code com o novo aparelho/número, e que os mapeamentos de grupos existentes continuam válidos apenas para grupos cujo ID não mudou.
-   - Confirm: "Desconectar e reconectar" (destructive).
-2. Em confirmação, chama a edge function `uazapi-status?action=disconnect` (POST) com loading.
-3. Em sucesso, atualiza `connectionStatus` para `disconnected`, mostra toast "Instância desconectada" e dispara `startQrFlow()` (reaproveita todo o pipeline existente: QR → polling de `connected` → `configureWebhook` → estado `done`).
-4. O `Dialog` do QR (já existente) cuida do feedback visual até o final ("WhatsApp conectado e webhook configurado com sucesso!").
-5. Após `done`, chama `testConnection()` para refletir o novo estado no badge.
-
-Mensagens de erro tratadas com toast destrutivo; em caso de falha no disconnect, ainda permitir o usuário tentar `startQrFlow` manualmente.
-
-### 3) Texto de ajuda
-
-Atualizar o accordion "📖 Como conectar?" (linhas ~503–518) adicionando um item curto:
-
-> Para trocar o número conectado, use **"Trocar número / Reconectar"** — ele encerra a sessão atual e abre o QR Code do novo número automaticamente.
-
-## Detalhes técnicos
-
-- Endpoint UAZAPI usado: `POST /instance/disconnect` (chatwees.uazapi.com), autenticado pelo header `token` igual aos demais endpoints na função.
-- Nenhuma mudança de banco, RLS ou secret.
-- Sem alterações no `uazapi-webhook` — o webhook continua o mesmo URL e é re-aplicado pelo `configureWebhook()` existente ao final do QR.
-- Os mapeamentos em `whatsapp_group_projects` não são tocados; group IDs de grupos existentes permanecem válidos quando o admin do grupo apenas troca um participante. Grupos novos precisarão de mapeamento como hoje.
+Nenhuma mudança em schema, RLS ou secrets.
 
 ## Fora de escopo
 
-- Não vamos detectar/avisar automaticamente quando o número conectado mudou entre sessões.
-- Não vamos migrar mapeamentos de um group_id para outro automaticamente.
+- Não vou alterar o prompt, o modelo ou a lógica de parsing.
+- Não vou adicionar retry automático.
+
+Se preferir só confirmar que está funcionando e não mexer no tratamento de erro, é só me dizer.
