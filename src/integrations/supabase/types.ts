@@ -1324,6 +1324,432 @@ export type Database = {
           },
         ]
       }
+      rdo_companies: {
+        Row: {
+          address: string | null
+          city: string | null
+          client_notes: string | null
+          cnpj: string | null
+          contract_number: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_client_active: boolean | null
+          logo_url: string | null
+          name: string
+          phone: string | null
+          photo_url: string | null
+          responsible_email: string | null
+          responsible_name: string | null
+          responsible_phone: string | null
+          responsible_role: string | null
+          slug: string | null
+          state: string | null
+          updated_at: string
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          client_notes?: string | null
+          cnpj?: string | null
+          contract_number?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_client_active?: boolean | null
+          logo_url?: string | null
+          name: string
+          phone?: string | null
+          photo_url?: string | null
+          responsible_email?: string | null
+          responsible_name?: string | null
+          responsible_phone?: string | null
+          responsible_role?: string | null
+          slug?: string | null
+          state?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          client_notes?: string | null
+          cnpj?: string | null
+          contract_number?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_client_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          phone?: string | null
+          photo_url?: string | null
+          responsible_email?: string | null
+          responsible_name?: string | null
+          responsible_phone?: string | null
+          responsible_role?: string | null
+          slug?: string | null
+          state?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
+      rdo_projects: {
+        Row: {
+          client_responsible_name: string | null
+          code: string | null
+          company_id: string
+          contract_number: string | null
+          created_at: string
+          default_planned_workforce: number | null
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          photo_url: string | null
+          progress: number | null
+          progress_target: number | null
+          site_id: string
+          start_date: string | null
+          status: Database["public"]["Enums"]["rdo_project_status"]
+          supervisor_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_responsible_name?: string | null
+          code?: string | null
+          company_id: string
+          contract_number?: string | null
+          created_at?: string
+          default_planned_workforce?: number | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          photo_url?: string | null
+          progress?: number | null
+          progress_target?: number | null
+          site_id: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["rdo_project_status"]
+          supervisor_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_responsible_name?: string | null
+          code?: string | null
+          company_id?: string
+          contract_number?: string | null
+          created_at?: string
+          default_planned_workforce?: number | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          photo_url?: string | null
+          progress?: number | null
+          progress_target?: number | null
+          site_id?: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["rdo_project_status"]
+          supervisor_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rdo_projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rdo_projects_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rdo_report_photos: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          report_id: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          report_id: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          report_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rdo_report_photos_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rdo_reports: {
+        Row: {
+          actual_workforce: number | null
+          ai_summary: string | null
+          ambulance_point: string | null
+          amt_deviation_details: string | null
+          amt_deviation_hours: number | null
+          amt_deviation_reason: string | null
+          approved_at: string | null
+          approved_by: string | null
+          archived_at: string | null
+          arrival_time_at_liberator: string | null
+          blockage_revalidation_time: string | null
+          blockage_status: string | null
+          client_company: string | null
+          client_name: string | null
+          climatic_deviation_details: string | null
+          climatic_deviation_hours: number | null
+          climatic_deviation_reason: string | null
+          comments: string | null
+          contract_number: string | null
+          created_at: string
+          created_by: string | null
+          daily_progress: number | null
+          date: string
+          document_release_time: string | null
+          end_time: string | null
+          finalized_at: string | null
+          id: string
+          is_emergency: boolean | null
+          location: string | null
+          maintenance_order_number: string | null
+          maintenance_order_title: string | null
+          meeting_point: string | null
+          no_activity: boolean | null
+          operational_deviation_details: string | null
+          operational_deviation_hours: number | null
+          operational_deviation_reason: string | null
+          planned_workforce: number | null
+          project_id: string
+          radio_frequency_operation: string | null
+          radio_frequency_wees: string | null
+          rdo_number: string | null
+          real_percentage: number | null
+          rejected_reason: string | null
+          routine: string | null
+          sent_at: string | null
+          shift: Database["public"]["Enums"]["rdo_shift_type"]
+          signed_pdf_url: string | null
+          start_time: string | null
+          status: Database["public"]["Enums"]["rdo_report_status"]
+          supervisor_name: string | null
+          supervisor_role: string | null
+          team_id: string | null
+          technical_responsible_name: string | null
+          technical_responsible_role: string | null
+          temperature: number | null
+          updated_at: string
+          use_weighted_progress: boolean | null
+          weather: string | null
+        }
+        Insert: {
+          actual_workforce?: number | null
+          ai_summary?: string | null
+          ambulance_point?: string | null
+          amt_deviation_details?: string | null
+          amt_deviation_hours?: number | null
+          amt_deviation_reason?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          archived_at?: string | null
+          arrival_time_at_liberator?: string | null
+          blockage_revalidation_time?: string | null
+          blockage_status?: string | null
+          client_company?: string | null
+          client_name?: string | null
+          climatic_deviation_details?: string | null
+          climatic_deviation_hours?: number | null
+          climatic_deviation_reason?: string | null
+          comments?: string | null
+          contract_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          daily_progress?: number | null
+          date: string
+          document_release_time?: string | null
+          end_time?: string | null
+          finalized_at?: string | null
+          id?: string
+          is_emergency?: boolean | null
+          location?: string | null
+          maintenance_order_number?: string | null
+          maintenance_order_title?: string | null
+          meeting_point?: string | null
+          no_activity?: boolean | null
+          operational_deviation_details?: string | null
+          operational_deviation_hours?: number | null
+          operational_deviation_reason?: string | null
+          planned_workforce?: number | null
+          project_id: string
+          radio_frequency_operation?: string | null
+          radio_frequency_wees?: string | null
+          rdo_number?: string | null
+          real_percentage?: number | null
+          rejected_reason?: string | null
+          routine?: string | null
+          sent_at?: string | null
+          shift?: Database["public"]["Enums"]["rdo_shift_type"]
+          signed_pdf_url?: string | null
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["rdo_report_status"]
+          supervisor_name?: string | null
+          supervisor_role?: string | null
+          team_id?: string | null
+          technical_responsible_name?: string | null
+          technical_responsible_role?: string | null
+          temperature?: number | null
+          updated_at?: string
+          use_weighted_progress?: boolean | null
+          weather?: string | null
+        }
+        Update: {
+          actual_workforce?: number | null
+          ai_summary?: string | null
+          ambulance_point?: string | null
+          amt_deviation_details?: string | null
+          amt_deviation_hours?: number | null
+          amt_deviation_reason?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          archived_at?: string | null
+          arrival_time_at_liberator?: string | null
+          blockage_revalidation_time?: string | null
+          blockage_status?: string | null
+          client_company?: string | null
+          client_name?: string | null
+          climatic_deviation_details?: string | null
+          climatic_deviation_hours?: number | null
+          climatic_deviation_reason?: string | null
+          comments?: string | null
+          contract_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          daily_progress?: number | null
+          date?: string
+          document_release_time?: string | null
+          end_time?: string | null
+          finalized_at?: string | null
+          id?: string
+          is_emergency?: boolean | null
+          location?: string | null
+          maintenance_order_number?: string | null
+          maintenance_order_title?: string | null
+          meeting_point?: string | null
+          no_activity?: boolean | null
+          operational_deviation_details?: string | null
+          operational_deviation_hours?: number | null
+          operational_deviation_reason?: string | null
+          planned_workforce?: number | null
+          project_id?: string
+          radio_frequency_operation?: string | null
+          radio_frequency_wees?: string | null
+          rdo_number?: string | null
+          real_percentage?: number | null
+          rejected_reason?: string | null
+          routine?: string | null
+          sent_at?: string | null
+          shift?: Database["public"]["Enums"]["rdo_shift_type"]
+          signed_pdf_url?: string | null
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["rdo_report_status"]
+          supervisor_name?: string | null
+          supervisor_role?: string | null
+          team_id?: string | null
+          technical_responsible_name?: string | null
+          technical_responsible_role?: string | null
+          temperature?: number | null
+          updated_at?: string
+          use_weighted_progress?: boolean | null
+          weather?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rdo_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rdo_sites: {
+        Row: {
+          address: string | null
+          city: string | null
+          company_id: string
+          created_at: string
+          id: string
+          latitude: number | null
+          longitude: number | null
+          name: string
+          photo_url: string | null
+          slug: string | null
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          photo_url?: string | null
+          slug?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          photo_url?: string | null
+          slug?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rdo_sites_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_activities: {
         Row: {
           completed: boolean | null
@@ -2927,6 +3353,7 @@ export type Database = {
           source: string
         }[]
       }
+      rdo_can: { Args: { _action: string }; Returns: boolean }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       unaccent: { Args: { "": string }; Returns: string }
@@ -2956,6 +3383,24 @@ export type Database = {
         | "execution"
       impact_level: "low" | "medium" | "high"
       project_status: "planning" | "in_progress" | "completed" | "suspended"
+      rdo_deviation_type:
+        | "delay"
+        | "equipment"
+        | "safety"
+        | "other"
+        | "weather"
+        | "materials"
+        | "labor"
+        | "stoppage"
+        | "contractor"
+        | "supplier"
+        | "project_design"
+        | "planning"
+        | "execution"
+      rdo_impact_level: "low" | "medium" | "high"
+      rdo_project_status: "planning" | "in_progress" | "completed" | "suspended"
+      rdo_report_status: "draft" | "completed" | "sent" | "signed"
+      rdo_shift_type: "morning" | "afternoon" | "night"
       report_status: "draft" | "completed" | "sent" | "signed" | "finalized"
       service_photo_layout: "full" | "half" | "third"
       service_report_status: "draft" | "completed" | "published"
@@ -3153,6 +3598,25 @@ export const Constants = {
       ],
       impact_level: ["low", "medium", "high"],
       project_status: ["planning", "in_progress", "completed", "suspended"],
+      rdo_deviation_type: [
+        "delay",
+        "equipment",
+        "safety",
+        "other",
+        "weather",
+        "materials",
+        "labor",
+        "stoppage",
+        "contractor",
+        "supplier",
+        "project_design",
+        "planning",
+        "execution",
+      ],
+      rdo_impact_level: ["low", "medium", "high"],
+      rdo_project_status: ["planning", "in_progress", "completed", "suspended"],
+      rdo_report_status: ["draft", "completed", "sent", "signed"],
+      rdo_shift_type: ["morning", "afternoon", "night"],
       report_status: ["draft", "completed", "sent", "signed", "finalized"],
       service_photo_layout: ["full", "half", "third"],
       service_report_status: ["draft", "completed", "published"],
