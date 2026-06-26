@@ -13,12 +13,9 @@ async function uaFetch(path: string, token: string, init: RequestInit = {}) {
 }
 
 async function sendUazapiText(token: string, phone: string, message: string) {
-  const number = phone.includes("@") ? phone.split("@")[0] : phone;
-  const res = await uaFetch("/send/text", token, {
-    method: "POST",
-    body: JSON.stringify({ number, text: message }),
-  });
-  return res.ok;
+  // Envio de mensagens ao WhatsApp está desativado por decisão do produto.
+  console.log("[sendUazapiText] suprimido (bot silencioso):", { phone, preview: message?.slice(0, 80) });
+  return false;
 }
 
 Deno.serve(async (req) => {
