@@ -41,17 +41,43 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
     const expectedWebhookUrl = `${supabaseUrl}/functions/v1/uazapi-webhook`;
 
-    // 1) Conferir e re-configurar webhook se necessário
     let logStatus = "ok";
     const logDetails: Record<string, unknown> = {};
 
+    // 1) Conferir status da instância e reconectar se desconectada
+    try {
+      const statusRes = await uaFetch("/instance/status", token, { method: "GET" });
+      const statusData = await statusRes.json().catch(() => ({}));
+      logDetails.instanceStatus = statusData?.status ?? statusData;
+      const connected =
+        statusData?.status?.connected === true ||
+        statusData?.connected === true ||
+        statusData?.instance?.status === "connected";
+      logDetails.connected = connected;
+
+      if (!connected) {
+        console.log("UAZAPI instance disconnected; attempting auto-reconnect");
+        const connectRes = await uaFetch("/instance/connect", token, {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+        logDetails.reconnectResult = await connectRes.json().catch(() => ({}));
+        logStatus = "reconnect_attempted";
+      }
+    } catch (err) {
+      console.error("Error checking instance status:", err);
+      logDetails.instanceStatusError = err instanceof Error ? err.message : String(err);
+    }
+
+    // 2) Conferir e re-configurar webhook se necessário
     const webhookRes = await uaFetch("/webhook", token, { method: "GET" });
     const webhookData = await webhookRes.json().catch(() => ({}));
     logDetails.webhookData = webhookData;
 
-    // UAZAPI returns an array of webhooks (one per saved config)
     const hooks = Array.isArray(webhookData) ? webhookData : (webhookData ? [webhookData] : []);
-    const ours = hooks.find((h: any) => (h?.url || "").includes("uazapi-webhook") && h?.enabled);
+    const ours = hooks.find(
+      (h: any) => (h?.url || "") === expectedWebhookUrl && h?.enabled,
+    );
     const needsFix = !ours;
 
     if (needsFix) {
@@ -66,7 +92,7 @@ Deno.serve(async (req) => {
         }),
       });
       logDetails.fixResult = await fixRes.json().catch(() => ({}));
-      logStatus = "fixed";
+      logStatus = logStatus === "ok" ? "webhook_fixed" : `${logStatus}+webhook_fixed`;
     }
 
     // 2) Expirar pending_photo > 2h e enviar feedback ao grupo
