@@ -331,20 +331,9 @@ async function attachPendingPhotos(
 }
 
 async function sendUazapiText(token: string, phone: string, message: string) {
-  try {
-    // Normalize: UAZAPI accepts the JID or bare number. Strip the @suffix when present.
-    const number = phone.includes("@") ? phone.split("@")[0] : phone;
-    const response = await fetch(`${UAZAPI_BASE_URL}/send/text`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", token },
-      body: JSON.stringify({ number, text: message }),
-    });
-    const data = await response.json().catch(() => ({}));
-    console.log("UAZAPI send response:", JSON.stringify(data));
-    return data;
-  } catch (error) {
-    console.error("Error sending UAZAPI message:", error);
-  }
+  // Envio de mensagens ao WhatsApp está desativado por decisão do produto.
+  console.log("[sendUazapiText] suprimido (bot silencioso):", { phone, preview: message?.slice(0, 80) });
+  return { suppressed: true };
 }
 
 async function downloadUazapiMedia(
