@@ -109,22 +109,6 @@ Deno.serve(async (req) => {
     } else {
       const expiredCount = expiredEntries?.length || 0;
       logDetails.expiredPendingPhotos = expiredCount;
-      if (expiredCount > 0) {
-        const uniqueGroups = new Set(
-          (expiredEntries || []).map((e: any) => e.group_id).filter(Boolean) as string[]
-        );
-        for (const groupId of uniqueGroups) {
-          try {
-            await sendUazapiText(
-              token,
-              groupId,
-              "📸 Foto recebida sem texto de RDO. Reenvie a foto junto com o texto do relatório para que seja processada corretamente."
-            );
-          } catch (err) {
-            console.error(`Error sending feedback to ${groupId}:`, err);
-          }
-        }
-      }
     }
 
     return new Response(JSON.stringify({ status: logStatus, ...logDetails }), {
