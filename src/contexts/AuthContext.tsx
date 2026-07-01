@@ -20,6 +20,7 @@ interface AuthState {
   role: UserRole | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  roleResolved: boolean;
 }
 
 interface AuthContextType extends AuthState {
@@ -39,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     role: null,
     isAuthenticated: false,
     isLoading: true,
+    roleResolved: false,
   });
 
   // Guard against duplicate profile fetches
@@ -50,14 +52,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchingRef.current = userId;
 
     try {
+      // Defensive timeout so a hung request never freezes the loader.
+      const withTimeout = <T,>(p: Promise<T>, ms = 8000, label = 'query'): Promise<T> =>
+        Promise.race<T>([
+          p,
+          new Promise<T>((_, reject) =>
+            setTimeout(() => reject(new Error(`[Auth] ${label} timeout after ${ms}ms`)), ms),
+          ),
+        ]);
+
       const [profileResult, roleResult] = await Promise.allSettled([
-        supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
-        supabase.from('user_roles').select('role').eq('user_id', userId).maybeSingle(),
+        withTimeout(
+          supabase.from('profiles').select('*').eq('id', userId).maybeSingle() as unknown as Promise<any>,
+          8000,
+          'profiles',
+        ),
+        withTimeout(
+          supabase.from('user_roles').select('role').eq('user_id', userId).maybeSingle() as unknown as Promise<any>,
+          8000,
+          'user_roles',
+        ),
       ]);
 
-      const profile = profileResult.status === 'fulfilled' ? profileResult.value.data as Profile | null : null;
-      const role = roleResult.status === 'fulfilled' ? (roleResult.value.data?.role as UserRole | null) : null;
+      if (profileResult.status === 'rejected') {
+        console.warn('[Auth] profiles fetch failed:', profileResult.reason);
+      } else if ((profileResult.value as any)?.error) {
+        console.warn('[Auth] profiles error:', (profileResult.value as any).error);
+      }
+      if (roleResult.status === 'rejected') {
+        console.warn('[Auth] user_roles fetch failed:', roleResult.reason);
+      } else if ((roleResult.value as any)?.error) {
+        console.warn('[Auth] user_roles error:', (roleResult.value as any).error);
+      }
 
+      const profile =
+        profileResult.status === 'fulfilled'
+          ? ((profileResult.value as any).data as Profile | null)
+          : null;
+      const role =
+        roleResult.status === 'fulfilled'
+          ? (((roleResult.value as any).data?.role as UserRole | null) ?? null)
+          : null;
+
+      console.info('[Auth] role resolved for user', userId, '->', role);
       return { profile, role };
     } catch (error) {
       console.warn('Profile fetch failed (non-fatal):', error);
@@ -70,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshProfile = useCallback(async () => {
     if (state.user) {
       const { profile, role } = await fetchProfile(state.user.id);
-      setState(prev => ({ ...prev, profile, role }));
+      setState(prev => ({ ...prev, profile, role, roleResolved: true }));
     }
   }, [state.user]);
 
@@ -90,16 +127,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           user: session?.user ?? null,
           isAuthenticated: !!session?.user,
           isLoading: false,
+          // Reset resolution state when the user changes
+          roleResolved: session?.user ? (prev.user?.id === session.user.id ? prev.roleResolved : false) : true,
         }));
 
         if (session?.user) {
           setTimeout(() => {
             fetchProfile(session.user.id).then(({ profile, role }) => {
-              setState(prev => ({ ...prev, profile, role }));
+              setState(prev => ({ ...prev, profile, role, roleResolved: true }));
             });
           }, 0);
         } else {
-          setState(prev => ({ ...prev, profile: null, role: null }));
+          setState(prev => ({ ...prev, profile: null, role: null, roleResolved: true }));
         }
       }
     );
@@ -114,12 +153,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: session?.user ?? null,
         isAuthenticated: !!session?.user,
         isLoading: false,
+        roleResolved: session?.user ? prev.roleResolved : true,
       }));
 
       if (session?.user) {
         fetchProfile(session.user.id).then(({ profile, role }) => {
-          setState(prev => ({ ...prev, profile, role }));
+          setState(prev => ({ ...prev, profile, role, roleResolved: true }));
         });
+      } else {
+        setState(prev => ({ ...prev, roleResolved: true }));
       }
     });
 
@@ -175,6 +217,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: null,
       isAuthenticated: false,
       isLoading: false,
+      roleResolved: true,
     });
   }, []);
 
