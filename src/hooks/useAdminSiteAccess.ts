@@ -30,6 +30,7 @@ interface AdminSiteAccess {
   activeSiteId: string | null;
   setActiveSiteId: (id: string) => void;
   isLoading: boolean;
+  error: string | null;
 }
 
 export function useAdminSiteAccess(): AdminSiteAccess {
@@ -38,6 +39,7 @@ export function useAdminSiteAccess(): AdminSiteAccess {
   const [companies, setCompanies] = useState<AdminCompany[]>([]);
   const [activeSiteId, setActiveSiteIdState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user || role !== 'admin') {
@@ -47,11 +49,19 @@ export function useAdminSiteAccess(): AdminSiteAccess {
 
     const fetchSites = async () => {
       setIsLoading(true);
-      const { data } = await supabase
+      setError(null);
+      const { data, error: paaError } = await supabase
         .from('portal_admin_access')
         .select('site_id, sites(name, photo_url, company_id, companies(id, name, logo_url, photo_url))')
         .eq('user_id', user.id)
         .order('created_at');
+
+      if (paaError) {
+        console.warn('[useAdminSiteAccess] portal_admin_access error:', paaError);
+        setError(paaError.message);
+        setIsLoading(false);
+        return;
+      }
 
       const mapped: AdminSite[] = (data || []).map(d => {
         const site = d.sites as any;
@@ -122,7 +132,11 @@ export function useAdminSiteAccess(): AdminSiteAccess {
       setIsLoading(false);
     };
 
-    fetchSites();
+    fetchSites().catch((err) => {
+      console.warn('[useAdminSiteAccess] unexpected error:', err);
+      setError(err?.message || 'Erro ao carregar unidades');
+      setIsLoading(false);
+    });
   }, [user, role]);
 
   const setActiveSiteId = useCallback((id: string) => {
@@ -139,5 +153,6 @@ export function useAdminSiteAccess(): AdminSiteAccess {
     activeSiteId,
     setActiveSiteId,
     isLoading: role === 'admin' ? isLoading : false,
+    error,
   };
 }
