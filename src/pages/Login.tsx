@@ -20,6 +20,19 @@ import { cn } from '@/lib/utils';
 
 type LoginMode = 'quick' | 'pin' | 'email';
 
+/** Read same-origin `?next=` and return a relative path, or null if unsafe/absent. */
+function getSafeNextParam(): string | null {
+  try {
+    const raw = new URLSearchParams(window.location.search).get('next');
+    if (!raw) return null;
+    // Must be a same-origin relative path.
+    if (!raw.startsWith('/') || raw.startsWith('//')) return null;
+    return raw;
+  } catch {
+    return null;
+  }
+}
+
 interface QuickAccessUser {
   id: string;
   name: string;
@@ -137,6 +150,11 @@ export default function Login() {
       try {
         const { data: { user } } = await (supabase as any).auth.getUser();
         if (!user) return;
+        const next = getSafeNextParam();
+        if (next) {
+          navigate(next);
+          return;
+        }
         await resolvePostLoginDestination(user.id, navigate, () => {
           console.warn('Auto-redirect check failed — staying on login');
         });
@@ -212,6 +230,12 @@ export default function Login() {
         description: `Olá, ${selectedUser.name.split(' ')[0]}!`,
       });
 
+      const nextPin = getSafeNextParam();
+      if (nextPin) {
+        navigate(nextPin);
+        return;
+      }
+
       // Use centralized resolver
       const resolved = await resolvePostLoginDestination(selectedUser.id, navigate, () => {});
       if (!resolved) navigate('/home');
@@ -286,6 +310,12 @@ export default function Login() {
         title: 'Bem-vindo!',
         description: 'Login realizado com sucesso.',
       });
+
+      const nextEmail = getSafeNextParam();
+      if (nextEmail) {
+        navigate(nextEmail);
+        return;
+      }
 
       // Use centralized resolver
       const resolved = await resolvePostLoginDestination(userId, navigate, (err) => {
