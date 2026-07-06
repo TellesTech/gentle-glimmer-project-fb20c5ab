@@ -21,6 +21,7 @@ import ClientReportView from "@/pages/ClientReportView";
 import ClientLogin from "@/pages/ClientLogin";
 import InitialSetup from "@/pages/InitialSetup";
 import Diagnostico from "@/pages/Diagnostico";
+import OAuthConsent from "@/pages/OAuthConsent";
 
 // Client Portal
 import ClientDashboard from "@/pages/client/ClientDashboard";
@@ -82,6 +83,7 @@ const App = () => (
                 {/* Public routes */}
                 <Route path="/pv" element={<SalesPage />} />
                 <Route path="/diagnostico" element={<Diagnostico />} />
+                <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
                 
                 <Route path="/" element={<Login />} />
                 <Route path="/login" element={<Login />} />
