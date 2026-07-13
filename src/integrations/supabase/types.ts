@@ -2470,14 +2470,18 @@ export type Database = {
           company_id: string | null
           conclusion: string | null
           cover_image_url: string | null
+          cover_photos: Json | null
           created_at: string
           created_by: string
           end_date: string | null
           id: string
+          irata_logo_brasil_url: string | null
+          irata_logo_international_url: string | null
           project_id: string | null
           revision: number
           safety_notes: string | null
           scope_description: string | null
+          show_irata_seals: boolean
           site_id: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["service_report_status"]
@@ -2493,14 +2497,18 @@ export type Database = {
           company_id?: string | null
           conclusion?: string | null
           cover_image_url?: string | null
+          cover_photos?: Json | null
           created_at?: string
           created_by: string
           end_date?: string | null
           id?: string
+          irata_logo_brasil_url?: string | null
+          irata_logo_international_url?: string | null
           project_id?: string | null
           revision?: number
           safety_notes?: string | null
           scope_description?: string | null
+          show_irata_seals?: boolean
           site_id?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["service_report_status"]
@@ -2516,14 +2524,18 @@ export type Database = {
           company_id?: string | null
           conclusion?: string | null
           cover_image_url?: string | null
+          cover_photos?: Json | null
           created_at?: string
           created_by?: string
           end_date?: string | null
           id?: string
+          irata_logo_brasil_url?: string | null
+          irata_logo_international_url?: string | null
           project_id?: string | null
           revision?: number
           safety_notes?: string | null
           scope_description?: string | null
+          show_irata_seals?: boolean
           site_id?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["service_report_status"]
