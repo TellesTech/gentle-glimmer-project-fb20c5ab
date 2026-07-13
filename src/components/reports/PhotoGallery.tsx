@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ChevronLeft, ChevronRight, X, ZoomIn, Loader2, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, ZoomIn, Loader2, AlertCircle, RotateCw, ExternalLink } from "lucide-react";
 import type { Photo } from "@/types";
 import { cn } from "@/lib/utils";
 import { useStorageUpload } from "@/hooks/useStorageUpload";
@@ -17,6 +17,12 @@ export function PhotoGallery({ photos, className }: PhotoGalleryProps) {
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const [imageLoading, setImageLoading] = useState<Record<string, boolean>>({});
   const { getViewUrl } = useStorageUpload();
+
+  // Lightbox-scoped state (independent from thumbnail grid so a transient
+  // thumbnail error never poisons the fullscreen view).
+  const [lightboxError, setLightboxError] = useState(false);
+  const [lightboxLoading, setLightboxLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Touch/swipe state
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -160,6 +166,20 @@ export function PhotoGallery({ photos, className }: PhotoGalleryProps) {
 
   const closeLightbox = () => {
     setLightboxOpen(false);
+  };
+
+  // Reset lightbox state whenever the visible photo changes.
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    setLightboxError(false);
+    setLightboxLoading(true);
+    setRetryCount(0);
+  }, [currentIndex, lightboxOpen]);
+
+  const retryLightboxImage = () => {
+    setLightboxError(false);
+    setLightboxLoading(true);
+    setRetryCount((c) => c + 1);
   };
 
   const goToPrevious = useCallback(() => {
@@ -311,21 +331,52 @@ export function PhotoGallery({ photos, className }: PhotoGalleryProps) {
 
             {/* Image with pinch-to-zoom */}
             <div className="w-full h-full flex items-center justify-center p-4 lightbox-image-container">
-              {imageErrors[currentPhoto?.id] ? (
-                <div className="flex flex-col items-center text-white">
-                  <AlertCircle className="w-16 h-16 mb-4" />
+              {lightboxError ? (
+                <div className="flex flex-col items-center text-white gap-4 px-6 text-center">
+                  <AlertCircle className="w-16 h-16" />
                   <p>Erro ao carregar a imagem</p>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    <button
+                      onClick={retryLightboxImage}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 active:bg-white/30 text-white text-sm transition-colors touch-manipulation"
+                    >
+                      <RotateCw className="w-4 h-4" />
+                      Tentar novamente
+                    </button>
+                    {currentPhoto?.url && (
+                      <a
+                        href={getPhotoUrl(currentPhoto) || currentPhoto.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 active:bg-white/30 text-white text-sm transition-colors touch-manipulation"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        Abrir em nova aba
+                      </a>
+                    )}
+                  </div>
                 </div>
               ) : (
-                <img
-                  src={getPhotoUrl(currentPhoto)}
-                  alt={currentPhoto?.description || `Foto ${currentIndex + 1}`}
-                  className="max-w-full max-h-full object-contain select-none"
-                  style={{ touchAction: 'pinch-zoom' }}
-                  onLoad={() => handleImageLoad(currentPhoto?.id)}
-                  onError={() => handleImageError(currentPhoto?.id)}
-                  draggable={false}
-                />
+                <>
+                  {lightboxLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <Loader2 className="w-10 h-10 animate-spin text-white/80" />
+                    </div>
+                  )}
+                  <img
+                    key={`${currentPhoto?.id}-${retryCount}`}
+                    src={getPhotoUrl(currentPhoto)}
+                    alt={currentPhoto?.description || `Foto ${currentIndex + 1}`}
+                    className="max-w-full max-h-full object-contain select-none"
+                    style={{ touchAction: 'pinch-zoom' }}
+                    onLoad={() => setLightboxLoading(false)}
+                    onError={() => {
+                      setLightboxLoading(false);
+                      setLightboxError(true);
+                    }}
+                    draggable={false}
+                  />
+                </>
               )}
             </div>
 
