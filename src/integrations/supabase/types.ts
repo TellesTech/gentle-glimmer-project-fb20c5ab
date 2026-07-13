@@ -2422,6 +2422,7 @@ export type Database = {
       }
       service_report_sections: {
         Row: {
+          annotations: Json
           content: Json | null
           created_at: string
           id: string
@@ -2432,6 +2433,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          annotations?: Json
           content?: Json | null
           created_at?: string
           id?: string
@@ -2442,6 +2444,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          annotations?: Json
           content?: Json | null
           created_at?: string
           id?: string
