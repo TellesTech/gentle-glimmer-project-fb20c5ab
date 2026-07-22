@@ -15,6 +15,7 @@ import { compressImage } from '@/lib/imageCompression';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { CoverPhotoPickerDialog } from './CoverPhotoPickerDialog';
+import { SafeImg } from './SafeImg';
 
 interface Section {
   id: string;
@@ -295,7 +296,7 @@ export function PropertiesPanel({
             >
               {url ? (
                 <>
-                  <img src={url} alt={`Foto ${slotIdx + 1}`} className="w-full h-full object-cover" />
+                  <SafeImg src={url} alt={`Foto ${slotIdx + 1}`} className="w-full h-full object-cover" fallbackLabel={`Foto ${slotIdx + 1} indisponível`} />
                   <button
                     type="button"
                     className="absolute top-0.5 right-0.5 w-4 h-4 bg-destructive text-destructive-foreground rounded-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
