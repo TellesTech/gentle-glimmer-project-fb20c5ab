@@ -1,6 +1,32 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+/**
+ * Some RDOs foram migrados de um projeto Supabase antigo cujo host não
+ * responde mais (DNS morto). Filtramos URLs que apontem para hosts diferentes
+ * do projeto atual para não sugerir capas quebradas.
+ */
+const CURRENT_SUPABASE_HOST = (() => {
+  try {
+    return new URL(import.meta.env.VITE_SUPABASE_URL as string).host;
+  } catch {
+    return "";
+  }
+})();
+
+function isUsableUrl(url: string | null | undefined): url is string {
+  if (!url) return false;
+  if (!url.startsWith("http")) return true; // path relativo — ok
+  try {
+    const host = new URL(url).host;
+    // Aceita host atual OU qualquer host não-supabase (imagens externas legítimas)
+    if (!host.endsWith(".supabase.co")) return true;
+    return CURRENT_SUPABASE_HOST ? host === CURRENT_SUPABASE_HOST : true;
+  } catch {
+    return false;
+  }
+}
+
 export interface RdoCoverPhoto {
   url: string;
   reportId: string;
@@ -75,7 +101,7 @@ export function useRdoCoverPhotos({
         const result: RdoCoverPhoto[] = [];
         for (const row of pdata || []) {
           const url = (row as any).url as string;
-          if (!url || seen.has(url)) continue;
+          if (!isUsableUrl(url) || seen.has(url)) continue;
           seen.add(url);
           const meta = reportMap.get((row as any).report_id) || { date: null, rdo: null };
           result.push({
