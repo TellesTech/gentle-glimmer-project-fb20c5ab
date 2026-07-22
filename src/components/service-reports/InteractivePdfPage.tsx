@@ -14,6 +14,7 @@ import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { getSectionNumberPrefix, formatSectionTitle } from '@/lib/sectionNumbering';
 import irataBrasilLogoFixed from '@/assets/irata-brasil.png';
 import irataInternationalLogoFixed from '@/assets/irata-international.png';
+import { SafeImg } from './SafeImg';
 
 /** Module-level stable component to avoid remount on parent re-render */
 const StableEditableText = React.memo(function StableEditableText({
@@ -85,7 +86,7 @@ function PhotoMosaic({ photos }: { photos: string[] }) {
   if (photos.length === 1) {
     return (
       <div className={cn(tileClass, 'w-full h-full')}>
-        <img src={photos[0]} alt="Foto 1" className={imgClass} />
+        <SafeImg src={photos[0]} alt="Foto 1" className={imgClass} />
       </div>
     );
   }
@@ -94,10 +95,10 @@ function PhotoMosaic({ photos }: { photos: string[] }) {
     return (
       <div className="w-full h-full flex flex-col gap-3">
         <div className={cn(tileClass, 'flex-[3]')}>
-          <img src={photos[0]} alt="Foto 1" className={imgClass} />
+          <SafeImg src={photos[0]} alt="Foto 1" className={imgClass} />
         </div>
         <div className={cn(tileClass, 'flex-[2]')}>
-          <img src={photos[1]} alt="Foto 2" className={imgClass} />
+          <SafeImg src={photos[1]} alt="Foto 2" className={imgClass} />
         </div>
       </div>
     );
@@ -107,14 +108,14 @@ function PhotoMosaic({ photos }: { photos: string[] }) {
     return (
       <div className="w-full h-full flex gap-3">
         <div className={cn(tileClass, 'flex-[3] h-full')}>
-          <img src={photos[0]} alt="Foto 1" className={imgClass} />
+          <SafeImg src={photos[0]} alt="Foto 1" className={imgClass} />
         </div>
         <div className="flex-[2] flex flex-col gap-3">
           <div className={cn(tileClass, 'flex-1')}>
-            <img src={photos[1]} alt="Foto 2" className={imgClass} />
+            <SafeImg src={photos[1]} alt="Foto 2" className={imgClass} />
           </div>
           <div className={cn(tileClass, 'flex-1')}>
-            <img src={photos[2]} alt="Foto 3" className={imgClass} />
+            <SafeImg src={photos[2]} alt="Foto 3" className={imgClass} />
           </div>
         </div>
       </div>
@@ -126,7 +127,7 @@ function PhotoMosaic({ photos }: { photos: string[] }) {
     <div className="w-full h-full grid grid-cols-2 grid-rows-2 gap-3">
       {photos.slice(0, 4).map((url, i) => (
         <div key={i} className={tileClass}>
-          <img src={url} alt={`Foto ${i + 1}`} className={imgClass} />
+          <SafeImg src={url} alt={`Foto ${i + 1}`} className={imgClass} />
         </div>
       ))}
     </div>
