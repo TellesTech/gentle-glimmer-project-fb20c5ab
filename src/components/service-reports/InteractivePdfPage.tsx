@@ -14,6 +14,7 @@ import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { getSectionNumberPrefix, formatSectionTitle } from '@/lib/sectionNumbering';
 import irataBrasilLogoFixed from '@/assets/irata-brasil.png';
 import irataInternationalLogoFixed from '@/assets/irata-international.png';
+import { SafeImg } from './SafeImg';
 
 /** Module-level stable component to avoid remount on parent re-render */
 const StableEditableText = React.memo(function StableEditableText({
