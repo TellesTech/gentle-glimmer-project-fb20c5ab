@@ -832,6 +832,7 @@ export default function UsersPage() {
           {filtered.map((userItem) => {
             const isSelected = selectedUsers.has(userItem.id);
             const isCurrentUser = userItem.id === user?.id;
+            const isInactive = userItem.is_active === false;
             
             return (
               <Card 
@@ -839,7 +840,8 @@ export default function UsersPage() {
                 className={cn(
                   "card-hover",
                   selectionMode && "cursor-pointer",
-                  selectionMode && isSelected && "ring-2 ring-primary bg-primary/5"
+                  selectionMode && isSelected && "ring-2 ring-primary bg-primary/5",
+                  isInactive && "opacity-60"
                 )}
                 onClick={() => {
                   if (selectionMode && !isCurrentUser) {
@@ -876,6 +878,12 @@ export default function UsersPage() {
                           )}
                           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                             <RoleBadge role={userItem.role} />
+                            {isInactive && (
+                              <Badge variant="outline" className="text-xs border-muted-foreground/40 text-muted-foreground gap-1">
+                                <PowerOff className="h-3 w-3" />
+                                Desligado
+                              </Badge>
+                            )}
                             <Badge
                               variant="outline"
                               className={`text-xs ${
