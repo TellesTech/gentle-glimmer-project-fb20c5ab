@@ -802,6 +802,16 @@ export default function UsersPage() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'active' | 'inactive' | 'all')}>
+            <SelectTrigger className="w-full sm:w-[160px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Ativos</SelectItem>
+              <SelectItem value="inactive">Desligados</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
