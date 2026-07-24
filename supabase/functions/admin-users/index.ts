@@ -451,12 +451,85 @@ serve(async (req) => {
         });
       }
 
-      case 'reset-password': {
-        // handled below
-        return await handleResetPassword();
+      case 'deactivate': {
+        if (!isSuperAdmin && !isAdmin) {
+          return new Response(JSON.stringify({ error: 'Apenas administradores podem desligar colaboradores' }), {
+            status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const { userId, reason } = payload as { userId: string; reason?: string };
+        if (!userId) {
+          return new Response(JSON.stringify({ error: 'userId é obrigatório' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        if (userId === user.id) {
+          return new Response(JSON.stringify({ error: 'Você não pode desligar sua própria conta' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // Prevent non super_admin from deactivating a super_admin
+        const { data: targetRole } = await supabaseAdmin
+          .from('user_roles').select('role').eq('user_id', userId).maybeSingle();
+        if (targetRole?.role === 'super_admin' && !isSuperAdmin) {
+          return new Response(JSON.stringify({ error: 'Apenas super admins podem desligar outro super admin' }), {
+            status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const { error: updErr } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            is_active: false,
+            deactivated_at: new Date().toISOString(),
+            deactivated_by: user.id,
+            deactivation_reason: reason || null,
+          })
+          .eq('id', userId);
+        if (updErr) throw updErr;
+
+        // Invalidate active sessions so the user is kicked out immediately.
+        try {
+          // @ts-ignore admin API present with service role
+          await supabaseAdmin.auth.admin.signOut(userId);
+        } catch (e) {
+          console.warn('signOut on deactivate failed (non-fatal):', e);
+        }
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
-      // NOTE: replaced by fallthrough marker above; real reset-password logic follows.
+      case 'reactivate': {
+        if (!isSuperAdmin && !isAdmin) {
+          return new Response(JSON.stringify({ error: 'Apenas administradores podem reativar colaboradores' }), {
+            status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const { userId } = payload as { userId: string };
+        if (!userId) {
+          return new Response(JSON.stringify({ error: 'userId é obrigatório' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const { error: updErr } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            is_active: true,
+            deactivated_at: null,
+            deactivated_by: null,
+            deactivation_reason: null,
+          })
+          .eq('id', userId);
+        if (updErr) throw updErr;
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      case 'reset-password': {
         const { userId, newPassword } = payload;
         
         if (!userId || !newPassword) {
