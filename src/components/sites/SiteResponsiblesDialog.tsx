@@ -96,6 +96,7 @@ export function SiteResponsiblesDialog({
       const { data: allProfiles, error: allProfilesError } = await supabase
         .from('profiles')
         .select('id, name, email, avatar_url, job_title')
+        .eq('is_active', true)
         .order('name');
 
       if (allProfilesError) throw allProfilesError;
