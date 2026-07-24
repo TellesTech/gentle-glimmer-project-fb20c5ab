@@ -54,7 +54,7 @@ export default function Teams() {
         supabase.from('teams').select('*').order('name'),
         supabase.from('projects').select('*').order('name'),
         supabase.from('companies').select('*').order('name'),
-        supabase.from('profiles').select('*').order('name'),
+        supabase.from('profiles').select('*').eq('is_active', true).order('name'),
         supabase.from('team_members').select('team_id, user_id'),
       ]);
       
