@@ -138,6 +138,7 @@ export default function TeamDetails() {
       const { data: allProfiles } = await supabase
         .from("profiles")
         .select("*")
+        .eq('is_active', true)
         .order("name");
       
       const available = (allProfiles || []).filter(p => !memberIds.includes(p.id));
