@@ -610,6 +610,57 @@ export default function UsersPage() {
     }
   };
 
+  const handleDeactivate = async () => {
+    if (!deactivateDialog.user) return;
+    setSaving(true);
+    try {
+      const response = await supabase.functions.invoke('admin-users', {
+        body: {
+          action: 'deactivate',
+          userId: deactivateDialog.user.id,
+          reason: deactivateReason.trim() || undefined,
+        },
+      });
+      const errMsg = response.data?.error || response.error?.message;
+      if (errMsg) throw new Error(errMsg);
+      toast({ title: 'Colaborador desligado', description: 'Ele perdeu o acesso ao sistema.' });
+      setDeactivateDialog({ open: false, user: null });
+      setDeactivateReason('');
+      fetchUsers();
+    } catch (error) {
+      toast({
+        title: 'Erro ao desligar colaborador',
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReactivate = async () => {
+    if (!reactivateDialog.user) return;
+    setSaving(true);
+    try {
+      const response = await supabase.functions.invoke('admin-users', {
+        body: { action: 'reactivate', userId: reactivateDialog.user.id },
+      });
+      const errMsg = response.data?.error || response.error?.message;
+      if (errMsg) throw new Error(errMsg);
+      toast({ title: 'Colaborador reativado' });
+      setReactivateDialog({ open: false, user: null });
+      fetchUsers();
+    } catch (error) {
+      toast({
+        title: 'Erro ao reativar colaborador',
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (!canManageUsers) {
     return (
       <div className="flex items-center justify-center h-64">
