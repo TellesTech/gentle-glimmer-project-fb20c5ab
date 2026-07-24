@@ -4,6 +4,7 @@ import { SiteAccessSelector } from '@/components/users/SiteAccessSelector';
 import { exportUsersToCSV } from '@/lib/adminExports';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { Card, CardContent } from '@/components/ui/card';
