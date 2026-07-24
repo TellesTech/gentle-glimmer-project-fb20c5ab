@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, UserCog, MoreHorizontal, Pencil, Trash2, Key, Loader2, Wrench, UserX, Eye, EyeOff, Mail, Download, Upload, MapPin, AlertTriangle, CheckSquare, X, KeyRound, Lock, LockOpen, Factory } from 'lucide-react';
+import { Plus, Search, UserCog, MoreHorizontal, Pencil, Trash2, Key, Loader2, Wrench, UserX, UserCheck, Eye, EyeOff, Mail, Download, Upload, MapPin, AlertTriangle, CheckSquare, X, KeyRound, Lock, LockOpen, Factory, PowerOff } from 'lucide-react';
 import { SiteAccessSelector } from '@/components/users/SiteAccessSelector';
 import { exportUsersToCSV } from '@/lib/adminExports';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -46,6 +47,9 @@ interface AdminUser {
   state: string | null;
   employment_type?: 'fixo' | 'intermitente' | null;
   has_pin?: boolean;
+  is_active?: boolean;
+  deactivated_at?: string | null;
+  deactivation_reason?: string | null;
 }
 
 export default function UsersPage() {
@@ -56,6 +60,7 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
   const [stateFilter, setStateFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
   
   // Selection mode
   const [selectionMode, setSelectionMode] = useState(false);
@@ -74,6 +79,10 @@ export default function UsersPage() {
   const [pinDialog, setPinDialog] = useState<{ open: boolean; user: AdminUser | null }>({ open: false, user: null });
   const [removePinDialog, setRemovePinDialog] = useState<{ open: boolean; user: AdminUser | null }>({ open: false, user: null });
   const [pinInput, setPinInput] = useState('');
+  // Deactivate / reactivate
+  const [deactivateDialog, setDeactivateDialog] = useState<{ open: boolean; user: AdminUser | null }>({ open: false, user: null });
+  const [deactivateReason, setDeactivateReason] = useState('');
+  const [reactivateDialog, setReactivateDialog] = useState<{ open: boolean; user: AdminUser | null }>({ open: false, user: null });
   // Form states
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [formData, setFormData] = useState({ 
@@ -146,7 +155,12 @@ export default function UsersPage() {
                           (u.job_title?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
     const matchesRole = roleFilter === 'all' || u.role === roleFilter;
     const matchesState = stateFilter === 'all' || u.state === stateFilter;
-    return matchesSearch && matchesRole && matchesState;
+    const isActive = u.is_active !== false;
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'active' && isActive) ||
+      (statusFilter === 'inactive' && !isActive);
+    return matchesSearch && matchesRole && matchesState && matchesStatus;
   });
 
   // Count only record-only collaborators (@internal.local)
@@ -597,6 +611,57 @@ export default function UsersPage() {
     }
   };
 
+  const handleDeactivate = async () => {
+    if (!deactivateDialog.user) return;
+    setSaving(true);
+    try {
+      const response = await supabase.functions.invoke('admin-users', {
+        body: {
+          action: 'deactivate',
+          userId: deactivateDialog.user.id,
+          reason: deactivateReason.trim() || undefined,
+        },
+      });
+      const errMsg = response.data?.error || response.error?.message;
+      if (errMsg) throw new Error(errMsg);
+      toast({ title: 'Colaborador desligado', description: 'Ele perdeu o acesso ao sistema.' });
+      setDeactivateDialog({ open: false, user: null });
+      setDeactivateReason('');
+      fetchUsers();
+    } catch (error) {
+      toast({
+        title: 'Erro ao desligar colaborador',
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReactivate = async () => {
+    if (!reactivateDialog.user) return;
+    setSaving(true);
+    try {
+      const response = await supabase.functions.invoke('admin-users', {
+        body: { action: 'reactivate', userId: reactivateDialog.user.id },
+      });
+      const errMsg = response.data?.error || response.error?.message;
+      if (errMsg) throw new Error(errMsg);
+      toast({ title: 'Colaborador reativado' });
+      setReactivateDialog({ open: false, user: null });
+      fetchUsers();
+    } catch (error) {
+      toast({
+        title: 'Erro ao reativar colaborador',
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (!canManageUsers) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -738,6 +803,16 @@ export default function UsersPage() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'active' | 'inactive' | 'all')}>
+            <SelectTrigger className="w-full sm:w-[160px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Ativos</SelectItem>
+              <SelectItem value="inactive">Desligados</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -758,6 +833,7 @@ export default function UsersPage() {
           {filtered.map((userItem) => {
             const isSelected = selectedUsers.has(userItem.id);
             const isCurrentUser = userItem.id === user?.id;
+            const isInactive = userItem.is_active === false;
             
             return (
               <Card 
@@ -765,7 +841,8 @@ export default function UsersPage() {
                 className={cn(
                   "card-hover",
                   selectionMode && "cursor-pointer",
-                  selectionMode && isSelected && "ring-2 ring-primary bg-primary/5"
+                  selectionMode && isSelected && "ring-2 ring-primary bg-primary/5",
+                  isInactive && "opacity-60"
                 )}
                 onClick={() => {
                   if (selectionMode && !isCurrentUser) {
@@ -802,6 +879,12 @@ export default function UsersPage() {
                           )}
                           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                             <RoleBadge role={userItem.role} />
+                            {isInactive && (
+                              <Badge variant="outline" className="text-xs border-muted-foreground/40 text-muted-foreground gap-1">
+                                <PowerOff className="h-3 w-3" />
+                                Desligado
+                              </Badge>
+                            )}
                             <Badge
                               variant="outline"
                               className={`text-xs ${
@@ -859,13 +942,13 @@ export default function UsersPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEdit(userItem)}>
+                              <DropdownMenuItem onClick={() => openEdit(userItem)} disabled={isInactive}>
                                 <Pencil className="h-4 w-4 mr-2" />
                                 Editar
                               </DropdownMenuItem>
                               {userItem.role !== 'collaborator' && (
                                 <>
-                                  <DropdownMenuItem onClick={() => openPasswordReset(userItem)}>
+                                  <DropdownMenuItem onClick={() => openPasswordReset(userItem)} disabled={isInactive}>
                                     <Key className="h-4 w-4 mr-2" />
                                     Redefinir Senha
                                   </DropdownMenuItem>
@@ -874,7 +957,7 @@ export default function UsersPage() {
                                       <DropdownMenuItem onClick={() => {
                                         setPinDialog({ open: true, user: userItem });
                                         setPinInput('');
-                                      }}>
+                                      }} disabled={isInactive}>
                                         <KeyRound className="h-4 w-4 mr-2" />
                                         {userItem.has_pin ? 'Alterar PIN' : 'Definir PIN'}
                                       </DropdownMenuItem>
@@ -882,6 +965,7 @@ export default function UsersPage() {
                                         <DropdownMenuItem 
                                           onClick={() => setRemovePinDialog({ open: true, user: userItem })}
                                           className="text-amber-600"
+                                          disabled={isInactive}
                                         >
                                           <LockOpen className="h-4 w-4 mr-2" />
                                           Remover PIN
@@ -892,6 +976,27 @@ export default function UsersPage() {
                                 </>
                               )}
                               <DropdownMenuSeparator />
+                              {isInactive ? (
+                                <DropdownMenuItem
+                                  onClick={() => setReactivateDialog({ open: true, user: userItem })}
+                                  className="text-emerald-600"
+                                >
+                                  <UserCheck className="h-4 w-4 mr-2" />
+                                  Reativar colaborador
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setDeactivateReason('');
+                                    setDeactivateDialog({ open: true, user: userItem });
+                                  }}
+                                  className="text-amber-600"
+                                  disabled={isCurrentUser || (userItem.role === 'super_admin' && role !== 'super_admin')}
+                                >
+                                  <UserX className="h-4 w-4 mr-2" />
+                                  Desligar colaborador
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem 
                                 onClick={() => setDeleteDialog({ open: true, user: userItem })} 
                                 className="text-destructive"
@@ -1264,6 +1369,55 @@ export default function UsersPage() {
         confirmText="Remover PIN"
         cancelText="Cancelar"
         onConfirm={handleRemoveUserPin}
+        isLoading={saving}
+      />
+
+      {/* Deactivate user dialog */}
+      <Dialog
+        open={deactivateDialog.open}
+        onOpenChange={(open) => {
+          setDeactivateDialog({ open, user: open ? deactivateDialog.user : null });
+          if (!open) setDeactivateReason('');
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Desligar colaborador</DialogTitle>
+            <DialogDescription>
+              {deactivateDialog.user?.name} perderá o acesso ao sistema imediatamente e deixará de aparecer nos seletores de equipe, presença e responsáveis. O histórico é preservado e você pode reativar depois.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="deactivate-reason">Motivo (opcional)</Label>
+            <Textarea
+              id="deactivate-reason"
+              placeholder="Ex.: Encerramento de contrato em 24/07/2026"
+              value={deactivateReason}
+              onChange={(e) => setDeactivateReason(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeactivateDialog({ open: false, user: null })} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDeactivate} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserX className="h-4 w-4 mr-2" />}
+              Desligar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reactivate user dialog */}
+      <ConfirmDialog
+        open={reactivateDialog.open}
+        onOpenChange={(open) => setReactivateDialog({ open, user: open ? reactivateDialog.user : null })}
+        title="Reativar colaborador"
+        description={`Reativar ${reactivateDialog.user?.name}? Ele voltará a acessar o sistema com o perfil e permissões atuais.`}
+        confirmText="Reativar"
+        cancelText="Cancelar"
+        onConfirm={handleReactivate}
         isLoading={saving}
       />
     </div>
