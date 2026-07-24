@@ -452,6 +452,11 @@ serve(async (req) => {
       }
 
       case 'reset-password': {
+        // handled below
+        return await handleResetPassword();
+      }
+
+      // NOTE: replaced by fallthrough marker above; real reset-password logic follows.
         const { userId, newPassword } = payload;
         
         if (!userId || !newPassword) {
