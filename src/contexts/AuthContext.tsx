@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
 import { User, Session } from '@/lib/supabaseAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export type UserRole = 'super_admin' | 'admin' | 'collaborator';
 
@@ -11,6 +12,7 @@ interface Profile {
   phone?: string;
   avatar_url?: string;
   company_id?: string;
+  is_active?: boolean;
 }
 
 interface AuthState {
@@ -33,6 +35,7 @@ interface AuthContextType extends AuthState {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { toast } = useToast();
   const [state, setState] = useState<AuthState>({
     user: null,
     session: null,
@@ -63,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const [profileResult, roleResult] = await Promise.allSettled([
         withTimeout(
-          supabase.from('profiles').select('*').eq('id', userId).maybeSingle() as unknown as Promise<any>,
+          supabase.from('profiles').select('id,name,email,phone,avatar_url,company_id,is_active').eq('id', userId).maybeSingle() as unknown as Promise<any>,
           8000,
           'profiles',
         ),
@@ -134,6 +137,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           setTimeout(() => {
             fetchProfile(session.user.id).then(({ profile, role }) => {
+              if (profile && profile.is_active === false) {
+                toast({
+                  title: 'Conta desativada',
+                  description: 'Sua conta foi desligada. Fale com o administrador.',
+                  variant: 'destructive',
+                });
+                (supabase as any).auth.signOut();
+                return;
+              }
               setState(prev => ({ ...prev, profile, role, roleResolved: true }));
             });
           }, 0);
@@ -158,6 +170,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (session?.user) {
         fetchProfile(session.user.id).then(({ profile, role }) => {
+          if (profile && profile.is_active === false) {
+            toast({
+              title: 'Conta desativada',
+              description: 'Sua conta foi desligada. Fale com o administrador.',
+              variant: 'destructive',
+            });
+            (supabase as any).auth.signOut();
+            return;
+          }
           setState(prev => ({ ...prev, profile, role, roleResolved: true }));
         });
       } else {
