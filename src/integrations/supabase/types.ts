@@ -880,9 +880,13 @@ export type Database = {
           avatar_url: string | null
           company_id: string | null
           created_at: string | null
+          deactivated_at: string | null
+          deactivated_by: string | null
+          deactivation_reason: string | null
           email: string
           employment_type: string | null
           id: string
+          is_active: boolean
           job_title: string | null
           name: string
           phone: string | null
@@ -895,9 +899,13 @@ export type Database = {
           avatar_url?: string | null
           company_id?: string | null
           created_at?: string | null
+          deactivated_at?: string | null
+          deactivated_by?: string | null
+          deactivation_reason?: string | null
           email: string
           employment_type?: string | null
           id: string
+          is_active?: boolean
           job_title?: string | null
           name: string
           phone?: string | null
@@ -910,9 +918,13 @@ export type Database = {
           avatar_url?: string | null
           company_id?: string | null
           created_at?: string | null
+          deactivated_at?: string | null
+          deactivated_by?: string | null
+          deactivation_reason?: string | null
           email?: string
           employment_type?: string | null
           id?: string
+          is_active?: boolean
           job_title?: string | null
           name?: string
           phone?: string | null
