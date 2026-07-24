@@ -941,13 +941,13 @@ export default function UsersPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEdit(userItem)}>
+                              <DropdownMenuItem onClick={() => openEdit(userItem)} disabled={isInactive}>
                                 <Pencil className="h-4 w-4 mr-2" />
                                 Editar
                               </DropdownMenuItem>
                               {userItem.role !== 'collaborator' && (
                                 <>
-                                  <DropdownMenuItem onClick={() => openPasswordReset(userItem)}>
+                                  <DropdownMenuItem onClick={() => openPasswordReset(userItem)} disabled={isInactive}>
                                     <Key className="h-4 w-4 mr-2" />
                                     Redefinir Senha
                                   </DropdownMenuItem>
@@ -956,7 +956,7 @@ export default function UsersPage() {
                                       <DropdownMenuItem onClick={() => {
                                         setPinDialog({ open: true, user: userItem });
                                         setPinInput('');
-                                      }}>
+                                      }} disabled={isInactive}>
                                         <KeyRound className="h-4 w-4 mr-2" />
                                         {userItem.has_pin ? 'Alterar PIN' : 'Definir PIN'}
                                       </DropdownMenuItem>
@@ -964,6 +964,7 @@ export default function UsersPage() {
                                         <DropdownMenuItem 
                                           onClick={() => setRemovePinDialog({ open: true, user: userItem })}
                                           className="text-amber-600"
+                                          disabled={isInactive}
                                         >
                                           <LockOpen className="h-4 w-4 mr-2" />
                                           Remover PIN
@@ -974,6 +975,27 @@ export default function UsersPage() {
                                 </>
                               )}
                               <DropdownMenuSeparator />
+                              {isInactive ? (
+                                <DropdownMenuItem
+                                  onClick={() => setReactivateDialog({ open: true, user: userItem })}
+                                  className="text-emerald-600"
+                                >
+                                  <UserCheck className="h-4 w-4 mr-2" />
+                                  Reativar colaborador
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setDeactivateReason('');
+                                    setDeactivateDialog({ open: true, user: userItem });
+                                  }}
+                                  className="text-amber-600"
+                                  disabled={isCurrentUser || (userItem.role === 'super_admin' && role !== 'super_admin')}
+                                >
+                                  <UserX className="h-4 w-4 mr-2" />
+                                  Desligar colaborador
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem 
                                 onClick={() => setDeleteDialog({ open: true, user: userItem })} 
                                 className="text-destructive"
