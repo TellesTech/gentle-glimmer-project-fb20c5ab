@@ -1370,6 +1370,55 @@ export default function UsersPage() {
         onConfirm={handleRemoveUserPin}
         isLoading={saving}
       />
+
+      {/* Deactivate user dialog */}
+      <Dialog
+        open={deactivateDialog.open}
+        onOpenChange={(open) => {
+          setDeactivateDialog({ open, user: open ? deactivateDialog.user : null });
+          if (!open) setDeactivateReason('');
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Desligar colaborador</DialogTitle>
+            <DialogDescription>
+              {deactivateDialog.user?.name} perderá o acesso ao sistema imediatamente e deixará de aparecer nos seletores de equipe, presença e responsáveis. O histórico é preservado e você pode reativar depois.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="deactivate-reason">Motivo (opcional)</Label>
+            <Textarea
+              id="deactivate-reason"
+              placeholder="Ex.: Encerramento de contrato em 24/07/2026"
+              value={deactivateReason}
+              onChange={(e) => setDeactivateReason(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeactivateDialog({ open: false, user: null })} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDeactivate} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserX className="h-4 w-4 mr-2" />}
+              Desligar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reactivate user dialog */}
+      <ConfirmDialog
+        open={reactivateDialog.open}
+        onOpenChange={(open) => setReactivateDialog({ open, user: open ? reactivateDialog.user : null })}
+        title="Reativar colaborador"
+        description={`Reativar ${reactivateDialog.user?.name}? Ele voltará a acessar o sistema com o perfil e permissões atuais.`}
+        confirmText="Reativar"
+        cancelText="Cancelar"
+        onConfirm={handleReactivate}
+        isLoading={saving}
+      />
     </div>
   );
 }
