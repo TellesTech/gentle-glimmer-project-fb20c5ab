@@ -132,7 +132,10 @@ serve(async (req) => {
             job_title,
             state,
             employment_type,
-            pin_hash
+            pin_hash,
+            is_active,
+            deactivated_at,
+            deactivation_reason
           `)
           .order('name');
 
@@ -180,7 +183,10 @@ serve(async (req) => {
           state: profile.state,
           employment_type: profile.employment_type || 'fixo',
           role: roles.find(r => r.user_id === profile.id)?.role || 'collaborator',
-          has_pin: !!profile.pin_hash
+          has_pin: !!profile.pin_hash,
+          is_active: profile.is_active !== false,
+          deactivated_at: profile.deactivated_at || null,
+          deactivation_reason: profile.deactivation_reason || null,
         }));
 
         return new Response(JSON.stringify({ users: usersWithRoles }), {
