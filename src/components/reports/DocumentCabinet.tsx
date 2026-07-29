@@ -85,6 +85,8 @@ interface ProjectFolder {
   progress: number;
   status: string;
   lastDate: string | null;
+  omNumbers: string[];
+  omTitles: string[];
 }
 
 interface MonthFolder {
