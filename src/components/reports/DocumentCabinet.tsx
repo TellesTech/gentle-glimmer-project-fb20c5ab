@@ -85,6 +85,8 @@ interface ProjectFolder {
   progress: number;
   status: string;
   lastDate: string | null;
+  omNumbers: string[];
+  omTitles: string[];
 }
 
 interface MonthFolder {
@@ -93,6 +95,16 @@ interface MonthFolder {
   reports: Report[];
   count: number;
   projects: ProjectFolder[];
+}
+
+const INVALID_OM_VALUES = ['na', 'n/a', 'n.a', 'null', 'nao informado', 'não informado', '-', '--', 'sem om', '0'];
+
+/** Retorna o número da OM limpo, ou null quando o valor for um placeholder ("NA", "N/A", "null"...). */
+export function sanitizeOmNumber(value: string | null | undefined): string | null {
+  const v = (value || '').trim();
+  if (!v) return null;
+  if (INVALID_OM_VALUES.includes(v.toLowerCase())) return null;
+  return v;
 }
 
 interface YearFolder {
@@ -693,11 +705,17 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
           progress: 0,
           status: project.status || 'planning',
           lastDate: null,
+          omNumbers: [],
+          omTitles: [],
         };
         monthFolder.projects.push(projectFolder);
       }
       projectFolder.reports.push(report);
       projectFolder.count++;
+      const omNum = sanitizeOmNumber(report.maintenance_order_number);
+      if (omNum && !projectFolder.omNumbers.includes(omNum)) projectFolder.omNumbers.push(omNum);
+      const omTitle = (report.maintenance_order_title || '').trim();
+      if (omTitle && !projectFolder.omTitles.includes(omTitle)) projectFolder.omTitles.push(omTitle);
       projectFolder.totalWorkforce += report.actual_workforce || 0;
       projectFolder.progress = Math.min(
         Math.round((projectFolder.progress + (report.daily_progress || 0)) * 10) / 10,
@@ -780,6 +798,8 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
           progress: 0,
           status: p.status || 'planning',
           lastDate: null,
+          omNumbers: [],
+          omTitles: [],
         });
       }
     });
@@ -1089,7 +1109,28 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                   <div className="p-2 rounded-lg bg-foreground/10 shrink-0">
                     <FolderKanban className="h-5 w-5 text-foreground/70" />
                   </div>
-                  <span className="text-sm font-semibold text-foreground truncate flex-1 min-w-0">{projectFolder.name}</span>
+                  <div className="flex-1 min-w-0">
+                    {projectFolder.omNumbers.length > 0 && (
+                      <span
+                        title={projectFolder.omNumbers.join(' · ')}
+                        className="inline-block mb-0.5 px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold tracking-wide"
+                      >
+                        {projectFolder.omNumbers.length === 1
+                          ? `OM ${projectFolder.omNumbers[0]}`
+                          : `${projectFolder.omNumbers.length} OMs`}
+                      </span>
+                    )}
+                    <p className="text-sm font-semibold text-foreground truncate">{projectFolder.name}</p>
+                    {projectFolder.omTitles.length > 0 && projectFolder.omTitles[0] !== projectFolder.name && (
+                      <p
+                        className="text-[11px] text-muted-foreground truncate"
+                        title={projectFolder.omTitles.join(' · ')}
+                      >
+                        {projectFolder.omTitles[0]}
+                        {projectFolder.omTitles.length > 1 && ` +${projectFolder.omTitles.length - 1}`}
+                      </p>
+                    )}
+                  </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-foreground group-hover:translate-x-0.5 transition-transform" />
                 </div>
 

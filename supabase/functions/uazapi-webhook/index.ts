@@ -260,6 +260,22 @@ function matchCollaborator(
 
 const UAZAPI_BASE_URL = "https://chatwees.uazapi.com";
 
+const INVALID_OM_VALUES = ["na", "n/a", "n.a", "null", "nao informado", "não informado", "-", "--", "sem om", "0", ""];
+
+/** Devolve o número da OM limpo, ou null quando for placeholder ("NA", "N/A", "null"...). */
+function sanitizeOmNumber(value: unknown): string | null {
+  const v = String(value ?? "").trim();
+  if (INVALID_OM_VALUES.includes(v.toLowerCase())) return null;
+  return v;
+}
+
+/** Nome padronizado da atividade: "OM 900037786367 — Título" (sem prefixo quando não há número válido). */
+function buildProjectName(omNumber: string | null, title: string): string {
+  const cleanTitle = (title || "").trim().replace(/\s+/g, " ");
+  const base = omNumber ? `OM ${omNumber} — ${cleanTitle}`.trim() : cleanTitle;
+  return base.substring(0, 100);
+}
+
 async function attachPendingPhotos(
   supabase: any,
   groupId: string | null,
@@ -747,7 +763,7 @@ function buildReportData(
     // New fields from AI parsing
     start_time: parsedData.horaInicio || null,
     end_time: parsedData.horaFim || null,
-    maintenance_order_number: parsedData.numeroOM || null,
+    maintenance_order_number: sanitizeOmNumber(parsedData.numeroOM),
     maintenance_order_title: parsedData.tituloOM || parsedData.tituloTrabalho || null,
     blockage_status: parsedData.bloqueio || null,
     supervisor_name: parsedData.supervisor || null,
@@ -1219,27 +1235,28 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Try to extract project name from message text (supports multiline WhatsApp format)
+      // Extract project name from message text.
+      // Prioridade: Título da OM → título/serviço → local → nome do grupo.
       let projectName = "Atividade criada via WhatsApp";
-      // Priority 1: "Local da Atividade:" or "Local:" (same line or next line)
+      // 1. "Título da OM:" (mesma linha ou linha seguinte)
+      const tituloOmMatch = messageText.match(/T[íi]tulo\s*(?:da\s*)?OM[:\s]*\n?\s*(.+)/i);
+      // 2. "Título:" / "Serviço:" / "Atividade Principal:"
+      const tituloMatch = messageText.match(/(?:T[íi]tulo|Atividade Principal|Servi[çc]o|Descri[çc][ãa]o da OM)[:\s]*\n?\s*(.+)/i);
+      // 3. Local / área (último recurso antes do nome do grupo)
       const localMatch = messageText.match(/(?:Local\s*(?:da\s*(?:atividade|obra|trabalho))?|[Áá]rea|Sub[áa]rea|Setor|Regi[ãa]o|Unidade)[:\s]*\n?\s*(.+)/i);
-      // Priority 2: "Título da OM:" followed by content on next line
-      const tituloOmMatch = messageText.match(/T[íi]tulo\s*(?:da\s*)?OM[:\s]*\n\s*(.+)/i);
-      // Priority 3: "OM:" or "Ordem de Manutenção:" (same line or next line)
-      const omMatch = messageText.match(/(?:OM|O\.M\.|Ordem de Manuten[çc][ãa]o)[:\s]*\n?\s*(.+)/i);
-      // Priority 4: "Título:" or "Serviço:" (same line or next line)
-      const tituloMatch = messageText.match(/(?:T[íi]tulo|Atividade Principal|Servi[çc]o)[:\s]*\n?\s*(.+)/i);
-      if (localMatch?.[1]?.trim()) {
-        projectName = localMatch[1].trim().substring(0, 100);
-      } else if (tituloOmMatch?.[1]?.trim()) {
-        projectName = tituloOmMatch[1].trim().substring(0, 100);
-      } else if (omMatch?.[1]?.trim()) {
-        projectName = omMatch[1].trim().substring(0, 100);
+      // Número da OM (para compor o nome final)
+      const numeroOmMatch = messageText.match(/(?:N[ºo°]?\.?\s*(?:da\s*)?OM|OM|O\.M\.|Ordem de Manuten[çc][ãa]o)[:\s]*\n?\s*([\w./-]+)/i);
+      const omNumber = sanitizeOmNumber(numeroOmMatch?.[1]);
+      if (tituloOmMatch?.[1]?.trim()) {
+        projectName = tituloOmMatch[1].trim();
       } else if (tituloMatch?.[1]?.trim()) {
-        projectName = tituloMatch[1].trim().substring(0, 100);
+        projectName = tituloMatch[1].trim();
+      } else if (localMatch?.[1]?.trim()) {
+        projectName = localMatch[1].trim();
       } else if (chatName) {
         projectName = chatName.replace(/^RDO[\s-]*/i, "").trim() || projectName;
       }
+      projectName = buildProjectName(omNumber, projectName);
 
       const today = new Date().toISOString().split("T")[0];
       const { data: newProject, error: projErr } = await supabase
@@ -1589,9 +1606,10 @@ Deno.serve(async (req) => {
       await upsertAttendance(supabase, reportId, parsedData, allProfiles, false, preferredIds);
     }
 
-    // Update project name with AI-extracted title - prioritize Local da Atividade
-    if (parsedData.localAtividade || parsedData.tituloOM || parsedData.tituloTrabalho) {
-      const omTitle = (parsedData.localAtividade || parsedData.tituloOM || parsedData.tituloTrabalho).trim().substring(0, 100);
+    // Atualiza o nome da atividade com o Título da OM extraído pela IA (nunca com o local)
+    if (parsedData.tituloOM || parsedData.tituloTrabalho || parsedData.localAtividade) {
+      const rawTitle = String(parsedData.tituloOM || parsedData.tituloTrabalho || parsedData.localAtividade).trim();
+      const omTitle = buildProjectName(sanitizeOmNumber(parsedData.numeroOM), rawTitle);
       if (omTitle && autoCreatedProject) {
         const { error: nameErr } = await supabase
           .from("projects")

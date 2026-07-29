@@ -5,6 +5,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const INVALID_OM_VALUES = ["na", "n/a", "n.a", "null", "nao informado", "não informado", "-", "--", "sem om", "0", ""];
+
+/** Devolve o número da OM limpo, ou null quando for placeholder ("NA", "N/A", "null"...). */
+function sanitizeOmNumber(value: unknown): string | null {
+  const v = String(value ?? "").trim();
+  if (INVALID_OM_VALUES.includes(v.toLowerCase())) return null;
+  return v;
+}
+
 const systemPrompt = `Você é um assistente especializado em extrair informações de relatórios diários de obra brasileiros.
 
 IMPORTANTE - FORMATAÇÃO DE TEXTO:
@@ -234,8 +243,13 @@ Analise o texto e extraia os seguintes campos (retorne null se não encontrar):
 - horaFim: horário de fim no formato HH:MM (extraia do período de trabalho)
 - radioWees: canal/faixa de rádio da Wees (procurar "Faixa de rádio Wees:", "rádio Wees:")
 - radioOperacao: canal/faixa de rádio da Operação (procurar "Faixa de rádio Operação:", "Operação:")
-- numeroOM: número da ordem de manutenção (procurar "Nº OM:", "OM:", "Ordem:", "N° OM:")
-- tituloOM: título da ordem de manutenção (procurar "Título da OM:", "Título OM:")
+- numeroOM: APENAS o número/código da ordem de manutenção (ex.: "900037786367", "4502365884", "22461261"). Procurar "Nº da OM:", "Nº OM:", "OM:", "Ordem:", "N° OM:", "OS:". REGRAS: retorne SOMENTE dígitos/código, sem texto descritivo. Se o valor for "NA", "N/A", "-", "não informado", "sem OM" ou vazio → retorne null (JSON null, NUNCA a string). NUNCA coloque o título aqui.
+- tituloOM: descrição do SERVIÇO da ordem de manutenção (ex.: "Substituição do Telhado do Elevador AF", "Reparo Calhas Fabril Alto Forno"). Procurar "Título da OM:", "Título OM:", "Descrição da OM:", "Serviço:". NUNCA use o local/área aqui e NUNCA repita o número da OM.
+  ATENÇÃO: tituloOM (o que será feito) e localAtividade (onde será feito) são campos DIFERENTES e nunca devem ser trocados.
+  Exemplo de formato usado nos grupos de WhatsApp:
+    "Nº da OM: 900037786367"        → numeroOM: "900037786367"
+    "Título da OM: Limpeza nas Calhas ADM 07" → tituloOM: "Limpeza nas Calhas ADM 07"
+    "Local da Atividade: Convertedores 2 (Aciaria)" → localAtividade: "Convertedores 2 (Aciaria)"
 - tituloTrabalho: título ou descrição principal do trabalho/manutenção
 - horarioChegadaLiberador: horário de chegada ao liberador no formato HH:MM (procurar "chegada na sala do liberador:", "chegada liberador:")
 - horarioLiberacao: horário de liberação do bloqueio/documento no formato HH:MM (procurar "liberação da atividade:", "Horário da liberação:")
@@ -457,7 +471,7 @@ serve(async (req) => {
       supervisor: parsedData.supervisor || parsedData.encarregado || parsedData.supervisorNome || null,
       responsavelTecnico: parsedData.responsavelTecnico || parsedData.rt || parsedData.engenheiro || parsedData.tecnicoResponsavel || null,
       comentarios: parsedData.comentarios || parsedData.observacoes || parsedData.comments || parsedData.obs || null,
-      numeroOM: parsedData.numeroOM || parsedData.om || parsedData.ordemManutencao || null,
+      numeroOM: sanitizeOmNumber(parsedData.numeroOM || parsedData.om || parsedData.ordemManutencao),
       tituloOM: parsedData.tituloOM || parsedData.tituloOrdem || null,
       bloqueio: parsedData.bloqueio || parsedData.statusBloqueio || null,
     };
