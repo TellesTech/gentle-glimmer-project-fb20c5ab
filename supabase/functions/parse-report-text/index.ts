@@ -5,9 +5,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const systemPrompt = `Você é um assistente especializado em extrair informações de relatórios diários de obra brasileiros.
-`;
-
 const INVALID_OM_VALUES = ["na", "n/a", "n.a", "null", "nao informado", "não informado", "-", "--", "sem om", "0", ""];
 
 /** Devolve o número da OM limpo, ou null quando for placeholder ("NA", "N/A", "null"...). */
@@ -17,7 +14,7 @@ function sanitizeOmNumber(value: unknown): string | null {
   return v;
 }
 
-const _systemPromptRest = `
+const systemPrompt = `Você é um assistente especializado em extrair informações de relatórios diários de obra brasileiros.
 
 IMPORTANTE - FORMATAÇÃO DE TEXTO:
 Antes de retornar os dados, você DEVE formatar todos os textos seguindo estas regras:
