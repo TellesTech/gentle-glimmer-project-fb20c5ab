@@ -260,6 +260,22 @@ function matchCollaborator(
 
 const UAZAPI_BASE_URL = "https://chatwees.uazapi.com";
 
+const INVALID_OM_VALUES = ["na", "n/a", "n.a", "null", "nao informado", "não informado", "-", "--", "sem om", "0", ""];
+
+/** Devolve o número da OM limpo, ou null quando for placeholder ("NA", "N/A", "null"...). */
+function sanitizeOmNumber(value: unknown): string | null {
+  const v = String(value ?? "").trim();
+  if (INVALID_OM_VALUES.includes(v.toLowerCase())) return null;
+  return v;
+}
+
+/** Nome padronizado da atividade: "OM 900037786367 — Título" (sem prefixo quando não há número válido). */
+function buildProjectName(omNumber: string | null, title: string): string {
+  const cleanTitle = (title || "").trim().replace(/\s+/g, " ");
+  const base = omNumber ? `OM ${omNumber} — ${cleanTitle}`.trim() : cleanTitle;
+  return base.substring(0, 100);
+}
+
 async function attachPendingPhotos(
   supabase: any,
   groupId: string | null,
@@ -747,7 +763,7 @@ function buildReportData(
     // New fields from AI parsing
     start_time: parsedData.horaInicio || null,
     end_time: parsedData.horaFim || null,
-    maintenance_order_number: parsedData.numeroOM || null,
+    maintenance_order_number: sanitizeOmNumber(parsedData.numeroOM),
     maintenance_order_title: parsedData.tituloOM || parsedData.tituloTrabalho || null,
     blockage_status: parsedData.bloqueio || null,
     supervisor_name: parsedData.supervisor || null,
@@ -1590,9 +1606,10 @@ Deno.serve(async (req) => {
       await upsertAttendance(supabase, reportId, parsedData, allProfiles, false, preferredIds);
     }
 
-    // Update project name with AI-extracted title - prioritize Local da Atividade
-    if (parsedData.localAtividade || parsedData.tituloOM || parsedData.tituloTrabalho) {
-      const omTitle = (parsedData.localAtividade || parsedData.tituloOM || parsedData.tituloTrabalho).trim().substring(0, 100);
+    // Atualiza o nome da atividade com o Título da OM extraído pela IA (nunca com o local)
+    if (parsedData.tituloOM || parsedData.tituloTrabalho || parsedData.localAtividade) {
+      const rawTitle = String(parsedData.tituloOM || parsedData.tituloTrabalho || parsedData.localAtividade).trim();
+      const omTitle = buildProjectName(sanitizeOmNumber(parsedData.numeroOM), rawTitle);
       if (omTitle && autoCreatedProject) {
         const { error: nameErr } = await supabase
           .from("projects")
