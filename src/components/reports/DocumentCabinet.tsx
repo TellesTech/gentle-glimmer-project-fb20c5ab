@@ -1056,13 +1056,17 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                 <h2 className="font-semibold text-xl">{selectedProjectFolder.name}</h2>
                 <p className="text-sm text-muted-foreground">
                   {selectedProjectFolder.count} relatório(s) em {selectedMonthFolder.monthName}/{selectedYearFolder.year}
+                  {selectedProjectFolder.sourceProjects.length > 0 &&
+                    ` · ${selectedProjectFolder.sourceProjects.map(sp => sp.name).join(', ')}`}
                 </p>
               </div>
             </div>
             <DownloadButton
               reportIds={selectedProjectFolder.reports.map(r => r.id)}
-              folderName={`${selectedCompany.name}_${selectedSiteFolder.name}_${selectedYearFolder.year}_${selectedMonthFolder.monthName}_${selectedProjectFolder.name}`}
-              folderId={`project-${selectedProjectFolder.id}-${openMonth}-${openYear}`}
+              folderName={`${selectedCompany.name}_${selectedSiteFolder.name}_${selectedYearFolder.year}_${selectedMonthFolder.monthName}_${
+                selectedProjectFolder.omNumber ? `OM-${selectedProjectFolder.omNumber}` : selectedProjectFolder.name
+              }`}
+              folderId={`om-${selectedProjectFolder.id}-${openMonth}-${openYear}`}
             />
           </div>
 
