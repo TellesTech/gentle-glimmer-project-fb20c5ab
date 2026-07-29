@@ -798,6 +798,8 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
           progress: 0,
           status: p.status || 'planning',
           lastDate: null,
+          omNumbers: [],
+          omTitles: [],
         });
       }
     });
