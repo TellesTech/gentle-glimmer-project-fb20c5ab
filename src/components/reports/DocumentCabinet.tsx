@@ -87,6 +87,10 @@ interface ProjectFolder {
   lastDate: string | null;
   omNumbers: string[];
   omTitles: string[];
+  omNumber: string | null;
+  omTitle: string | null;
+  sourceProjects: { id: string; name: string }[];
+  titleCounts?: Record<string, { label: string; count: number }>;
 }
 
 interface MonthFolder {
@@ -105,6 +109,30 @@ export function sanitizeOmNumber(value: string | null | undefined): string | nul
   if (!v) return null;
   if (INVALID_OM_VALUES.includes(v.toLowerCase())) return null;
   return v;
+}
+
+/** Normaliza o número da OM para uso como chave de agrupamento. */
+export function normalizeOmKeyNumber(value: string | null | undefined): string | null {
+  const raw = sanitizeOmNumber(value);
+  if (!raw) return null;
+  const cleaned = raw
+    .replace(/^\s*(om|o\.m\.?)\s*[:\-]?\s*/i, '')
+    .replace(/^\s*[a-z]\s+/i, '')
+    .replace(/[.\s]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cleaned || null;
+}
+
+/** Normaliza o título da OM (minúsculas, sem acentos, espaços colapsados). */
+export function normalizeOmTitle(value: string | null | undefined): string {
+  return (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 interface YearFolder {
@@ -691,15 +719,28 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
       monthFolder.reports.push(report);
       monthFolder.count++;
       
-      let projectFolder = monthFolder.projects.find(p => p.id === project.id);
+      // Agrupamento por OM: número da OM > título da OM > atividade (fallback "Sem OM")
+      const omNum = normalizeOmKeyNumber(report.maintenance_order_number);
+      const omTitle = (report.maintenance_order_title || '').trim();
+      const omTitleKey = normalizeOmTitle(omTitle);
       const isGenericName = !project.name || project.name === '*' || project.name.startsWith('Atividade criada via');
-      const displayName = isGenericName ? (report.location || report.maintenance_order_title || project.name) : project.name;
+      const projectDisplayName = isGenericName
+        ? (report.location || omTitle || project.name || 'Atividade')
+        : project.name;
+
+      const omKey = omNum
+        ? `om:${omNum}`
+        : omTitleKey
+          ? `title:${omTitleKey}`
+          : `project:${project.id}`;
+
+      let projectFolder = monthFolder.projects.find(p => p.id === omKey);
       if (!projectFolder) {
-        projectFolder = { 
-          id: project.id, 
-          name: displayName,
+        projectFolder = {
+          id: omKey,
+          name: omNum ? `OM ${omNum}` : (omTitle || projectDisplayName),
           code: project.code || null,
-          reports: [], 
+          reports: [],
           count: 0,
           totalWorkforce: 0,
           progress: 0,
@@ -707,15 +748,26 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
           lastDate: null,
           omNumbers: [],
           omTitles: [],
+          omNumber: omNum,
+          omTitle: omTitle || null,
+          sourceProjects: [],
+          titleCounts: {},
         };
         monthFolder.projects.push(projectFolder);
       }
       projectFolder.reports.push(report);
       projectFolder.count++;
-      const omNum = sanitizeOmNumber(report.maintenance_order_number);
-      if (omNum && !projectFolder.omNumbers.includes(omNum)) projectFolder.omNumbers.push(omNum);
-      const omTitle = (report.maintenance_order_title || '').trim();
-      if (omTitle && !projectFolder.omTitles.includes(omTitle)) projectFolder.omTitles.push(omTitle);
+      if (!projectFolder.sourceProjects.some(sp => sp.id === project.id)) {
+        projectFolder.sourceProjects.push({ id: project.id, name: projectDisplayName });
+      }
+      const rawOmNum = sanitizeOmNumber(report.maintenance_order_number);
+      if (rawOmNum && !projectFolder.omNumbers.includes(rawOmNum)) projectFolder.omNumbers.push(rawOmNum);
+      if (omTitle) {
+        if (!projectFolder.omTitles.includes(omTitle)) projectFolder.omTitles.push(omTitle);
+        const tc = projectFolder.titleCounts!;
+        const k = omTitleKey || omTitle;
+        tc[k] = { label: omTitle, count: (tc[k]?.count || 0) + 1 };
+      }
       projectFolder.totalWorkforce += report.actual_workforce || 0;
       projectFolder.progress = Math.min(
         Math.round((projectFolder.progress + (report.daily_progress || 0)) * 10) / 10,
@@ -786,10 +838,10 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
         yearFolder.months.push(monthFolder);
       }
 
-      if (!monthFolder.projects.find(pf => pf.id === p.id)) {
+      if (!monthFolder.projects.some(pf => pf.sourceProjects.some(sp => sp.id === p.id))) {
         const isGenericName = !p.name || p.name === '*' || (p.name || '').startsWith('Atividade criada via');
         monthFolder.projects.push({
-          id: p.id,
+          id: `project:${p.id}`,
           name: isGenericName ? (p.name || 'Atividade') : p.name,
           code: p.code || null,
           reports: [],
@@ -800,6 +852,10 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
           lastDate: null,
           omNumbers: [],
           omTitles: [],
+          omNumber: null,
+          omTitle: null,
+          sourceProjects: [{ id: p.id, name: isGenericName ? (p.name || 'Atividade') : p.name }],
+          titleCounts: {},
         });
       }
     });
@@ -813,7 +869,26 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
         site.years.forEach(year => {
           year.months.sort((a, b) => b.month - a.month);
           year.months.forEach(month => {
-            month.projects.sort((a, b) => b.count - a.count);
+            // Nome final do card: OM <número> — <título mais frequente>
+            month.projects.forEach(pf => {
+              const best = Object.values(pf.titleCounts || {}).sort((a, b) => b.count - a.count)[0];
+              const bestTitle = best?.label || pf.omTitle || null;
+              pf.omTitle = bestTitle;
+              if (pf.omNumber) {
+                pf.name = bestTitle ? `OM ${pf.omNumber} — ${bestTitle}` : `OM ${pf.omNumber}`;
+              } else if (bestTitle) {
+                pf.name = bestTitle;
+              } else if (pf.count > 0) {
+                pf.name = `${pf.sourceProjects[0]?.name || 'Atividade'} — Sem OM`;
+              }
+              pf.reports.sort((a, b) => (a.date < b.date ? 1 : -1));
+            });
+            month.projects.sort((a, b) => {
+              const da = a.lastDate || '';
+              const db = b.lastDate || '';
+              if (da !== db) return db.localeCompare(da);
+              return b.count - a.count;
+            });
           });
         });
       });
@@ -981,13 +1056,17 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                 <h2 className="font-semibold text-xl">{selectedProjectFolder.name}</h2>
                 <p className="text-sm text-muted-foreground">
                   {selectedProjectFolder.count} relatório(s) em {selectedMonthFolder.monthName}/{selectedYearFolder.year}
+                  {selectedProjectFolder.sourceProjects.length > 0 &&
+                    ` · ${selectedProjectFolder.sourceProjects.map(sp => sp.name).join(', ')}`}
                 </p>
               </div>
             </div>
             <DownloadButton
               reportIds={selectedProjectFolder.reports.map(r => r.id)}
-              folderName={`${selectedCompany.name}_${selectedSiteFolder.name}_${selectedYearFolder.year}_${selectedMonthFolder.monthName}_${selectedProjectFolder.name}`}
-              folderId={`project-${selectedProjectFolder.id}-${openMonth}-${openYear}`}
+              folderName={`${selectedCompany.name}_${selectedSiteFolder.name}_${selectedYearFolder.year}_${selectedMonthFolder.monthName}_${
+                selectedProjectFolder.omNumber ? `OM-${selectedProjectFolder.omNumber}` : selectedProjectFolder.name
+              }`}
+              folderId={`om-${selectedProjectFolder.id}-${openMonth}-${openYear}`}
             />
           </div>
 
@@ -1073,7 +1152,7 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
               <div>
                 <h2 className="font-semibold text-xl">{selectedMonthFolder.monthName} {selectedYearFolder.year}</h2>
                 <p className="text-sm text-muted-foreground">
-                  {selectedMonthFolder.projects.length} atividade(s) • {selectedMonthFolder.count} relatório(s)
+                  {selectedMonthFolder.projects.length} OM(s) • {selectedMonthFolder.count} relatório(s)
                 </p>
               </div>
             </div>
@@ -1096,10 +1175,10 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                 {isSuperAdmin && (
                   <div className="absolute top-2 right-2 z-10">
                     <CardActions
-                      id={projectFolder.id}
+                      id={projectFolder.sourceProjects[0]?.id || projectFolder.id}
                       type="project"
                       name={projectFolder.name}
-                      onEdit={() => navigate(`/projects/${projectFolder.id}`)}
+                      onEdit={() => navigate(`/projects/${projectFolder.sourceProjects[0]?.id || ''}`)}
                     />
                   </div>
                 )}
@@ -1110,24 +1189,28 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                     <FolderKanban className="h-5 w-5 text-foreground/70" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    {projectFolder.omNumbers.length > 0 && (
+                    {projectFolder.omNumber ? (
                       <span
-                        title={projectFolder.omNumbers.join(' · ')}
+                        title={`OM ${projectFolder.omNumber}`}
                         className="inline-block mb-0.5 px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold tracking-wide"
                       >
-                        {projectFolder.omNumbers.length === 1
-                          ? `OM ${projectFolder.omNumbers[0]}`
-                          : `${projectFolder.omNumbers.length} OMs`}
+                        OM {projectFolder.omNumber}
+                      </span>
+                    ) : (
+                      <span className="inline-block mb-0.5 px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground text-[10px] font-bold tracking-wide">
+                        SEM Nº DE OM
                       </span>
                     )}
-                    <p className="text-sm font-semibold text-foreground truncate">{projectFolder.name}</p>
-                    {projectFolder.omTitles.length > 0 && projectFolder.omTitles[0] !== projectFolder.name && (
+                    <p className="text-sm font-semibold text-foreground truncate" title={projectFolder.name}>
+                      {projectFolder.omTitle || projectFolder.name}
+                    </p>
+                    {projectFolder.sourceProjects.length > 0 && (
                       <p
                         className="text-[11px] text-muted-foreground truncate"
-                        title={projectFolder.omTitles.join(' · ')}
+                        title={projectFolder.sourceProjects.map(sp => sp.name).join(' · ')}
                       >
-                        {projectFolder.omTitles[0]}
-                        {projectFolder.omTitles.length > 1 && ` +${projectFolder.omTitles.length - 1}`}
+                        {projectFolder.sourceProjects[0].name}
+                        {projectFolder.sourceProjects.length > 1 && ` +${projectFolder.sourceProjects.length - 1}`}
                       </p>
                     )}
                   </div>
