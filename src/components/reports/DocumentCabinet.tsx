@@ -1148,7 +1148,7 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
               <div>
                 <h2 className="font-semibold text-xl">{selectedMonthFolder.monthName} {selectedYearFolder.year}</h2>
                 <p className="text-sm text-muted-foreground">
-                  {selectedMonthFolder.projects.length} atividade(s) • {selectedMonthFolder.count} relatório(s)
+                  {selectedMonthFolder.projects.length} OM(s) • {selectedMonthFolder.count} relatório(s)
                 </p>
               </div>
             </div>
@@ -1171,10 +1171,10 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                 {isSuperAdmin && (
                   <div className="absolute top-2 right-2 z-10">
                     <CardActions
-                      id={projectFolder.id}
+                      id={projectFolder.sourceProjects[0]?.id || projectFolder.id}
                       type="project"
                       name={projectFolder.name}
-                      onEdit={() => navigate(`/projects/${projectFolder.id}`)}
+                      onEdit={() => navigate(`/projects/${projectFolder.sourceProjects[0]?.id || ''}`)}
                     />
                   </div>
                 )}
@@ -1185,24 +1185,28 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                     <FolderKanban className="h-5 w-5 text-foreground/70" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    {projectFolder.omNumbers.length > 0 && (
+                    {projectFolder.omNumber ? (
                       <span
-                        title={projectFolder.omNumbers.join(' · ')}
+                        title={`OM ${projectFolder.omNumber}`}
                         className="inline-block mb-0.5 px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold tracking-wide"
                       >
-                        {projectFolder.omNumbers.length === 1
-                          ? `OM ${projectFolder.omNumbers[0]}`
-                          : `${projectFolder.omNumbers.length} OMs`}
+                        OM {projectFolder.omNumber}
+                      </span>
+                    ) : (
+                      <span className="inline-block mb-0.5 px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground text-[10px] font-bold tracking-wide">
+                        SEM Nº DE OM
                       </span>
                     )}
-                    <p className="text-sm font-semibold text-foreground truncate">{projectFolder.name}</p>
-                    {projectFolder.omTitles.length > 0 && projectFolder.omTitles[0] !== projectFolder.name && (
+                    <p className="text-sm font-semibold text-foreground truncate" title={projectFolder.name}>
+                      {projectFolder.omTitle || projectFolder.name}
+                    </p>
+                    {projectFolder.sourceProjects.length > 0 && (
                       <p
                         className="text-[11px] text-muted-foreground truncate"
-                        title={projectFolder.omTitles.join(' · ')}
+                        title={projectFolder.sourceProjects.map(sp => sp.name).join(' · ')}
                       >
-                        {projectFolder.omTitles[0]}
-                        {projectFolder.omTitles.length > 1 && ` +${projectFolder.omTitles.length - 1}`}
+                        {projectFolder.sourceProjects[0].name}
+                        {projectFolder.sourceProjects.length > 1 && ` +${projectFolder.sourceProjects.length - 1}`}
                       </p>
                     )}
                   </div>
