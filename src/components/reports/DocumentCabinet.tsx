@@ -838,10 +838,10 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
         yearFolder.months.push(monthFolder);
       }
 
-      if (!monthFolder.projects.find(pf => pf.id === p.id)) {
+      if (!monthFolder.projects.some(pf => pf.sourceProjects.some(sp => sp.id === p.id))) {
         const isGenericName = !p.name || p.name === '*' || (p.name || '').startsWith('Atividade criada via');
         monthFolder.projects.push({
-          id: p.id,
+          id: `project:${p.id}`,
           name: isGenericName ? (p.name || 'Atividade') : p.name,
           code: p.code || null,
           reports: [],
@@ -852,6 +852,10 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
           lastDate: null,
           omNumbers: [],
           omTitles: [],
+          omNumber: null,
+          omTitle: null,
+          sourceProjects: [{ id: p.id, name: isGenericName ? (p.name || 'Atividade') : p.name }],
+          titleCounts: {},
         });
       }
     });
@@ -865,7 +869,26 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
         site.years.forEach(year => {
           year.months.sort((a, b) => b.month - a.month);
           year.months.forEach(month => {
-            month.projects.sort((a, b) => b.count - a.count);
+            // Nome final do card: OM <número> — <título mais frequente>
+            month.projects.forEach(pf => {
+              const best = Object.values(pf.titleCounts || {}).sort((a, b) => b.count - a.count)[0];
+              const bestTitle = best?.label || pf.omTitle || null;
+              pf.omTitle = bestTitle;
+              if (pf.omNumber) {
+                pf.name = bestTitle ? `OM ${pf.omNumber} — ${bestTitle}` : `OM ${pf.omNumber}`;
+              } else if (bestTitle) {
+                pf.name = bestTitle;
+              } else if (pf.count > 0) {
+                pf.name = `${pf.sourceProjects[0]?.name || 'Atividade'} — Sem OM`;
+              }
+              pf.reports.sort((a, b) => (a.date < b.date ? 1 : -1));
+            });
+            month.projects.sort((a, b) => {
+              const da = a.lastDate || '';
+              const db = b.lastDate || '';
+              if (da !== db) return db.localeCompare(da);
+              return b.count - a.count;
+            });
           });
         });
       });
