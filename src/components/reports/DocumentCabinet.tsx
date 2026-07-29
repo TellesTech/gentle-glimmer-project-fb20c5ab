@@ -97,6 +97,16 @@ interface MonthFolder {
   projects: ProjectFolder[];
 }
 
+const INVALID_OM_VALUES = ['na', 'n/a', 'n.a', 'null', 'nao informado', 'não informado', '-', '--', 'sem om', '0'];
+
+/** Retorna o número da OM limpo, ou null quando o valor for um placeholder ("NA", "N/A", "null"...). */
+export function sanitizeOmNumber(value: string | null | undefined): string | null {
+  const v = (value || '').trim();
+  if (!v) return null;
+  if (INVALID_OM_VALUES.includes(v.toLowerCase())) return null;
+  return v;
+}
+
 interface YearFolder {
   year: number;
   reports: Report[];
@@ -695,11 +705,17 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
           progress: 0,
           status: project.status || 'planning',
           lastDate: null,
+          omNumbers: [],
+          omTitles: [],
         };
         monthFolder.projects.push(projectFolder);
       }
       projectFolder.reports.push(report);
       projectFolder.count++;
+      const omNum = sanitizeOmNumber(report.maintenance_order_number);
+      if (omNum && !projectFolder.omNumbers.includes(omNum)) projectFolder.omNumbers.push(omNum);
+      const omTitle = (report.maintenance_order_title || '').trim();
+      if (omTitle && !projectFolder.omTitles.includes(omTitle)) projectFolder.omTitles.push(omTitle);
       projectFolder.totalWorkforce += report.actual_workforce || 0;
       projectFolder.progress = Math.min(
         Math.round((projectFolder.progress + (report.daily_progress || 0)) * 10) / 10,
