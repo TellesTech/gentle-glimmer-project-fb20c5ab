@@ -87,6 +87,10 @@ interface ProjectFolder {
   lastDate: string | null;
   omNumbers: string[];
   omTitles: string[];
+  omNumber: string | null;
+  omTitle: string | null;
+  sourceProjects: { id: string; name: string }[];
+  titleCounts?: Record<string, { label: string; count: number }>;
 }
 
 interface MonthFolder {
@@ -105,6 +109,30 @@ export function sanitizeOmNumber(value: string | null | undefined): string | nul
   if (!v) return null;
   if (INVALID_OM_VALUES.includes(v.toLowerCase())) return null;
   return v;
+}
+
+/** Normaliza o número da OM para uso como chave de agrupamento. */
+export function normalizeOmKeyNumber(value: string | null | undefined): string | null {
+  const raw = sanitizeOmNumber(value);
+  if (!raw) return null;
+  const cleaned = raw
+    .replace(/^\s*(om|o\.m\.?)\s*[:\-]?\s*/i, '')
+    .replace(/^\s*[a-z]\s+/i, '')
+    .replace(/[.\s]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cleaned || null;
+}
+
+/** Normaliza o título da OM (minúsculas, sem acentos, espaços colapsados). */
+export function normalizeOmTitle(value: string | null | undefined): string {
+  return (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 interface YearFolder {
