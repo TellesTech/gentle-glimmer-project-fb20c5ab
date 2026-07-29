@@ -719,15 +719,28 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
       monthFolder.reports.push(report);
       monthFolder.count++;
       
-      let projectFolder = monthFolder.projects.find(p => p.id === project.id);
+      // Agrupamento por OM: número da OM > título da OM > atividade (fallback "Sem OM")
+      const omNum = normalizeOmKeyNumber(report.maintenance_order_number);
+      const omTitle = (report.maintenance_order_title || '').trim();
+      const omTitleKey = normalizeOmTitle(omTitle);
       const isGenericName = !project.name || project.name === '*' || project.name.startsWith('Atividade criada via');
-      const displayName = isGenericName ? (report.location || report.maintenance_order_title || project.name) : project.name;
+      const projectDisplayName = isGenericName
+        ? (report.location || omTitle || project.name || 'Atividade')
+        : project.name;
+
+      const omKey = omNum
+        ? `om:${omNum}`
+        : omTitleKey
+          ? `title:${omTitleKey}`
+          : `project:${project.id}`;
+
+      let projectFolder = monthFolder.projects.find(p => p.id === omKey);
       if (!projectFolder) {
-        projectFolder = { 
-          id: project.id, 
-          name: displayName,
+        projectFolder = {
+          id: omKey,
+          name: omNum ? `OM ${omNum}` : (omTitle || projectDisplayName),
           code: project.code || null,
-          reports: [], 
+          reports: [],
           count: 0,
           totalWorkforce: 0,
           progress: 0,
@@ -735,15 +748,26 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
           lastDate: null,
           omNumbers: [],
           omTitles: [],
+          omNumber: omNum,
+          omTitle: omTitle || null,
+          sourceProjects: [],
+          titleCounts: {},
         };
         monthFolder.projects.push(projectFolder);
       }
       projectFolder.reports.push(report);
       projectFolder.count++;
-      const omNum = sanitizeOmNumber(report.maintenance_order_number);
-      if (omNum && !projectFolder.omNumbers.includes(omNum)) projectFolder.omNumbers.push(omNum);
-      const omTitle = (report.maintenance_order_title || '').trim();
-      if (omTitle && !projectFolder.omTitles.includes(omTitle)) projectFolder.omTitles.push(omTitle);
+      if (!projectFolder.sourceProjects.some(sp => sp.id === project.id)) {
+        projectFolder.sourceProjects.push({ id: project.id, name: projectDisplayName });
+      }
+      const rawOmNum = sanitizeOmNumber(report.maintenance_order_number);
+      if (rawOmNum && !projectFolder.omNumbers.includes(rawOmNum)) projectFolder.omNumbers.push(rawOmNum);
+      if (omTitle) {
+        if (!projectFolder.omTitles.includes(omTitle)) projectFolder.omTitles.push(omTitle);
+        const tc = projectFolder.titleCounts!;
+        const k = omTitleKey || omTitle;
+        tc[k] = { label: omTitle, count: (tc[k]?.count || 0) + 1 };
+      }
       projectFolder.totalWorkforce += report.actual_workforce || 0;
       projectFolder.progress = Math.min(
         Math.round((projectFolder.progress + (report.daily_progress || 0)) * 10) / 10,
