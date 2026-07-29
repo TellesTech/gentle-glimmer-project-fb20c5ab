@@ -1109,7 +1109,28 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                   <div className="p-2 rounded-lg bg-foreground/10 shrink-0">
                     <FolderKanban className="h-5 w-5 text-foreground/70" />
                   </div>
-                  <span className="text-sm font-semibold text-foreground truncate flex-1 min-w-0">{projectFolder.name}</span>
+                  <div className="flex-1 min-w-0">
+                    {projectFolder.omNumbers.length > 0 && (
+                      <span
+                        title={projectFolder.omNumbers.join(' · ')}
+                        className="inline-block mb-0.5 px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold tracking-wide"
+                      >
+                        {projectFolder.omNumbers.length === 1
+                          ? `OM ${projectFolder.omNumbers[0]}`
+                          : `${projectFolder.omNumbers.length} OMs`}
+                      </span>
+                    )}
+                    <p className="text-sm font-semibold text-foreground truncate">{projectFolder.name}</p>
+                    {projectFolder.omTitles.length > 0 && projectFolder.omTitles[0] !== projectFolder.name && (
+                      <p
+                        className="text-[11px] text-muted-foreground truncate"
+                        title={projectFolder.omTitles.join(' · ')}
+                      >
+                        {projectFolder.omTitles[0]}
+                        {projectFolder.omTitles.length > 1 && ` +${projectFolder.omTitles.length - 1}`}
+                      </p>
+                    )}
+                  </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-foreground group-hover:translate-x-0.5 transition-transform" />
                 </div>
 
