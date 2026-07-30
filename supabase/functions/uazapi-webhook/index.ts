@@ -1745,17 +1745,11 @@ Deno.serve(async (req) => {
       reportData.maintenance_order_number,
       reportData.maintenance_order_title
     );
-    // Sem título de OM (campo em branco no WhatsApp): usa o local da atividade
-    // para o card ficar identificável — nunca uma linha de seção do modelo.
+    // Atividade e Local da Atividade são entidades distintas: NUNCA viram título da OM.
+    // Se o "Título da OM" vier em branco, o RDO fica sem título (card "SEM Nº DE OM"/sem título).
     if (!reportData.maintenance_order_title || !String(reportData.maintenance_order_title).trim()) {
-      const fallbackTitle =
-        extractLocationFromText(messageText) ||
-        (reportData.location ? String(reportData.location).trim() : "") ||
-        (parsedData.tituloTrabalho ? String(parsedData.tituloTrabalho).trim() : "");
-      if (fallbackTitle && !looksLikeSectionLabel(fallbackTitle)) {
-        console.log(`[OM] Título ausente — usando local como título: "${fallbackTitle}"`);
-        reportData.maintenance_order_title = fallbackTitle;
-      }
+      reportData.maintenance_order_title = null;
+      console.log("[OM] Título da OM ausente — não será substituído por local/atividade.");
     }
     // Sem número de OM na mensagem: herda de um RDO já existente com o mesmo título de OM
     if (!reportData.maintenance_order_number) {
