@@ -1554,6 +1554,12 @@ Deno.serve(async (req) => {
 
     // Build report data using correct field mapping (needed early to know resolved shift)
     const reportData = buildReportData(parsedData, projectId, createdBy);
+    // Garante que todos os RDOs da mesma OM/OS usem exatamente o mesmo título (mesmo card)
+    reportData.maintenance_order_title = await resolveCanonicalOmTitle(
+      supabase,
+      reportData.maintenance_order_number,
+      reportData.maintenance_order_title
+    );
     const resolvedShift = reportData.shift;
 
     // Check for existing report (same sender + date + group + SHIFT)
