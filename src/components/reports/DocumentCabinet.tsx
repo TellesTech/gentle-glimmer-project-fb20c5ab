@@ -1226,15 +1226,6 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                         <span className="truncate">{projectFolder.mainLocation}</span>
                       </p>
                     )}
-                    {projectFolder.sourceProjects.length > 0 && (
-                      <p
-                        className="text-[11px] text-muted-foreground truncate"
-                        title={projectFolder.sourceProjects.map(sp => sp.name).join(' · ')}
-                      >
-                        {projectFolder.sourceProjects[0].name}
-                        {projectFolder.sourceProjects.length > 1 && ` +${projectFolder.sourceProjects.length - 1}`}
-                      </p>
-                    )}
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-foreground group-hover:translate-x-0.5 transition-transform" />
                 </div>
