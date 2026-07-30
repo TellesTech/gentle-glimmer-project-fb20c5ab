@@ -91,6 +91,8 @@ interface ProjectFolder {
   omTitle: string | null;
   sourceProjects: { id: string; name: string }[];
   titleCounts?: Record<string, { label: string; count: number }>;
+  locationCounts?: Record<string, { label: string; count: number }>;
+  mainLocation?: string | null;
 }
 
 interface MonthFolder {
@@ -752,6 +754,8 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
           omTitle: omTitle || null,
           sourceProjects: [],
           titleCounts: {},
+          locationCounts: {},
+          mainLocation: null,
         };
         monthFolder.projects.push(projectFolder);
       }
@@ -767,6 +771,15 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
         const tc = projectFolder.titleCounts!;
         const k = omTitleKey || omTitle;
         tc[k] = { label: omTitle, count: (tc[k]?.count || 0) + 1 };
+      }
+      // Local da atividade predominante desta OM (mostrado no card)
+      const loc = (report.location || '').trim();
+      if (loc) {
+        const lc = projectFolder.locationCounts!;
+        const lk = normalizeOmTitle(loc) || loc;
+        lc[lk] = { label: loc, count: (lc[lk]?.count || 0) + 1 };
+        const best = Object.values(lc).sort((a, b) => b.count - a.count)[0];
+        projectFolder.mainLocation = best?.label || null;
       }
       projectFolder.totalWorkforce += report.actual_workforce || 0;
       projectFolder.progress = Math.min(
@@ -1204,6 +1217,15 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                     <p className="text-sm font-semibold text-foreground truncate" title={projectFolder.name}>
                       {projectFolder.omTitle || projectFolder.name}
                     </p>
+                    {projectFolder.mainLocation && (
+                      <p
+                        className="text-[11px] text-muted-foreground flex items-center gap-1 truncate"
+                        title={`Local: ${projectFolder.mainLocation}`}
+                      >
+                        <MapPin className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{projectFolder.mainLocation}</span>
+                      </p>
+                    )}
                     {projectFolder.sourceProjects.length > 0 && (
                       <p
                         className="text-[11px] text-muted-foreground truncate"
