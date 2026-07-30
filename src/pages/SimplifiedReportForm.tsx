@@ -516,7 +516,7 @@ export default function SimplifiedReportForm() {
         }
       }
       
-      navigate(`/reports/${report.id}`, { replace: true });
+      navigate(`/reports/${report.id}`, { replace: true, state: { from: backTarget } });
     },
     onError: (error) => {
       console.error('Error creating report:', error);
@@ -721,7 +721,7 @@ export default function SimplifiedReportForm() {
       queryClient.invalidateQueries({ queryKey: ['reports'] });
       queryClient.invalidateQueries({ queryKey: ['report', reportId] });
       toast.success(status === 'draft' ? 'Rascunho salvo!' : 'Relatório atualizado!');
-      navigate(`/reports/${report.id}`, { replace: true });
+      navigate(`/reports/${report.id}`, { replace: true, state: { from: backTarget } });
     },
     onError: (error) => {
       console.error('Error updating report:', error);
@@ -746,7 +746,7 @@ export default function SimplifiedReportForm() {
     }
     
     if (target === 'back') {
-      navigate(-1);
+      navigate(backTarget);
     }
   };
 
