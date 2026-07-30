@@ -1282,7 +1282,7 @@ Deno.serve(async (req) => {
       const fallbackTitle =
         omTitleEarly ||
         detEarly.atividade ||
-        (chatName ? chatName.replace(/^RDO[\s-]*/i, "").trim() : "");
+        (mappedGroupName ? mappedGroupName.replace(/^RDO[\s-]*/i, "").trim() : "");
       const projectName = buildProjectName(omNumberEarly, fallbackTitle);
 
       if (!projectName) {
@@ -1340,7 +1340,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const projectId: string = routedId;
+    const projectId: string = routedId as string;
 
     // Log the incoming message
     const { data: logEntry } = await supabase
