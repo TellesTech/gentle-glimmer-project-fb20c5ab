@@ -65,6 +65,7 @@ const IMPACT_CONFIG: Record<ImpactLevel, { label: string; color: string; badge: 
 export default function ReportDetail() {
   const { id: reportId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const routerLocation = useLocation();
   const { user, role } = useAuth();
   
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
