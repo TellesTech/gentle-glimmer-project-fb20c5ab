@@ -1869,9 +1869,9 @@ Deno.serve(async (req) => {
       await upsertAttendance(supabase, reportId, parsedData, allProfiles, false, preferredIds);
     }
 
-    // Atualiza o nome da atividade com o Título da OM extraído pela IA (nunca com o local)
-    if (parsedData.tituloOM || parsedData.tituloTrabalho || parsedData.localAtividade) {
-      const rawTitle = String(parsedData.tituloOM || parsedData.tituloTrabalho || parsedData.localAtividade).trim();
+    // Atualiza o nome do projeto SOMENTE com o Título da OM (nunca com atividade ou local)
+    if (parsedData.tituloOM) {
+      const rawTitle = String(parsedData.tituloOM).trim();
       const omTitle = buildProjectName(sanitizeOmNumber(parsedData.numeroOM), rawTitle);
       if (omTitle && autoCreatedProject) {
         const { error: nameErr } = await supabase
