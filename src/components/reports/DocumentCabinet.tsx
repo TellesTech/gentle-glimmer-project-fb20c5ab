@@ -977,6 +977,16 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     onBreadcrumbChange(crumbs);
   }, [onBreadcrumbChange, selectedCompany, selectedSiteFolder, selectedYearFolder, selectedMonthFolder, selectedProjectFolder, setOpenSiteId, setOpenYear, setOpenMonth, setOpenProjectId]);
 
+  // Emit current company/site context to parent (used by "Novo Relatório")
+  useEffect(() => {
+    onContextChange?.({
+      companyId: selectedCompany?.id ?? null,
+      companyName: selectedCompany?.name ?? null,
+      siteId: selectedSiteFolder?.id ?? null,
+      siteName: selectedSiteFolder?.name ?? null,
+    });
+  }, [onContextChange, selectedCompany, selectedSiteFolder]);
+
   const dialogs = (
     <>
       <BatchDownloadOptionsDialog
