@@ -1628,12 +1628,13 @@ Deno.serve(async (req) => {
 
     // Deterministic date extraction from raw message — overrides AI to avoid hallucinations
     // Supports: DD/MM/YYYY, DD/MM/YY, DD.MM.YYYY, DD.MM.YY, DD-MM-YY, DD-MM-YYYY
-    const dateRegex = /(?:data|dia)\s*[:：]?\s*(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/i;
+    // Aceita "Data: 27/07/2026", "*Data* 27-07-26", "📅 Data : 27.07.2026" e "Data: 27/07" (sem ano)
+    const dateRegex = /(?:data|dia)\s*[*_~`]*\s*[:：]?\s*[*_~`]*\s*(\d{1,2})[\/.\-](\d{1,2})(?:[\/.\-](\d{2,4}))?/i;
     const dateMatch = messageText.match(dateRegex);
     if (dateMatch) {
       const day = parseInt(dateMatch[1], 10);
       const month = parseInt(dateMatch[2], 10);
-      let year = parseInt(dateMatch[3], 10);
+      let year = dateMatch[3] ? parseInt(dateMatch[3], 10) : new Date().getFullYear();
       if (year < 100) year += 2000;
       if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 2000 && year <= 2100) {
         const extracted = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
