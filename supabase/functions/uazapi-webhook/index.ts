@@ -1578,6 +1578,15 @@ Deno.serve(async (req) => {
 
     // Build report data using correct field mapping (needed early to know resolved shift)
     const reportData = buildReportData(parsedData, projectId, createdBy);
+    // Rede de segurança: se a IA não trouxe a OM, extrai por regex do texto original
+    const omFromText = extractOmFromText(messageText);
+    if (!reportData.maintenance_order_number && omFromText.number) {
+      console.log(`[OM] Número recuperado por regex: ${omFromText.number}`);
+      reportData.maintenance_order_number = omFromText.number;
+    }
+    if (!reportData.maintenance_order_title && omFromText.title) {
+      reportData.maintenance_order_title = omFromText.title;
+    }
     // Garante que todos os RDOs da mesma OM/OS usem exatamente o mesmo título (mesmo card)
     reportData.maintenance_order_title = await resolveCanonicalOmTitle(
       supabase,
