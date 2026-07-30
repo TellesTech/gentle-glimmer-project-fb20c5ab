@@ -338,6 +338,49 @@ async function resolveCanonicalOmTitle(
 }
 
 /** Nome padronizado da atividade: "OM 900037786367 — Título" (sem prefixo quando não há número válido). */
+/** Chave normalizada de título (sem acentos/pontuação) usada para casar OMs iguais. */
+function normalizeTitleKey(value: unknown): string {
+  return String(value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/**
+ * Quando o RDO chega SEM número de OM, tenta herdar o número de um RDO já existente
+ * no mesmo projeto/unidade com o MESMO título de OM — evita cards "SEM Nº DE OM"
+ * duplicando uma OM que já existe no sistema.
+ */
+async function inheritOmNumberByTitle(
+  supabase: any,
+  projectId: string,
+  title: string | null
+): Promise<string | null> {
+  const key = normalizeTitleKey(title);
+  if (!key) return null;
+  try {
+    const { data } = await supabase
+      .from("reports")
+      .select("maintenance_order_number, maintenance_order_title, project_id")
+      .eq("project_id", projectId)
+      .not("maintenance_order_number", "is", null)
+      .order("created_at", { ascending: true })
+      .limit(200);
+    const hit = (data || []).find(
+      (r: any) => normalizeTitleKey(r.maintenance_order_title) === key
+    );
+    if (hit?.maintenance_order_number) {
+      console.log(`[OM] Número herdado pelo título "${title}": ${hit.maintenance_order_number}`);
+      return String(hit.maintenance_order_number);
+    }
+  } catch (e) {
+    console.error("[OM] Falha ao herdar número por título:", e);
+  }
+  return null;
+}
+
 /**
  * Extração determinística (regex) do número e do título da OM/OS direto do texto da mensagem.
  * Usada como REDE DE SEGURANÇA quando a IA não devolve numeroOM/tituloOM — sem OM os RDOs
@@ -920,7 +963,9 @@ function buildReportData(
     start_time: parsedData.horaInicio || null,
     end_time: parsedData.horaFim || null,
     maintenance_order_number: sanitizeOmNumber(parsedData.numeroOM),
-    maintenance_order_title: parsedData.tituloOM || parsedData.tituloTrabalho || null,
+    // Somente o "Título da OM" oficial. `tituloTrabalho` (texto das atividades) é usado
+    // apenas como último recurso, depois do local — evita cards com nome de atividade.
+    maintenance_order_title: parsedData.tituloOM || null,
     blockage_status: parsedData.bloqueio || null,
     supervisor_name: parsedData.supervisor || null,
     technical_responsible_name: parsedData.responsavelTecnico || null,
@@ -1703,11 +1748,23 @@ Deno.serve(async (req) => {
     // Sem título de OM (campo em branco no WhatsApp): usa o local da atividade
     // para o card ficar identificável — nunca uma linha de seção do modelo.
     if (!reportData.maintenance_order_title || !String(reportData.maintenance_order_title).trim()) {
-      const fallbackTitle = extractLocationFromText(messageText) || (reportData.location ? String(reportData.location).trim() : "");
+      const fallbackTitle =
+        extractLocationFromText(messageText) ||
+        (reportData.location ? String(reportData.location).trim() : "") ||
+        (parsedData.tituloTrabalho ? String(parsedData.tituloTrabalho).trim() : "");
       if (fallbackTitle && !looksLikeSectionLabel(fallbackTitle)) {
         console.log(`[OM] Título ausente — usando local como título: "${fallbackTitle}"`);
         reportData.maintenance_order_title = fallbackTitle;
       }
+    }
+    // Sem número de OM na mensagem: herda de um RDO já existente com o mesmo título de OM
+    if (!reportData.maintenance_order_number) {
+      const inherited = await inheritOmNumberByTitle(
+        supabase,
+        projectId,
+        reportData.maintenance_order_title
+      );
+      if (inherited) reportData.maintenance_order_number = inherited;
     }
     const resolvedShift = reportData.shift;
 
