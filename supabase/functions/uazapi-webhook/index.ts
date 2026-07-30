@@ -1351,21 +1351,19 @@ Deno.serve(async (req) => {
       // Extract project name from message text.
       // Prioridade: Título da OM → título/serviço → local → nome do grupo.
       let projectName = "Atividade criada via WhatsApp";
-      // 1. "Título da OM:" (mesma linha ou linha seguinte)
-      const tituloOmMatch = messageText.match(/T[íi]tulo\s*(?:da\s*)?OM[:\s]*\n?\s*(.+)/i);
+      // 1. "Título da OM (obrigatório):" — tolera emoji, parênteses e valor na linha seguinte
+      const omFromRaw = extractOmFromText(messageText);
       // 2. "Título:" / "Serviço:" / "Atividade Principal:"
-      const tituloMatch = messageText.match(/(?:T[íi]tulo|Atividade Principal|Servi[çc]o|Descri[çc][ãa]o da OM)[:\s]*\n?\s*(.+)/i);
+      const tituloAlt = extractLabeledValue(messageText, /(?:t[íi]tulo|atividade principal|servi[çc]o|descri[çc][ãa]o da om)\b/i);
       // 3. Local / área (último recurso antes do nome do grupo)
-      const localMatch = messageText.match(/(?:Local\s*(?:da\s*(?:atividade|obra|trabalho))?|[Áá]rea|Sub[áa]rea|Setor|Regi[ãa]o|Unidade)[:\s]*\n?\s*(.+)/i);
-      // Número da OM (para compor o nome final)
-      const numeroOmMatch = messageText.match(/(?:N[ºo°]?\.?\s*(?:da\s*)?OM|OM|O\.M\.|Ordem de Manuten[çc][ãa]o)[:\s]*\n?\s*([\w./-]+)/i);
-      const omNumber = sanitizeOmNumber(numeroOmMatch?.[1]);
-      if (tituloOmMatch?.[1]?.trim()) {
-        projectName = tituloOmMatch[1].trim();
-      } else if (tituloMatch?.[1]?.trim()) {
-        projectName = tituloMatch[1].trim();
-      } else if (localMatch?.[1]?.trim()) {
-        projectName = localMatch[1].trim();
+      const localAlt = extractLocationFromText(messageText);
+      const omNumber = omFromRaw.number;
+      if (omFromRaw.title) {
+        projectName = omFromRaw.title;
+      } else if (tituloAlt) {
+        projectName = tituloAlt;
+      } else if (localAlt) {
+        projectName = localAlt;
       } else if (chatName) {
         projectName = chatName.replace(/^RDO[\s-]*/i, "").trim() || projectName;
       }
