@@ -91,6 +91,8 @@ interface ProjectFolder {
   omTitle: string | null;
   sourceProjects: { id: string; name: string }[];
   titleCounts?: Record<string, { label: string; count: number }>;
+  locationCounts?: Record<string, { label: string; count: number }>;
+  mainLocation?: string | null;
 }
 
 interface MonthFolder {
