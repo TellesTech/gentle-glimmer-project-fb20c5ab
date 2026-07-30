@@ -448,7 +448,19 @@ async function attachPendingPhotos(
       return;
     }
 
-    const { data: pendingPhotos } = await query.order("created_at", { ascending: true });
+    let { data: pendingPhotos } = await query.order("created_at", { ascending: true });
+    // Fallback: foto enviada no privado pelo mesmo remetente
+    if ((!pendingPhotos || pendingPhotos.length === 0) && groupId && senderPhone) {
+      const { data: bySender } = await supabase
+        .from("whatsapp_rdo_logs")
+        .select("id, raw_payload")
+        .in("status", ["pending_photo", "expired"])
+        .is("report_id", null)
+        .eq("sender_phone", senderPhone)
+        .gt("created_at", windowStart)
+        .order("created_at", { ascending: true });
+      pendingPhotos = bySender || [];
+    }
     if (!pendingPhotos?.length) return;
 
     console.log(`Found ${pendingPhotos.length} pending photos to attach to RDO #${rdoCode}`);
