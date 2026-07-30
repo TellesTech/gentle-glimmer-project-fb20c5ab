@@ -428,13 +428,17 @@ async function attachPendingPhotos(
   uazapiToken: string | null
 ) {
   try {
-    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    // Janela alinhada com a expiração do health-check (2h) + resgate de fotos já
+    // marcadas como "expired": antes só olhava 5 min, então quase toda foto enviada
+    // antes do texto do RDO acabava expirando sem nunca ser anexada.
+    const windowStart = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
 
     let query = supabase
       .from("whatsapp_rdo_logs")
       .select("id, raw_payload")
-      .eq("status", "pending_photo")
-      .gt("created_at", fiveMinAgo);
+      .in("status", ["pending_photo", "expired"])
+      .is("report_id", null)
+      .gt("created_at", windowStart);
 
     if (groupId) {
       query = query.eq("group_id", groupId);
