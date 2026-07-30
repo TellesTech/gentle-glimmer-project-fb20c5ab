@@ -54,33 +54,61 @@ export function Header({ onMobileMenuToggle, sidebarCollapsed, onSidebarToggle, 
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
 
   const handleCopyWhatsAppTemplate = () => {
-    const template = `📌 RELATÓRIO DIÁRIO DE OBRA (RDO)
+    const template = `📌 *RELATÓRIO DIÁRIO DE OBRA (RDO)*
 
-📆 Data:
-🧰 Equipe:
-📍 Local da Atividade:
-⏰ Período de Trabalho:
-🔊 Faixa de Rádio (WEES):
-🔊 Faixa de Rádio (Operação):
-📄 Título da OM (obrigatório):
-🚨 Ponto de Ambulância:
-🚨 Ponto de Encontro:
+📆 *Data/Turno:* XX/XX/XXXX – Diurno/Noturno
 
-⏱️ Controle de Liberação:
-Chegada à sala do liberador:
-Liberação da documentação:
-Revalidação de bloqueio:
+🔹 *Atividade:*
 
-🛠️ Atividades Executadas:
+📍 *Área da Atividade:*
 
-📌 Desvios / Ocorrências:
+⏰ *Horário de Trabalho:*
 
-🧗‍♂️ Efetivo do Dia:
+📡 *Faixa de Rádio (WEES):*
+
+📡 *Faixa de Rádio (Operação):*
+
+📄 *Título da OM (Obrigatório):*
+
+📝 *Número da OM:*
+
+🚑 *Ponto de Ambulância:*
+
+🚨 *Ponto de Encontro:*
+
+━━━━━━━━━━━━━━━━━━━━
+
+⏱️ *Controle de Liberação*
+
+• Chegada à sala do liberador:
+• Liberação da documentação:
+• Revalidação de bloqueio:
+
+━━━━━━━━━━━━━━━━━━━━
+
+🛠️ *Atividades Executadas*
+
+• 
+
+━━━━━━━━━━━━━━━━━━━━
+
+📌 *Desvios / Ocorrências*
+
+• 
+
+━━━━━━━━━━━━━━━━━━━━
+
+🧗‍♂️ *Efetivo do Dia*
+
 1.
 2.
 3.
 4.
-5.`;
+5.
+
+✅ *Observações:*
+
+📷 *Fotos abaixo:*`;
     navigator.clipboard.writeText(template).then(() => {
       toast.success('Relatório copiado! Cole no WhatsApp.');
     }).catch(() => {
