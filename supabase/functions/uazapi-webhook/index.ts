@@ -263,6 +263,29 @@ const UAZAPI_BASE_URL = "https://chatwees.uazapi.com";
 const INVALID_OM_VALUES = ["na", "n/a", "n.a", "null", "nao informado", "não informado", "-", "--", "sem om", "sem os", "nao se aplica", "não se aplica", "0", ""];
 
 /**
+ * Rótulos/seções do modelo de RDO do WhatsApp que NUNCA podem virar título de OM ou local.
+ * Evita que um campo em branco ("Título da OM:") capture a linha seguinte
+ * (ex.: "🕐 Registro de Horários") e crie um card errado.
+ */
+const RDO_SECTION_KEYWORDS = [
+  "registro de hor", "atividades executadas", "atividade executada", "observa",
+  "equipe de trabalho", "hor[áa]rio de trabalho", "faixa de r[áa]dio", "chegada",
+  "libera[çc][ãa]o", "in[íi]cio", "t[ée]rmino", "data", "relat[óo]rio di[áa]rio",
+  "ponto de", "dds", "efetivo", "n[ºo°]? ?da om", "t[íi]tulo da om", "local",
+  "execu[çc][ãa]o de bloqueio", "clima", "condi[çc][õo]es",
+];
+
+function looksLikeSectionLabel(value: string): boolean {
+  const v = value
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, "")
+    .replace(/[*_~`]/g, "")
+    .trim()
+    .toLowerCase();
+  if (!v) return true;
+  return RDO_SECTION_KEYWORDS.some((k) => new RegExp(`^${k}\\b`, "i").test(v));
+}
+
+/**
  * Devolve o número da OM/OS limpo (somente o código), ou null quando for placeholder.
  * Ex.: "A 900035606252" → "900035606252"; "OM 4502365884" → "4502365884";
  *      "900036405278 E 900036405279" → "900036405278" (o primeiro código é a chave do card).
@@ -279,6 +302,8 @@ function sanitizeOmNumber(value: unknown): string | null {
     return codeMatch[0].replace(/[.\-/]+$/, "");
   }
   if (INVALID_OM_VALUES.includes(v.toLowerCase()) || !/\d/.test(v)) return null;
+  // códigos muito curtos (ex.: "13" da faixa de rádio) não são OM válidas
+  if (v.replace(/\D/g, "").length < 4) return null;
   return v;
 }
 
@@ -327,7 +352,8 @@ function extractOmFromText(text: string): { number: string | null; title: string
   );
   let number = sanitizeOmNumber(numMatch?.[1]);
   // Rótulo do título tolerante a emojis e a "(obrigatório)": "📄 Título da OM (obrigatório):"
-  let title = extractLabeledValue(t, /t[íi]tulo\s*(?:d[ao]\s*)?(?:om|os)\b[ \t]*(?:\([^)\n]*\))?/i);
+  // STRICT: valor precisa estar na MESMA linha do rótulo — campo vazio deve permanecer vazio.
+  let title = extractLabeledValue(t, /t[íi]tulo\s*(?:d[ao]\s*)?(?:om|os)\b[ \t]*(?:\([^)\n]*\))?/i, true);
   if (title) {
     title = title
       .replace(/[*_~`]/g, "")
@@ -335,7 +361,7 @@ function extractOmFromText(text: string): { number: string | null; title: string
       .replace(/\s+/g, " ")
       .replace(/[.\s]+$/, "")
       .trim();
-    if (!title || INVALID_OM_VALUES.includes(title.toLowerCase())) title = null;
+    if (!title || INVALID_OM_VALUES.includes(title.toLowerCase()) || looksLikeSectionLabel(title)) title = null;
   }
   // Muitos grupos usam SOMENTE "Título da OM" e escrevem o número dentro dele:
   // "Título da OM: 22461261 - Transportadora 09" → número 22461261 + título "Transportadora 09"
@@ -358,16 +384,19 @@ function extractOmFromText(text: string): { number: string | null; title: string
  * Se o valor estiver na mesma linha, usa-o; se a linha estiver vazia, usa a próxima linha
  * SOMENTE quando ela não for outro rótulo (evita puxar "🚨 Ponto de Ambulância:" como valor).
  */
-function extractLabeledValue(text: string, label: RegExp): string | null {
+function extractLabeledValue(text: string, label: RegExp, sameLineOnly = false): string | null {
   const re = new RegExp(`${label.source}[ \\t]*[:\\-][ \\t]*([^\\n]*)((?:\\n[ \\t]*)*)([^\\n]*)`, "i");
   const m = text.match(re);
   if (!m) return null;
   const sameLine = (m[1] || "").trim();
   if (sameLine) return sameLine;
+  if (sameLineOnly) return null;
   const next = (m[3] || "").trim();
   if (!next) return null;
   // outra linha rotulada (ex.: "🚨 Ponto de Encontro:") não é o valor deste campo
   if (/^[^:]{0,45}:/.test(next)) return null;
+  // linha seguinte que é uma seção do modelo de RDO nunca é o valor do campo
+  if (looksLikeSectionLabel(next)) return null;
   return next;
 }
 
@@ -375,11 +404,12 @@ function extractLabeledValue(text: string, label: RegExp): string | null {
 function extractLocationFromText(text: string): string | null {
   const value = extractLabeledValue(
     text,
-    /local\s*(?:d[ao]\s*)?(?:atividade|obra|trabalho|servi[çc]o)?\b[ \t]*(?:\([^)\n]*\))?/i
-  ) || extractLabeledValue(text, /(?:[áa]rea|sub[áa]rea|setor|regi[ãa]o)\b/i);
+    /local\s*(?:d[ao]\s*)?(?:atividade|obra|trabalho|servi[çc]o)?\b[ \t]*(?:\([^)\n]*\))?/i,
+    true
+  ) || extractLabeledValue(text, /(?:[áa]rea|sub[áa]rea|setor|regi[ãa]o)\b/i, true);
   if (!value) return null;
   const clean = value.replace(/[*_~`]/g, "").replace(/\s+/g, " ").replace(/[.\s]+$/, "").trim();
-  if (!clean || INVALID_OM_VALUES.includes(clean.toLowerCase())) return null;
+  if (!clean || INVALID_OM_VALUES.includes(clean.toLowerCase()) || looksLikeSectionLabel(clean)) return null;
   return clean;
 }
 
@@ -1354,7 +1384,7 @@ Deno.serve(async (req) => {
       // 1. "Título da OM (obrigatório):" — tolera emoji, parênteses e valor na linha seguinte
       const omFromRaw = extractOmFromText(messageText);
       // 2. "Título:" / "Serviço:" / "Atividade Principal:"
-      const tituloAlt = extractLabeledValue(messageText, /(?:t[íi]tulo|atividade principal|servi[çc]o|descri[çc][ãa]o da om)\b/i);
+      const tituloAlt = extractLabeledValue(messageText, /(?:t[íi]tulo|atividade principal|servi[çc]o|descri[çc][ãa]o da om)\b/i, true);
       // 3. Local / área (último recurso antes do nome do grupo)
       const localAlt = extractLocationFromText(messageText);
       const omNumber = omFromRaw.number;
@@ -1649,6 +1679,15 @@ Deno.serve(async (req) => {
       reportData.maintenance_order_number,
       reportData.maintenance_order_title
     );
+    // Sem título de OM (campo em branco no WhatsApp): usa o local da atividade
+    // para o card ficar identificável — nunca uma linha de seção do modelo.
+    if (!reportData.maintenance_order_title || !String(reportData.maintenance_order_title).trim()) {
+      const fallbackTitle = extractLocationFromText(messageText) || (reportData.location ? String(reportData.location).trim() : "");
+      if (fallbackTitle && !looksLikeSectionLabel(fallbackTitle)) {
+        console.log(`[OM] Título ausente — usando local como título: "${fallbackTitle}"`);
+        reportData.maintenance_order_title = fallbackTitle;
+      }
+    }
     const resolvedShift = reportData.shift;
 
     // Check for existing report (same sender + date + group + SHIFT)
