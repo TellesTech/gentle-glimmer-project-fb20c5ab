@@ -1408,6 +1408,42 @@ export type Database = {
         }
         Relationships: []
       }
+      rdo_legacy_backup: {
+        Row: {
+          batch_id: string
+          created_at: string
+          entity: string
+          entity_id: string | null
+          field: string
+          id: string
+          report_id: string
+          value_after: Json | null
+          value_before: Json | null
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          entity: string
+          entity_id?: string | null
+          field: string
+          id?: string
+          report_id: string
+          value_after?: Json | null
+          value_before?: Json | null
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          entity?: string
+          entity_id?: string | null
+          field?: string
+          id?: string
+          report_id?: string
+          value_after?: Json | null
+          value_before?: Json | null
+        }
+        Relationships: []
+      }
       rdo_projects: {
         Row: {
           client_responsible_name: string | null
