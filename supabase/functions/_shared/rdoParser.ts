@@ -757,11 +757,9 @@ export function mergeParsed(det: RdoParsed, ai: Record<string, any> | null | und
   for (const key of AI_ONLY_KEYS) {
     const detValue = (det as any)[key];
     if (explicit.has(key)) {
-      merged[key] = isEmptyValue(detValue) && key !== "numeroOM" ? (isEmptyValue(aiData[key]) ? detValue : aiData[key]) : detValue;
-      // Rótulo explícito com valor determinístico => vence, mesmo se vazio
-      if (!isEmptyValue(detValue)) merged[key] = detValue;
-      if (key === "numeroOM") merged[key] = detValue; // nunca aceita OM inventada pela IA
-      if (key === "atividades" || key === "desvios" || key === "efetivo") merged[key] = detValue;
+      // Rótulo/cabeçalho explícito SEMPRE vence a IA, inclusive quando o valor
+      // determinístico é null, "" ou [] (campo rotulado deixado em branco).
+      merged[key] = detValue;
       continue;
     }
     if (isEmptyValue(merged[key]) && !isEmptyValue(detValue)) {
