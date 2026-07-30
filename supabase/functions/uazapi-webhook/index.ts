@@ -1,4 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  buildProjectName as buildProjectNameShared,
+  omKey,
+  parseRdoDeterministic,
+  projectOmKey,
+  routeProject,
+  sanitizeOmNumber,
+} from "../_shared/rdoParser.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -260,20 +268,10 @@ function matchCollaborator(
 
 const UAZAPI_BASE_URL = "https://chatwees.uazapi.com";
 
-const INVALID_OM_VALUES = ["na", "n/a", "n.a", "null", "nao informado", "não informado", "-", "--", "sem om", "0", ""];
-
-/** Devolve o número da OM limpo, ou null quando for placeholder ("NA", "N/A", "null"...). */
-function sanitizeOmNumber(value: unknown): string | null {
-  const v = String(value ?? "").trim();
-  if (INVALID_OM_VALUES.includes(v.toLowerCase())) return null;
-  return v;
-}
-
-/** Nome padronizado da atividade: "OM 900037786367 — Título" (sem prefixo quando não há número válido). */
-function buildProjectName(omNumber: string | null, title: string): string {
-  const cleanTitle = (title || "").trim().replace(/\s+/g, " ");
-  const base = omNumber ? `OM ${omNumber} — ${cleanTitle}`.trim() : cleanTitle;
-  return base.substring(0, 100);
+/** Nome padronizado da atividade: "OM 900037786367 — Título". */
+function buildProjectName(omNumber: string | null, title: string | null): string | null {
+  const name = buildProjectNameShared(omNumber, title);
+  return name ? name.substring(0, 100) : null;
 }
 
 async function attachPendingPhotos(
@@ -721,15 +719,7 @@ function buildReportData(
   createdBy: string | null
 ): Record<string, any> {
   let reportDate = parsedData.data || new Date().toISOString().split("T")[0];
-  // Force current year if parsed year differs (e.g. user typed 2025 but we're in 2026)
-  if (parsedData.data) {
-    const [year, month, day] = parsedData.data.split("-").map(Number);
-    const currentYear = new Date().getFullYear();
-    if (year !== currentYear) {
-      reportDate = `${currentYear}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      console.log(`Date corrected from ${parsedData.data} to ${reportDate}`);
-    }
-  }
+  // A data informada na mensagem é preservada exatamente (dia/mês/ANO).
 
   // Map turno to shift enum, with fallback inferred from start time and title keywords
   let shift = "morning";
@@ -764,7 +754,7 @@ function buildReportData(
     start_time: parsedData.horaInicio || null,
     end_time: parsedData.horaFim || null,
     maintenance_order_number: sanitizeOmNumber(parsedData.numeroOM),
-    maintenance_order_title: parsedData.tituloOM || parsedData.tituloTrabalho || null,
+    maintenance_order_title: parsedData.tituloOM || null,
     blockage_status: parsedData.bloqueio || null,
     supervisor_name: parsedData.supervisor || null,
     technical_responsible_name: parsedData.responsavelTecnico || null,
@@ -783,18 +773,24 @@ function buildReportData(
 
 // Insert/update activities from parsed data
 async function upsertActivities(supabase: any, reportId: string, parsedData: any, isUpdate: boolean) {
-  const activities = parsedData.atividades;
-  if (!activities?.length) return;
+  const activities = (parsedData.atividades || [])
+    .map((a: any) => (typeof a === "string" ? a : a.description || a.descricao || ""))
+    .map((d: string) => String(d || "").trim())
+    .filter(Boolean);
 
   if (isUpdate) {
+    // Substitui integralmente — inclusive quando a nova lista está vazia
     await supabase.from("report_activities").delete().eq("report_id", reportId);
   }
+  if (!activities.length) return;
 
   const { error } = await supabase.from("report_activities").insert(
-    activities.map((a: any) => ({
+    activities.map((description: string) => ({
       report_id: reportId,
-      description: typeof a === "string" ? a : a.description || a.descricao || "",
-      completed: false,
+      description,
+      // Itens de "Atividades Executadas" já foram realizados no dia
+      completed: true,
+      progress: 100,
     }))
   );
   if (error) {
@@ -806,12 +802,17 @@ async function upsertActivities(supabase: any, reportId: string, parsedData: any
 
 // Insert/update deviations from parsed data
 async function upsertDeviations(supabase: any, reportId: string, parsedData: any, isUpdate: boolean) {
-  const deviations = parsedData.desvios;
-  if (!deviations?.length) return;
+  const deviations = (parsedData.desvios || []).filter((d: any) => {
+    const desc = String(
+      (typeof d === "string" ? d : d?.descricao || d?.description) || ""
+    ).trim();
+    return !!desc;
+  });
 
   if (isUpdate) {
     await supabase.from("report_deviations").delete().eq("report_id", reportId);
   }
+  if (!deviations.length) return;
 
   const { error } = await supabase.from("report_deviations").insert(
     deviations.map((d: any) => ({
@@ -838,11 +839,17 @@ async function upsertAttendance(
   isUpdate: boolean,
   preferredIds?: Set<string>
 ) {
-  const efetivo = parsedData.efetivo;
-  if (!efetivo?.length) return;
+  const efetivo = (parsedData.efetivo || []).filter((e: any) => {
+    const nome = typeof e === "string" ? e : e?.nome;
+    return !!String(nome || "").trim();
+  });
 
   if (isUpdate) {
     await supabase.from("report_attendance").delete().eq("report_id", reportId);
+  }
+  if (!efetivo.length) {
+    await supabase.from("reports").update({ actual_workforce: 0 }).eq("id", reportId);
+    return;
   }
 
   const attendanceRows = efetivo.map((item: any) => {
@@ -1160,6 +1167,7 @@ Deno.serve(async (req) => {
 
     // Look up site mapping
     let siteId: string | null = null;
+    let mappedGroupName: string | null = null;
 
     if (isGroup && groupId) {
       const { data: mapping } = await supabase
@@ -1169,6 +1177,7 @@ Deno.serve(async (req) => {
         .eq("is_active", true)
         .maybeSingle();
       siteId = mapping?.site_id || null;
+      mappedGroupName = mapping?.group_name || null;
     }
 
     if (!siteId && senderPhone) {
@@ -1205,20 +1214,55 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Resolve active projects from site
-    let { data: activeProjects } = await supabase
+    // ------------------------------------------------------------------
+    // Roteamento por OM (determinístico) — extrai OM/título ANTES de escolher
+    // ou criar a atividade.
+    // ------------------------------------------------------------------
+    const detEarly = parseRdoDeterministic(messageText);
+    const omNumberEarly = detEarly.numeroOM;
+    const omTitleEarly = detEarly.tituloOM || detEarly.atividade || null;
+
+    const { data: activeProjectsRaw } = await supabase
       .from("projects")
       .select("id, name, description, code, contract_number")
       .eq("site_id", siteId)
       .not("status", "in", '("completed","suspended")')
       .order("created_at", { ascending: false });
+    const activeProjects: Array<{ id: string; name: string; description: string | null; code: string | null; contract_number: string | null }> =
+      activeProjectsRaw || [];
 
+    // OMs já usadas em relatórios das atividades desta unidade
+    const projectOmNumbers: Record<string, string[]> = {};
+    if (activeProjects.length) {
+      const { data: omRows } = await supabase
+        .from("reports")
+        .select("project_id, maintenance_order_number")
+        .in("project_id", activeProjects.map((p) => p.id))
+        .not("maintenance_order_number", "is", null);
+      for (const row of omRows || []) {
+        if (!row.maintenance_order_number) continue;
+        (projectOmNumbers[row.project_id] ||= []).push(row.maintenance_order_number);
+      }
+    }
+
+    const route = routeProject({
+      omNumber: omNumberEarly,
+      omTitle: omTitleEarly,
+      projects: activeProjects,
+      projectOmNumbers,
+    });
+    console.log(`[ROUTE] om=${omNumberEarly ?? "-"} titulo="${omTitleEarly ?? "-"}" -> ${route.projectId ?? "novo"} (${route.reason})`);
+
+    let routedId: string | null = route.projectId;
     let autoCreatedProject = false;
-    if (!activeProjects || activeProjects.length === 0) {
-      // Auto-create project for this site
-      console.log("No active projects found, auto-creating project...");
 
-      // Get company_id from site
+    // Sem OM e sem título: tenta código/contrato do projeto (compatibilidade)
+    if (!routedId && !omNumberEarly && !omTitleEarly) {
+      routedId = matchProjectDeterministic(messageText, activeProjects);
+    }
+
+    if (!routedId) {
+      // Cria uma nova atividade para esta OM, mesmo havendo outras ativas
       const { data: siteData } = await supabase
         .from("sites")
         .select("company_id, name")
@@ -1235,105 +1279,68 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Extract project name from message text.
-      // Prioridade: Título da OM → título/serviço → local → nome do grupo.
-      let projectName = "Atividade criada via WhatsApp";
-      // 1. "Título da OM:" (mesma linha ou linha seguinte)
-      const tituloOmMatch = messageText.match(/T[íi]tulo\s*(?:da\s*)?OM[:\s]*\n?\s*(.+)/i);
-      // 2. "Título:" / "Serviço:" / "Atividade Principal:"
-      const tituloMatch = messageText.match(/(?:T[íi]tulo|Atividade Principal|Servi[çc]o|Descri[çc][ãa]o da OM)[:\s]*\n?\s*(.+)/i);
-      // 3. Local / área (último recurso antes do nome do grupo)
-      const localMatch = messageText.match(/(?:Local\s*(?:da\s*(?:atividade|obra|trabalho))?|[Áá]rea|Sub[áa]rea|Setor|Regi[ãa]o|Unidade)[:\s]*\n?\s*(.+)/i);
-      // Número da OM (para compor o nome final)
-      const numeroOmMatch = messageText.match(/(?:N[ºo°]?\.?\s*(?:da\s*)?OM|OM|O\.M\.|Ordem de Manuten[çc][ãa]o)[:\s]*\n?\s*([\w./-]+)/i);
-      const omNumber = sanitizeOmNumber(numeroOmMatch?.[1]);
-      if (tituloOmMatch?.[1]?.trim()) {
-        projectName = tituloOmMatch[1].trim();
-      } else if (tituloMatch?.[1]?.trim()) {
-        projectName = tituloMatch[1].trim();
-      } else if (localMatch?.[1]?.trim()) {
-        projectName = localMatch[1].trim();
-      } else if (chatName) {
-        projectName = chatName.replace(/^RDO[\s-]*/i, "").trim() || projectName;
-      }
-      projectName = buildProjectName(omNumber, projectName);
+      const fallbackTitle =
+        omTitleEarly ||
+        detEarly.atividade ||
+        (mappedGroupName ? mappedGroupName.replace(/^RDO[\s-]*/i, "").trim() : "");
+      const projectName = buildProjectName(omNumberEarly, fallbackTitle);
 
-      const today = new Date().toISOString().split("T")[0];
-      const { data: newProject, error: projErr } = await supabase
-        .from("projects")
-        .insert({
-          site_id: siteId,
-          company_id: siteData.company_id,
-          name: projectName,
-          status: "in_progress",
-          start_date: today,
-        })
-        .select("id, name")
-        .single();
-
-      if (projErr || !newProject) {
-        console.error("Failed to auto-create project:", projErr);
+      if (!projectName) {
         await supabase.from("whatsapp_rdo_logs").insert({
           message_id: messageId, group_id: groupId, sender_phone: senderPhone, sender_name: senderName,
-          status: "error", error_message: `Erro ao criar atividade automaticamente: ${projErr?.message}`, raw_payload: payload,
+          status: "error",
+          error_message: "Não foi possível determinar a atividade (sem número e sem título de OM)",
+          raw_payload: payload,
         });
-        return new Response(JSON.stringify({ status: "error", reason: "auto_create_failed" }), {
+        return new Response(JSON.stringify({ status: "error", reason: "no_activity_identity" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // Push to activeProjects so rest of flow works
-      activeProjects = [{ id: newProject.id, name: newProject.name, description: null, code: null, contract_number: null }];
-      autoCreatedProject = true;
-      console.log(`Auto-created project "${newProject.name}" (${newProject.id})`);
-    }
+      // Idempotência: reaproveita atividade com o mesmo nome padronizado
+      const { data: sameName } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("site_id", siteId)
+        .ilike("name", projectName)
+        .limit(1)
+        .maybeSingle();
 
-    // Determine project ID
-    let projectId: string;
-    if (activeProjects.length === 1) {
-      projectId = activeProjects[0].id;
-    } else {
-      // Try deterministic matching first (by code, contract, keywords)
-      const deterministicId = matchProjectDeterministic(messageText, activeProjects);
-      if (deterministicId) {
-        projectId = deterministicId;
+      if (sameName?.id) {
+        routedId = sameName.id;
+        console.log(`Reusing existing project with same name: ${projectName}`);
       } else {
-        // Enrich projects with RDO stats for better AI routing
-        const enrichedProjects = await Promise.all(activeProjects.map(async (p) => {
-          const { count } = await supabase
-            .from("reports")
-            .select("*", { count: "exact", head: true })
-            .eq("project_id", p.id);
-          const { data: lastReport } = await supabase
-            .from("reports")
-            .select("date")
-            .eq("project_id", p.id)
-            .order("date", { ascending: false })
-            .limit(1)
-            .single();
-          return {
-            ...p,
-            rdo_count: count || 0,
-            last_rdo_date: lastReport?.date || null,
-          };
-        }));
+        const today = new Date().toISOString().split("T")[0];
+        const { data: newProject, error: projErr } = await supabase
+          .from("projects")
+          .insert({
+            site_id: siteId,
+            company_id: siteData.company_id,
+            name: projectName,
+            status: "in_progress",
+            start_date: today,
+          })
+          .select("id, name")
+          .single();
 
-        console.log(`Found ${activeProjects.length} active projects for site, calling AI to route...`);
-        const aiResult = await identifyProjectWithAI(messageText, enrichedProjects);
-        if (aiResult) {
-          projectId = aiResult;
-        } else {
+        if (projErr || !newProject) {
+          console.error("Failed to auto-create project:", projErr);
           await supabase.from("whatsapp_rdo_logs").insert({
             message_id: messageId, group_id: groupId, sender_phone: senderPhone, sender_name: senderName,
-            status: "error", error_message: "IA não conseguiu identificar a atividade (múltiplas ativas)", raw_payload: payload,
+            status: "error", error_message: `Erro ao criar atividade automaticamente: ${projErr?.message}`, raw_payload: payload,
           });
-          // Bot silencioso: não envia resposta no grupo.
-          return new Response(JSON.stringify({ status: "error", reason: "multiple_projects_unresolved" }), {
+          return new Response(JSON.stringify({ status: "error", reason: "auto_create_failed" }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
+
+        routedId = newProject.id;
+        autoCreatedProject = true;
+        console.log(`Auto-created project "${newProject.name}" (${newProject.id})`);
       }
     }
+
+    const projectId: string = routedId as string;
 
     // Log the incoming message
     const { data: logEntry } = await supabase
@@ -1606,11 +1613,11 @@ Deno.serve(async (req) => {
       await upsertAttendance(supabase, reportId, parsedData, allProfiles, false, preferredIds);
     }
 
-    // Atualiza o nome da atividade com o Título da OM extraído pela IA (nunca com o local)
-    if (parsedData.tituloOM || parsedData.tituloTrabalho || parsedData.localAtividade) {
-      const rawTitle = String(parsedData.tituloOM || parsedData.tituloTrabalho || parsedData.localAtividade).trim();
+    // Atualiza o nome da atividade recém-criada com o Título da OM (nunca com o local)
+    if (autoCreatedProject && (parsedData.tituloOM || parsedData.tituloTrabalho)) {
+      const rawTitle = String(parsedData.tituloOM || parsedData.tituloTrabalho).trim();
       const omTitle = buildProjectName(sanitizeOmNumber(parsedData.numeroOM), rawTitle);
-      if (omTitle && autoCreatedProject) {
+      if (omTitle) {
         const { error: nameErr } = await supabase
           .from("projects")
           .update({ name: omTitle })
