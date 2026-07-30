@@ -677,6 +677,9 @@ export default function ProjectCalendar() {
     return `/reports/create/${projectId}?${params.toString()}`;
   };
 
+  // Estado enviado ao formulário para que o botão "Voltar" retorne a esta unidade
+  const newReportState = { from: `/projects/${projectId}${window.location.search}` };
+
   const latestReport = reports[0];
 
   if (isLoadingProject) {
@@ -730,7 +733,7 @@ export default function ProjectCalendar() {
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-2">
         <Button asChild size="sm" className="gap-2">
-          <Link to={getNewReportUrl()}>
+          <Link to={getNewReportUrl()} state={newReportState}>
             <Plus className="h-4 w-4" />
             Novo RDO
           </Link>
@@ -960,7 +963,7 @@ export default function ProjectCalendar() {
                         setSelectedDate(isSelected ? null : day);
                       }
                     } else {
-                      navigate(getNewReportUrl(day));
+                      navigate(getNewReportUrl(day), { state: newReportState });
                     }
                   }}
                   className={cn(
@@ -1059,7 +1062,7 @@ export default function ProjectCalendar() {
               <CardTitle className="text-base">Últimos Relatórios</CardTitle>
               {latestReport && (
                 <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" asChild>
-                  <Link to={getNewReportUrl(undefined, latestReport.id)}>
+                  <Link to={getNewReportUrl(undefined, latestReport.id)} state={newReportState}>
                     <Copy className="h-3 w-3" />
                     Copiar último
                   </Link>
