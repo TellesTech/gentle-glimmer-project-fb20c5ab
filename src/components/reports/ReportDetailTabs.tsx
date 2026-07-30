@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
@@ -24,15 +24,12 @@ interface ReportDetailTabsProps {
 
 export function ReportDetailTabs({ siblings, activeReportId, projectId, reportDate, onDuplicate }: ReportDetailTabsProps) {
   const navigate = useNavigate();
-  const location = useLocation();
   const [popoverOpen, setPopoverOpen] = useState(false);
 
   const handleNewBlank = () => {
     setPopoverOpen(false);
-    const params = new URLSearchParams();
-    if (reportDate) params.set('date', reportDate);
-    navigate(`/reports/create/${projectId}?${params.toString()}`, {
-      state: { from: `${location.pathname}${location.search}` },
+    navigate(`/reports/create/${projectId}`, {
+      state: { date: reportDate },
     });
   };
 

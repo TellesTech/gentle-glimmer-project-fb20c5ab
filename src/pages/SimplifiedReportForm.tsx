@@ -78,9 +78,6 @@ export default function SimplifiedReportForm() {
   const tabsHook = useReportTabs(projectId || '', dateFromUrl);
   const showTabs = !isEditMode && !!projectId;
 
-  // Origem da navegação (para o botão Voltar retornar à página anterior correta)
-  const returnTo = (navigationState as any)?.from as string | undefined;
-
   // Navigation blocker state
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
@@ -192,10 +189,6 @@ export default function SimplifiedReportForm() {
         teamId: teamData?.id || null,
         teamName: teamData?.name || null,
       } : null);
-
-  // Destino do botão "Voltar": prioriza a origem da navegação, senão a unidade/projeto atual
-  const contextProjectId = projectId || (existingReport as any)?.project_id || selection?.projectId;
-  const backTarget = returnTo || (contextProjectId ? `/projects/${contextProjectId}` : '/reports');
 
   // Build initial form data from existing report or duplicated data (for edit mode only)
   const editModeInitialData: ReportFormData | undefined = existingReport ? {
@@ -516,7 +509,7 @@ export default function SimplifiedReportForm() {
         }
       }
       
-      navigate(`/reports/${report.id}`, { replace: true, state: { from: backTarget } });
+      navigate(`/reports/${report.id}`, { replace: true });
     },
     onError: (error) => {
       console.error('Error creating report:', error);
@@ -721,7 +714,7 @@ export default function SimplifiedReportForm() {
       queryClient.invalidateQueries({ queryKey: ['reports'] });
       queryClient.invalidateQueries({ queryKey: ['report', reportId] });
       toast.success(status === 'draft' ? 'Rascunho salvo!' : 'Relatório atualizado!');
-      navigate(`/reports/${report.id}`, { replace: true, state: { from: backTarget } });
+      navigate(`/reports/${report.id}`, { replace: true });
     },
     onError: (error) => {
       console.error('Error updating report:', error);
@@ -746,7 +739,7 @@ export default function SimplifiedReportForm() {
     }
     
     if (target === 'back') {
-      navigate(backTarget);
+      navigate(-1);
     }
   };
 

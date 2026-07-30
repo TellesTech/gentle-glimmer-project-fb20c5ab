@@ -260,202 +260,16 @@ function matchCollaborator(
 
 const UAZAPI_BASE_URL = "https://chatwees.uazapi.com";
 
-const INVALID_OM_VALUES = ["na", "n/a", "n.a", "null", "nao informado", "não informado", "-", "--", "sem om", "sem os", "nao se aplica", "não se aplica", "0", ""];
+const INVALID_OM_VALUES = ["na", "n/a", "n.a", "null", "nao informado", "não informado", "-", "--", "sem om", "0", ""];
 
-/**
- * Rótulos/seções do modelo de RDO do WhatsApp que NUNCA podem virar título de OM ou local.
- * Evita que um campo em branco ("Título da OM:") capture a linha seguinte
- * (ex.: "🕐 Registro de Horários") e crie um card errado.
- */
-const RDO_SECTION_KEYWORDS = [
-  "registro de hor", "atividades executadas", "atividade executada", "observa",
-  "equipe de trabalho", "hor[áa]rio de trabalho", "faixa de r[áa]dio", "chegada",
-  "libera[çc][ãa]o", "in[íi]cio", "t[ée]rmino", "data", "relat[óo]rio di[áa]rio",
-  "ponto de", "dds", "efetivo", "n[ºo°]? ?da om", "t[íi]tulo da om", "local",
-  "execu[çc][ãa]o de bloqueio", "clima", "condi[çc][õo]es",
-];
-
-function looksLikeSectionLabel(value: string): boolean {
-  const v = value
-    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, "")
-    .replace(/[*_~`]/g, "")
-    .trim()
-    .toLowerCase();
-  if (!v) return true;
-  return RDO_SECTION_KEYWORDS.some((k) => new RegExp(`^${k}\\b`, "i").test(v));
-}
-
-/**
- * Devolve o número da OM/OS limpo (somente o código), ou null quando for placeholder.
- * Ex.: "A 900035606252" → "900035606252"; "OM 4502365884" → "4502365884";
- *      "900036405278 E 900036405279" → "900036405278" (o primeiro código é a chave do card).
- */
+/** Devolve o número da OM limpo, ou null quando for placeholder ("NA", "N/A", "null"...). */
 function sanitizeOmNumber(value: unknown): string | null {
-  let v = String(value ?? "").trim();
-  if (!v) return null;
-  // remove prefixos textuais "OM", "O.M.", "OS", "O.S.", "Nº", "N°", "ordem..."
-  v = v.replace(/^(ordem\s+de\s+(manuten[çc][ãa]o|servi[çc]o)|o\.?\s?[ms]\.?|o\.?\s?s\.?|n[ºo°]?\.?)\s*[:\-]?\s*/i, "").trim();
+  const v = String(value ?? "").trim();
   if (INVALID_OM_VALUES.includes(v.toLowerCase())) return null;
-  // pega o primeiro código com 4+ caracteres alfanuméricos (ignora "E", "/", " e ")
-  const codeMatch = v.match(/\d[\w./-]{3,}/);
-  if (codeMatch) {
-    return codeMatch[0].replace(/[.\-/]+$/, "");
-  }
-  if (INVALID_OM_VALUES.includes(v.toLowerCase()) || !/\d/.test(v)) return null;
-  // códigos muito curtos (ex.: "13" da faixa de rádio) não são OM válidas
-  if (v.replace(/\D/g, "").length < 4) return null;
   return v;
 }
 
-/**
- * Título canônico da OM/OS: se essa OM já existe no sistema, reaproveita o título já usado
- * para que TODOS os RDOs da mesma OM caiam no MESMO card, sem variações de escrita.
- */
-async function resolveCanonicalOmTitle(
-  supabase: any,
-  omNumber: string | null,
-  newTitle: string | null
-): Promise<string | null> {
-  const clean = (newTitle || "").trim().replace(/\s+/g, " ") || null;
-  if (!omNumber) return clean;
-  try {
-    const { data } = await supabase
-      .from("reports")
-      .select("maintenance_order_title")
-      .eq("maintenance_order_number", omNumber)
-      .not("maintenance_order_title", "is", null)
-      .order("created_at", { ascending: true })
-      .limit(1);
-    const existing = data?.[0]?.maintenance_order_title?.trim();
-    if (existing) {
-      console.log(`[OM] Reutilizando título canônico da OM ${omNumber}: "${existing}" (recebido: "${clean}")`);
-      return existing;
-    }
-  } catch (e) {
-    console.error("[OM] Falha ao buscar título canônico:", e);
-  }
-  return clean;
-}
-
 /** Nome padronizado da atividade: "OM 900037786367 — Título" (sem prefixo quando não há número válido). */
-/** Chave normalizada de título (sem acentos/pontuação) usada para casar OMs iguais. */
-function normalizeTitleKey(value: unknown): string {
-  return String(value ?? "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-/**
- * Quando o RDO chega SEM número de OM, tenta herdar o número de um RDO já existente
- * no mesmo projeto/unidade com o MESMO título de OM — evita cards "SEM Nº DE OM"
- * duplicando uma OM que já existe no sistema.
- */
-async function inheritOmNumberByTitle(
-  supabase: any,
-  projectId: string,
-  title: string | null
-): Promise<string | null> {
-  const key = normalizeTitleKey(title);
-  if (!key) return null;
-  try {
-    const { data } = await supabase
-      .from("reports")
-      .select("maintenance_order_number, maintenance_order_title, project_id")
-      .eq("project_id", projectId)
-      .not("maintenance_order_number", "is", null)
-      .order("created_at", { ascending: true })
-      .limit(200);
-    const hit = (data || []).find(
-      (r: any) => normalizeTitleKey(r.maintenance_order_title) === key
-    );
-    if (hit?.maintenance_order_number) {
-      console.log(`[OM] Número herdado pelo título "${title}": ${hit.maintenance_order_number}`);
-      return String(hit.maintenance_order_number);
-    }
-  } catch (e) {
-    console.error("[OM] Falha ao herdar número por título:", e);
-  }
-  return null;
-}
-
-/**
- * Extração determinística (regex) do número e do título da OM/OS direto do texto da mensagem.
- * Usada como REDE DE SEGURANÇA quando a IA não devolve numeroOM/tituloOM — sem OM os RDOs
- * caem em cards "SEM Nº DE OM" separados.
- */
-function extractOmFromText(text: string): { number: string | null; title: string | null } {
-  const t = String(text || "");
-  // exige dígito e não atravessa quebra de linha (evita capturar o "Título da OM" quando o número vem vazio)
-  // aceita rótulos com parênteses/observação: "Nº da OM (obrigatório): 12345"
-  const numMatch = t.match(
-    /\b(?:o\.?\s?m\.?|o\.?\s?s\.?|ordem\s+de\s+(?:manuten[çc][ãa]o|servi[çc]o))\b[ \t]*(?:\([^)\n]*\))?[ \t]*[:\-]?[ \t]*(\d[\w./-]*)/i
-  );
-  let number = sanitizeOmNumber(numMatch?.[1]);
-  // Rótulo do título tolerante a emojis e a "(obrigatório)": "📄 Título da OM (obrigatório):"
-  // STRICT: valor precisa estar na MESMA linha do rótulo — campo vazio deve permanecer vazio.
-  let title = extractLabeledValue(t, /t[íi]tulo\s*(?:d[ao]\s*)?(?:om|os)\b[ \t]*(?:\([^)\n]*\))?/i, true);
-  if (title) {
-    title = title
-      .replace(/[*_~`]/g, "")
-      .replace(/^[\s\-–—:]+/, "")
-      .replace(/\s+/g, " ")
-      .replace(/[.\s]+$/, "")
-      .trim();
-    if (!title || INVALID_OM_VALUES.includes(title.toLowerCase()) || looksLikeSectionLabel(title)) title = null;
-  }
-  // Muitos grupos usam SOMENTE "Título da OM" e escrevem o número dentro dele:
-  // "Título da OM: 22461261 - Transportadora 09" → número 22461261 + título "Transportadora 09"
-  if (title) {
-    const inTitle = title.match(/^\s*(?:n[ºo°]?\.?\s*)?(?:o\.?\s?[ms]\.?|o\.?\s?s\.?)?\s*[:\-]?\s*(\d{5,})\s*[-–—:/]?\s*(.*)$/i);
-    if (inTitle) {
-      const cand = sanitizeOmNumber(inTitle[1]);
-      const rest = (inTitle[2] || "").trim();
-      if (cand && rest) {
-        if (!number) number = cand;
-        title = rest;
-      }
-    }
-  }
-  return { number, title };
-}
-
-/**
- * Lê o valor de um campo rotulado ("Rótulo: valor").
- * Se o valor estiver na mesma linha, usa-o; se a linha estiver vazia, usa a próxima linha
- * SOMENTE quando ela não for outro rótulo (evita puxar "🚨 Ponto de Ambulância:" como valor).
- */
-function extractLabeledValue(text: string, label: RegExp, sameLineOnly = false): string | null {
-  const re = new RegExp(`${label.source}[ \\t]*[:\\-][ \\t]*([^\\n]*)((?:\\n[ \\t]*)*)([^\\n]*)`, "i");
-  const m = text.match(re);
-  if (!m) return null;
-  const sameLine = (m[1] || "").trim();
-  if (sameLine) return sameLine;
-  if (sameLineOnly) return null;
-  const next = (m[3] || "").trim();
-  if (!next) return null;
-  // outra linha rotulada (ex.: "🚨 Ponto de Encontro:") não é o valor deste campo
-  if (/^[^:]{0,45}:/.test(next)) return null;
-  // linha seguinte que é uma seção do modelo de RDO nunca é o valor do campo
-  if (looksLikeSectionLabel(next)) return null;
-  return next;
-}
-
-/** Local da atividade extraído do texto bruto (rede de segurança quando a IA não devolve). */
-function extractLocationFromText(text: string): string | null {
-  const value = extractLabeledValue(
-    text,
-    /local\s*(?:d[ao]\s*)?(?:atividade|obra|trabalho|servi[çc]o)?\b[ \t]*(?:\([^)\n]*\))?/i,
-    true
-  ) || extractLabeledValue(text, /(?:[áa]rea|sub[áa]rea|setor|regi[ãa]o)\b/i, true);
-  if (!value) return null;
-  const clean = value.replace(/[*_~`]/g, "").replace(/\s+/g, " ").replace(/[.\s]+$/, "").trim();
-  if (!clean || INVALID_OM_VALUES.includes(clean.toLowerCase()) || looksLikeSectionLabel(clean)) return null;
-  return clean;
-}
-
 function buildProjectName(omNumber: string | null, title: string): string {
   const cleanTitle = (title || "").trim().replace(/\s+/g, " ");
   const base = omNumber ? `OM ${omNumber} — ${cleanTitle}`.trim() : cleanTitle;
@@ -471,17 +285,13 @@ async function attachPendingPhotos(
   uazapiToken: string | null
 ) {
   try {
-    // Janela alinhada com a expiração do health-check (2h) + resgate de fotos já
-    // marcadas como "expired": antes só olhava 5 min, então quase toda foto enviada
-    // antes do texto do RDO acabava expirando sem nunca ser anexada.
-    const windowStart = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
     let query = supabase
       .from("whatsapp_rdo_logs")
       .select("id, raw_payload")
-      .in("status", ["pending_photo", "expired"])
-      .is("report_id", null)
-      .gt("created_at", windowStart);
+      .eq("status", "pending_photo")
+      .gt("created_at", fiveMinAgo);
 
     if (groupId) {
       query = query.eq("group_id", groupId);
@@ -491,19 +301,7 @@ async function attachPendingPhotos(
       return;
     }
 
-    let { data: pendingPhotos } = await query.order("created_at", { ascending: true });
-    // Fallback: foto enviada no privado pelo mesmo remetente
-    if ((!pendingPhotos || pendingPhotos.length === 0) && groupId && senderPhone) {
-      const { data: bySender } = await supabase
-        .from("whatsapp_rdo_logs")
-        .select("id, raw_payload")
-        .in("status", ["pending_photo", "expired"])
-        .is("report_id", null)
-        .eq("sender_phone", senderPhone)
-        .gt("created_at", windowStart)
-        .order("created_at", { ascending: true });
-      pendingPhotos = bySender || [];
-    }
+    const { data: pendingPhotos } = await query.order("created_at", { ascending: true });
     if (!pendingPhotos?.length) return;
 
     console.log(`Found ${pendingPhotos.length} pending photos to attach to RDO #${rdoCode}`);
@@ -922,12 +720,15 @@ function buildReportData(
   projectId: string,
   createdBy: string | null
 ): Record<string, any> {
-  // A data informada na mensagem é SEMPRE respeitada (sem "corrigir" o ano).
-  // Só cai para hoje quando a mensagem realmente não traz data.
   let reportDate = parsedData.data || new Date().toISOString().split("T")[0];
-  if (parsedData.data && !/^\d{4}-\d{2}-\d{2}$/.test(String(parsedData.data))) {
-    console.warn(`[DATA] Formato inesperado "${parsedData.data}" — usando data de hoje`);
-    reportDate = new Date().toISOString().split("T")[0];
+  // Force current year if parsed year differs (e.g. user typed 2025 but we're in 2026)
+  if (parsedData.data) {
+    const [year, month, day] = parsedData.data.split("-").map(Number);
+    const currentYear = new Date().getFullYear();
+    if (year !== currentYear) {
+      reportDate = `${currentYear}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      console.log(`Date corrected from ${parsedData.data} to ${reportDate}`);
+    }
   }
 
   // Map turno to shift enum, with fallback inferred from start time and title keywords
@@ -963,9 +764,7 @@ function buildReportData(
     start_time: parsedData.horaInicio || null,
     end_time: parsedData.horaFim || null,
     maintenance_order_number: sanitizeOmNumber(parsedData.numeroOM),
-    // Somente o "Título da OM" oficial. `tituloTrabalho` (texto das atividades) é usado
-    // apenas como último recurso, depois do local — evita cards com nome de atividade.
-    maintenance_order_title: parsedData.tituloOM || null,
+    maintenance_order_title: parsedData.tituloOM || parsedData.tituloTrabalho || null,
     blockage_status: parsedData.bloqueio || null,
     supervisor_name: parsedData.supervisor || null,
     technical_responsible_name: parsedData.responsavelTecnico || null,
@@ -1274,13 +1073,6 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (!recentRdo?.report_id) {
-        // Fotos de grupos NÃO mapeados (ex.: "ABASTECIMENTO FROTA WEES") não são RDO:
-        // antes eram salvas como pending_photo e enchiam o log de registros "expired".
-        if (isGroup && !scopeSiteId) {
-          return new Response(JSON.stringify({ status: "ignored", reason: "photo_from_unmapped_group" }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
         // No recent RDO found — save as pending photo for retroactive attachment
         await supabase.from("whatsapp_rdo_logs").insert({
           message_id: messageId,
@@ -1446,19 +1238,21 @@ Deno.serve(async (req) => {
       // Extract project name from message text.
       // Prioridade: Título da OM → título/serviço → local → nome do grupo.
       let projectName = "Atividade criada via WhatsApp";
-      // 1. "Título da OM (obrigatório):" — tolera emoji, parênteses e valor na linha seguinte
-      const omFromRaw = extractOmFromText(messageText);
+      // 1. "Título da OM:" (mesma linha ou linha seguinte)
+      const tituloOmMatch = messageText.match(/T[íi]tulo\s*(?:da\s*)?OM[:\s]*\n?\s*(.+)/i);
       // 2. "Título:" / "Serviço:" / "Atividade Principal:"
-      const tituloAlt = extractLabeledValue(messageText, /(?:t[íi]tulo|atividade principal|servi[çc]o|descri[çc][ãa]o da om)\b/i, true);
+      const tituloMatch = messageText.match(/(?:T[íi]tulo|Atividade Principal|Servi[çc]o|Descri[çc][ãa]o da OM)[:\s]*\n?\s*(.+)/i);
       // 3. Local / área (último recurso antes do nome do grupo)
-      const localAlt = extractLocationFromText(messageText);
-      const omNumber = omFromRaw.number;
-      if (omFromRaw.title) {
-        projectName = omFromRaw.title;
-      } else if (tituloAlt) {
-        projectName = tituloAlt;
-      } else if (localAlt) {
-        projectName = localAlt;
+      const localMatch = messageText.match(/(?:Local\s*(?:da\s*(?:atividade|obra|trabalho))?|[Áá]rea|Sub[áa]rea|Setor|Regi[ãa]o|Unidade)[:\s]*\n?\s*(.+)/i);
+      // Número da OM (para compor o nome final)
+      const numeroOmMatch = messageText.match(/(?:N[ºo°]?\.?\s*(?:da\s*)?OM|OM|O\.M\.|Ordem de Manuten[çc][ãa]o)[:\s]*\n?\s*([\w./-]+)/i);
+      const omNumber = sanitizeOmNumber(numeroOmMatch?.[1]);
+      if (tituloOmMatch?.[1]?.trim()) {
+        projectName = tituloOmMatch[1].trim();
+      } else if (tituloMatch?.[1]?.trim()) {
+        projectName = tituloMatch[1].trim();
+      } else if (localMatch?.[1]?.trim()) {
+        projectName = localMatch[1].trim();
       } else if (chatName) {
         projectName = chatName.replace(/^RDO[\s-]*/i, "").trim() || projectName;
       }
@@ -1696,13 +1490,12 @@ Deno.serve(async (req) => {
 
     // Deterministic date extraction from raw message — overrides AI to avoid hallucinations
     // Supports: DD/MM/YYYY, DD/MM/YY, DD.MM.YYYY, DD.MM.YY, DD-MM-YY, DD-MM-YYYY
-    // Aceita "Data: 27/07/2026", "*Data* 27-07-26", "📅 Data : 27.07.2026" e "Data: 27/07" (sem ano)
-    const dateRegex = /(?:data|dia)\s*[*_~`]*\s*[:：]?\s*[*_~`]*\s*(\d{1,2})[\/.\-](\d{1,2})(?:[\/.\-](\d{2,4}))?/i;
+    const dateRegex = /(?:data|dia)\s*[:：]?\s*(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/i;
     const dateMatch = messageText.match(dateRegex);
     if (dateMatch) {
       const day = parseInt(dateMatch[1], 10);
       const month = parseInt(dateMatch[2], 10);
-      let year = dateMatch[3] ? parseInt(dateMatch[3], 10) : new Date().getFullYear();
+      let year = parseInt(dateMatch[3], 10);
       if (year < 100) year += 2000;
       if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 2000 && year <= 2100) {
         const extracted = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
@@ -1718,48 +1511,6 @@ Deno.serve(async (req) => {
 
     // Build report data using correct field mapping (needed early to know resolved shift)
     const reportData = buildReportData(parsedData, projectId, createdBy);
-    // Rede de segurança: se a IA não trouxe a OM, extrai por regex do texto original
-    const omFromText = extractOmFromText(messageText);
-    if (!reportData.maintenance_order_number && omFromText.number) {
-      console.log(`[OM] Número recuperado por regex: ${omFromText.number}`);
-      reportData.maintenance_order_number = omFromText.number;
-    }
-    if (!reportData.maintenance_order_title && omFromText.title) {
-      reportData.maintenance_order_title = omFromText.title;
-    }
-    // Número da OM pode vir dentro do próprio "Título da OM" (grupos que não têm campo de número)
-    if (!reportData.maintenance_order_number && omFromText.number) {
-      reportData.maintenance_order_number = omFromText.number;
-    }
-    // Local da atividade: garante que o card mostre o local correto mesmo se a IA falhar
-    if (!reportData.location || !String(reportData.location).trim()) {
-      const localFromText = extractLocationFromText(messageText);
-      if (localFromText) {
-        console.log(`[LOCAL] Recuperado por regex: ${localFromText}`);
-        reportData.location = localFromText;
-      }
-    }
-    // Garante que todos os RDOs da mesma OM/OS usem exatamente o mesmo título (mesmo card)
-    reportData.maintenance_order_title = await resolveCanonicalOmTitle(
-      supabase,
-      reportData.maintenance_order_number,
-      reportData.maintenance_order_title
-    );
-    // Atividade e Local da Atividade são entidades distintas: NUNCA viram título da OM.
-    // Se o "Título da OM" vier em branco, o RDO fica sem título (card "SEM Nº DE OM"/sem título).
-    if (!reportData.maintenance_order_title || !String(reportData.maintenance_order_title).trim()) {
-      reportData.maintenance_order_title = null;
-      console.log("[OM] Título da OM ausente — não será substituído por local/atividade.");
-    }
-    // Sem número de OM na mensagem: herda de um RDO já existente com o mesmo título de OM
-    if (!reportData.maintenance_order_number) {
-      const inherited = await inheritOmNumberByTitle(
-        supabase,
-        projectId,
-        reportData.maintenance_order_title
-      );
-      if (inherited) reportData.maintenance_order_number = inherited;
-    }
     const resolvedShift = reportData.shift;
 
     // Check for existing report (same sender + date + group + SHIFT)
@@ -1776,35 +1527,21 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(10);
 
-    // A OM também faz parte da chave: duas OMs diferentes no mesmo dia/turno são RDOs
-    // distintos e NUNCA podem sobrescrever um ao outro (era o que trocava data/título).
-    const omKey = (num: string | null, title: string | null) =>
-      (num && String(num).trim()) ||
-      (title ? String(title).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim() : "");
-    const currentOmKey = omKey(reportData.maintenance_order_number, reportData.maintenance_order_title);
-
     if (existingLogs && existingLogs.length > 0) {
       const candidateIds = existingLogs.map((l: any) => l.report_id).filter(Boolean);
       if (candidateIds.length > 0) {
         const { data: candidateReports } = await supabase
           .from("reports")
-          .select("id, shift, date, maintenance_order_number, maintenance_order_title")
+          .select("id, shift")
           .in("id", candidateIds)
-          .eq("shift", resolvedShift)
-          .eq("date", reportDate);
-        const sameOm = (candidateReports || []).filter(
-          (r: any) => omKey(r.maintenance_order_number, r.maintenance_order_title) === currentOmKey
-        );
-        if (sameOm.length > 0) {
-          const matchSet = new Set(sameOm.map((r: any) => r.id));
+          .eq("shift", resolvedShift);
+        if (candidateReports && candidateReports.length > 0) {
+          // Preserve order from the logs query (most recent first)
+          const matchSet = new Set(candidateReports.map((r: any) => r.id));
           const ordered = candidateIds.find((id: string) => matchSet.has(id));
-          if (ordered) existingReportId = ordered;
-        } else if (isCorrection && (candidateReports || []).length > 0) {
-          // Mensagem explícita de correção: atualiza o RDO mais recente do mesmo dia/turno
-          const matchSet = new Set((candidateReports || []).map((r: any) => r.id));
-          existingReportId = candidateIds.find((id: string) => matchSet.has(id)) || null;
-        } else {
-          console.log(`[DEDUP] OM diferente no mesmo dia/turno (key="${currentOmKey}") — criando novo RDO`);
+          if (ordered && (isCorrection || true)) {
+            existingReportId = ordered;
+          }
         }
       }
     }
@@ -1869,9 +1606,9 @@ Deno.serve(async (req) => {
       await upsertAttendance(supabase, reportId, parsedData, allProfiles, false, preferredIds);
     }
 
-    // Atualiza o nome do projeto SOMENTE com o Título da OM (nunca com atividade ou local)
-    if (parsedData.tituloOM) {
-      const rawTitle = String(parsedData.tituloOM).trim();
+    // Atualiza o nome da atividade com o Título da OM extraído pela IA (nunca com o local)
+    if (parsedData.tituloOM || parsedData.tituloTrabalho || parsedData.localAtividade) {
+      const rawTitle = String(parsedData.tituloOM || parsedData.tituloTrabalho || parsedData.localAtividade).trim();
       const omTitle = buildProjectName(sanitizeOmNumber(parsedData.numeroOM), rawTitle);
       if (omTitle && autoCreatedProject) {
         const { error: nameErr } = await supabase

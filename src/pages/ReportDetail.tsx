@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -65,7 +65,6 @@ const IMPACT_CONFIG: Record<ImpactLevel, { label: string; color: string; badge: 
 export default function ReportDetail() {
   const { id: reportId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const routerLocation = useLocation();
   const { user, role } = useAuth();
   
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
@@ -523,20 +522,6 @@ export default function ReportDetail() {
     }
   };
 
-  const handleBack = () => {
-    const from = (routerLocation.state as any)?.from as string | undefined;
-    if (from) {
-      navigate(from);
-      return;
-    }
-    const historyIdx = (window.history.state as any)?.idx;
-    if (typeof historyIdx === 'number' && historyIdx > 0) {
-      navigate(-1);
-      return;
-    }
-    navigate(report.project_id ? `/projects/${report.project_id}` : '/reports');
-  };
-
   const handleDuplicate = () => {
     // Dados do formulário (sem fotos, progresso zerado)
     const duplicatedFormData = {
@@ -582,7 +567,6 @@ export default function ReportDetail() {
       state: {
         ...selectionData,
         duplicatedData: duplicatedFormData,
-        from: `/reports/${report.id}`,
       },
     });
   };
@@ -774,7 +758,7 @@ export default function ReportDetail() {
   return (
     <div className="space-y-6 pb-28 md:pb-6">
       {/* Back Button */}
-      <Button variant="ghost" size="sm" onClick={handleBack} className="gap-2">
+      <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-2">
         <ChevronLeft className="h-4 w-4" />
         Voltar
       </Button>
@@ -1554,7 +1538,7 @@ export default function ReportDetail() {
           
           {/* Grupo de Ações de Edição - Centralizado */}
           <div className="flex gap-1.5 sm:gap-2 flex-wrap justify-center w-full">
-            <Button variant="outline" size="sm" className="min-w-0 px-2 sm:px-3" onClick={handleBack}>
+            <Button variant="outline" size="sm" className="min-w-0 px-2 sm:px-3" onClick={() => navigate(-1)}>
               <ChevronLeft className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Voltar</span>
             </Button>
