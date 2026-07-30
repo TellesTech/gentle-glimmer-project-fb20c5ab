@@ -523,6 +523,20 @@ export default function ReportDetail() {
     }
   };
 
+  const handleBack = () => {
+    const from = (routerLocation.state as any)?.from as string | undefined;
+    if (from) {
+      navigate(from);
+      return;
+    }
+    const historyIdx = (window.history.state as any)?.idx;
+    if (typeof historyIdx === 'number' && historyIdx > 0) {
+      navigate(-1);
+      return;
+    }
+    navigate(report.project_id ? `/projects/${report.project_id}` : '/reports');
+  };
+
   const handleDuplicate = () => {
     // Dados do formulário (sem fotos, progresso zerado)
     const duplicatedFormData = {
@@ -568,6 +582,7 @@ export default function ReportDetail() {
       state: {
         ...selectionData,
         duplicatedData: duplicatedFormData,
+        from: `/reports/${report.id}`,
       },
     });
   };
