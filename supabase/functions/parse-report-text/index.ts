@@ -282,6 +282,14 @@ Analise o texto e extraia os seguintes campos (retorne null se não encontrar):
     "OM 22461261 - Recuperação estrutural" → numeroOM: "22461261", tituloOM: "Recuperação estrutural"
     "Título da OM: Limpeza nas Calhas ADM 07" → tituloOM: "Limpeza nas Calhas ADM 07"
     "Local da Atividade: Convertedores 2 (Aciaria)" → localAtividade: "Convertedores 2 (Aciaria)"
+  MODELO PADRÃO USADO NOS GRUPOS (rótulos podem vir com emoji e observação entre parênteses):
+    "📄 Título da OM (obrigatório): Limpeza da TCM" → tituloOM: "Limpeza da TCM"
+    "📍 Local da Atividade: Pátio de Matérias-Primas" → localAtividade: "Pátio de Matérias-Primas"
+  REGRAS ADICIONAIS OBRIGATÓRIAS PARA ESSE MODELO:
+    * IGNORE emojis e textos entre parênteses no RÓTULO ("(obrigatório)") — eles não fazem parte do valor.
+    * Se o rótulo estiver seguido de nada (campo em branco), retorne null para esse campo. NUNCA use o conteúdo da linha/rótulo seguinte como valor.
+    * Quando NÃO existir campo separado de número e o número vier dentro do próprio título ("Título da OM: 22461261 - Transportadora 09"), separe: numeroOM: "22461261" e tituloOM: "Transportadora 09".
+    * tituloOM é OBRIGATÓRIO quando existir a linha "Título da OM" — nunca deixe null nesse caso e nunca copie o "Local da Atividade" para ele.
 - tituloTrabalho: título ou descrição principal do trabalho/manutenção
 - horarioChegadaLiberador: horário de chegada ao liberador no formato HH:MM (procurar "chegada na sala do liberador:", "chegada liberador:")
 - horarioLiberacao: horário de liberação do bloqueio/documento no formato HH:MM (procurar "liberação da atividade:", "Horário da liberação:")
