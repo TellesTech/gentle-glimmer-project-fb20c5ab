@@ -1088,7 +1088,7 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                     <CardActions
                       id={report.id}
                       type="report"
-                      name={`RDO Nº ${(report.rdo_number ?? 1).toString().padStart(3, '0')}`}
+                      name={`RDO Nº ${seqLabel(report.id)}`}
                       onEdit={() => navigate(`/reports/${report.id}/edit`)}
                     />
                   </div>
@@ -1101,7 +1101,7 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                       <FileText className="h-5 w-5 text-foreground/70" />
                     </div>
                     <span className="text-sm font-semibold text-foreground truncate">
-                      RDO Nº {(report.rdo_number ?? 1).toString().padStart(3, '0')}
+                      RDO Nº {seqLabel(report.id)}
                       {report.maintenance_order_number && (
                         <span className="ml-1.5 text-xs font-normal text-muted-foreground">
                           · OM {report.maintenance_order_number}
