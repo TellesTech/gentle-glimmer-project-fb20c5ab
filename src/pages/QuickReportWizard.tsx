@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,6 +23,11 @@ interface SelectionData {
 
 export default function QuickReportWizard() {
   const navigate = useNavigate();
+  const location = useLocation();
+  // Context passed from the Reports cabinet ("Novo Relatório" in the current unit)
+  const contextFromState = (location.state || null) as
+    | { companyId?: string | null; companyName?: string | null; siteId?: string | null; siteName?: string | null }
+    | null;
   const { role } = useAuth();
   const { companies, primarySiteId, isLoading: isAccessLoading } = useAdminSiteAccess();
 
@@ -51,6 +56,14 @@ export default function QuickReportWizard() {
   });
 
   const initialData = useMemo(() => {
+    if (contextFromState?.siteId && contextFromState?.companyId) {
+      return {
+        companyId: contextFromState.companyId,
+        companyName: contextFromState.companyName || '',
+        siteId: contextFromState.siteId,
+        siteName: contextFromState.siteName || '',
+      };
+    }
     if (role === 'admin') {
       if (companies.length > 1) return undefined;
       if (adminSiteData) {
@@ -64,7 +77,7 @@ export default function QuickReportWizard() {
       }
     }
     return undefined;
-  }, [role, adminSiteData, companies]);
+  }, [role, adminSiteData, companies, contextFromState]);
 
   const handleSelectionComplete = useCallback((data: SelectionData) => {
     // Navigate to simplified report form with selection data
