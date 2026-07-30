@@ -24,6 +24,7 @@ import { StatusBadge, NoActivityBadge, EmptyState } from '@/components/shared';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { BatchExportDialog, DocumentCabinet, SignedDocumentsSection, ReportProgressStepper } from '@/components/reports';
 import type { CabinetBreadcrumbItem } from '@/components/reports';
+import type { CabinetContext } from '@/components/reports/DocumentCabinet';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -102,6 +103,7 @@ export default function Reports() {
   const [viewMode, setViewMode] = useState<'list' | 'cabinet' | 'signed'>('cabinet');
   const [exportProgress, setExportProgress] = useState<BatchExportProgress | null>(null);
   const [cabinetBreadcrumbs, setCabinetBreadcrumbs] = useState<CabinetBreadcrumbItem[]>([]);
+  const [cabinetContext, setCabinetContext] = useState<CabinetContext | null>(null);
 
   // Fetch project IDs for admin's restricted sites
   const { data: adminProjectIds } = useQuery({
@@ -634,7 +636,7 @@ export default function Reports() {
       {viewMode === 'signed' ? (
         <SignedDocumentsSection onClose={() => setViewMode('cabinet')} adminProjectIds={isRestrictedAdmin ? adminProjectIds : undefined} />
       ) : viewMode === 'cabinet' ? (
-        <DocumentCabinet onBreadcrumbChange={setCabinetBreadcrumbs} />
+        <DocumentCabinet onBreadcrumbChange={setCabinetBreadcrumbs} onContextChange={setCabinetContext} />
       ) : (
         <>
           {/* Filters */}
