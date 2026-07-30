@@ -321,12 +321,13 @@ async function resolveCanonicalOmTitle(
 function extractOmFromText(text: string): { number: string | null; title: string | null } {
   const t = String(text || "");
   // exige dígito e não atravessa quebra de linha (evita capturar o "Título da OM" quando o número vem vazio)
+  // aceita rótulos com parênteses/observação: "Nº da OM (obrigatório): 12345"
   const numMatch = t.match(
-    /\b(?:o\.?\s?m\.?|o\.?\s?s\.?|ordem\s+de\s+(?:manuten[çc][ãa]o|servi[çc]o))\b[ \t]*[:\-]?[ \t]*(\d[\w./-]*)/i
+    /\b(?:o\.?\s?m\.?|o\.?\s?s\.?|ordem\s+de\s+(?:manuten[çc][ãa]o|servi[çc]o))\b[ \t]*(?:\([^)\n]*\))?[ \t]*[:\-]?[ \t]*(\d[\w./-]*)/i
   );
-  const number = sanitizeOmNumber(numMatch?.[1]);
-  const titleMatch = t.match(/t[íi]tulo\s*(?:d[ao]\s*)?(?:om|os)\s*[:\-]?\s*\n?\s*(.+)/i);
-  let title = titleMatch?.[1]?.trim() || null;
+  let number = sanitizeOmNumber(numMatch?.[1]);
+  // Rótulo do título tolerante a emojis e a "(obrigatório)": "📄 Título da OM (obrigatório):"
+  let title = extractLabeledValue(t, /t[íi]tulo\s*(?:d[ao]\s*)?(?:om|os)\b[ \t]*(?:\([^)\n]*\))?/i);
   if (title) {
     title = title
       .replace(/[*_~`]/g, "")
@@ -336,7 +337,50 @@ function extractOmFromText(text: string): { number: string | null; title: string
       .trim();
     if (!title || INVALID_OM_VALUES.includes(title.toLowerCase())) title = null;
   }
+  // Muitos grupos usam SOMENTE "Título da OM" e escrevem o número dentro dele:
+  // "Título da OM: 22461261 - Transportadora 09" → número 22461261 + título "Transportadora 09"
+  if (title) {
+    const inTitle = title.match(/^\s*(?:n[ºo°]?\.?\s*)?(?:o\.?\s?[ms]\.?|o\.?\s?s\.?)?\s*[:\-]?\s*(\d{5,})\s*[-–—:/]?\s*(.*)$/i);
+    if (inTitle) {
+      const cand = sanitizeOmNumber(inTitle[1]);
+      const rest = (inTitle[2] || "").trim();
+      if (cand && rest) {
+        if (!number) number = cand;
+        title = rest;
+      }
+    }
+  }
   return { number, title };
+}
+
+/**
+ * Lê o valor de um campo rotulado ("Rótulo: valor").
+ * Se o valor estiver na mesma linha, usa-o; se a linha estiver vazia, usa a próxima linha
+ * SOMENTE quando ela não for outro rótulo (evita puxar "🚨 Ponto de Ambulância:" como valor).
+ */
+function extractLabeledValue(text: string, label: RegExp): string | null {
+  const re = new RegExp(`${label.source}[ \\t]*[:\\-][ \\t]*([^\\n]*)((?:\\n[ \\t]*)*)([^\\n]*)`, "i");
+  const m = text.match(re);
+  if (!m) return null;
+  const sameLine = (m[1] || "").trim();
+  if (sameLine) return sameLine;
+  const next = (m[3] || "").trim();
+  if (!next) return null;
+  // outra linha rotulada (ex.: "🚨 Ponto de Encontro:") não é o valor deste campo
+  if (/^[^:]{0,45}:/.test(next)) return null;
+  return next;
+}
+
+/** Local da atividade extraído do texto bruto (rede de segurança quando a IA não devolve). */
+function extractLocationFromText(text: string): string | null {
+  const value = extractLabeledValue(
+    text,
+    /local\s*(?:d[ao]\s*)?(?:atividade|obra|trabalho|servi[çc]o)?\b[ \t]*(?:\([^)\n]*\))?/i
+  ) || extractLabeledValue(text, /(?:[áa]rea|sub[áa]rea|setor|regi[ãa]o)\b/i);
+  if (!value) return null;
+  const clean = value.replace(/[*_~`]/g, "").replace(/\s+/g, " ").replace(/[.\s]+$/, "").trim();
+  if (!clean || INVALID_OM_VALUES.includes(clean.toLowerCase())) return null;
+  return clean;
 }
 
 function buildProjectName(omNumber: string | null, title: string): string {
