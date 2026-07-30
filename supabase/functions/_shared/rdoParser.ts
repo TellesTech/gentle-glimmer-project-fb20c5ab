@@ -769,7 +769,9 @@ export function mergeParsed(det: RdoParsed, ai: Record<string, any> | null | und
 
   // Saneamentos finais
   merged.numeroOM = sanitizeOmNumber(merged.numeroOM);
-  merged.atividade = det.atividade || merged.atividade || null;
+  merged.atividade = explicit.has("atividade")
+    ? det.atividade
+    : det.atividade || merged.atividade || null;
   if (!merged.tituloTrabalho) merged.tituloTrabalho = det.tituloTrabalho || det.atividade || null;
 
   // tituloOM nunca pode ser substituído pelo local
