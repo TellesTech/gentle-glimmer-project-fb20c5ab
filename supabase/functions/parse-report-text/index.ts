@@ -9,8 +9,13 @@ const INVALID_OM_VALUES = ["na", "n/a", "n.a", "null", "nao informado", "não in
 
 /** Devolve o número da OM limpo, ou null quando for placeholder ("NA", "N/A", "null"...). */
 function sanitizeOmNumber(value: unknown): string | null {
-  const v = String(value ?? "").trim();
+  let v = String(value ?? "").trim();
+  if (!v) return null;
+  v = v.replace(/^(ordem\s+de\s+(manuten[çc][ãa]o|servi[çc]o)|o\.?\s?m\.?|o\.?\s?s\.?|n[ºo°]?\.?)\s*[:\-]?\s*/i, "").trim();
   if (INVALID_OM_VALUES.includes(v.toLowerCase())) return null;
+  const codeMatch = v.match(/\d[\w./-]{3,}/);
+  if (codeMatch) return codeMatch[0].replace(/[.\-/]+$/, "");
+  if (!/\d/.test(v)) return null;
   return v;
 }
 
