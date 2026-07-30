@@ -1229,6 +1229,13 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (!recentRdo?.report_id) {
+        // Fotos de grupos NÃO mapeados (ex.: "ABASTECIMENTO FROTA WEES") não são RDO:
+        // antes eram salvas como pending_photo e enchiam o log de registros "expired".
+        if (isGroup && !scopeSiteId) {
+          return new Response(JSON.stringify({ status: "ignored", reason: "photo_from_unmapped_group" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
         // No recent RDO found — save as pending photo for retroactive attachment
         await supabase.from("whatsapp_rdo_logs").insert({
           message_id: messageId,
