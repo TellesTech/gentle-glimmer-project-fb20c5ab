@@ -50,13 +50,20 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // 1. Logs vinculados a reports, com texto original
-    const { data: logs, error: logErr } = await admin
-      .from("whatsapp_rdo_logs")
-      .select("id, report_id, status, raw_payload, created_at")
-      .not("report_id", "is", null)
-      .limit(3000);
-    if (logErr) throw logErr;
+    // 1. Logs vinculados a reports, com texto original (paginado: PostgREST limita a 1000)
+    const logs: any[] = [];
+    const PAGE = 500;
+    for (let from = 0; from < 6000; from += PAGE) {
+      const { data, error } = await admin
+        .from("whatsapp_rdo_logs")
+        .select("id, report_id, status, raw_payload, created_at")
+        .not("report_id", "is", null)
+        .order("created_at", { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      logs.push(...(data ?? []));
+      if (!data || data.length < PAGE) break;
+    }
 
     // melhor log por report = maior texto
     const bestByReport = new Map<string, { logId: string; status: string; text: string }>();
