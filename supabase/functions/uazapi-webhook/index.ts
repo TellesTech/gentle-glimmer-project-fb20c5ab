@@ -1748,11 +1748,23 @@ Deno.serve(async (req) => {
     // Sem título de OM (campo em branco no WhatsApp): usa o local da atividade
     // para o card ficar identificável — nunca uma linha de seção do modelo.
     if (!reportData.maintenance_order_title || !String(reportData.maintenance_order_title).trim()) {
-      const fallbackTitle = extractLocationFromText(messageText) || (reportData.location ? String(reportData.location).trim() : "");
+      const fallbackTitle =
+        extractLocationFromText(messageText) ||
+        (reportData.location ? String(reportData.location).trim() : "") ||
+        (parsedData.tituloTrabalho ? String(parsedData.tituloTrabalho).trim() : "");
       if (fallbackTitle && !looksLikeSectionLabel(fallbackTitle)) {
         console.log(`[OM] Título ausente — usando local como título: "${fallbackTitle}"`);
         reportData.maintenance_order_title = fallbackTitle;
       }
+    }
+    // Sem número de OM na mensagem: herda de um RDO já existente com o mesmo título de OM
+    if (!reportData.maintenance_order_number) {
+      const inherited = await inheritOmNumberByTitle(
+        supabase,
+        projectId,
+        reportData.maintenance_order_title
+      );
+      if (inherited) reportData.maintenance_order_number = inherited;
     }
     const resolvedShift = reportData.shift;
 
