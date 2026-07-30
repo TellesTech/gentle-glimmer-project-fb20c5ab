@@ -754,6 +754,8 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
           omTitle: omTitle || null,
           sourceProjects: [],
           titleCounts: {},
+          locationCounts: {},
+          mainLocation: null,
         };
         monthFolder.projects.push(projectFolder);
       }
@@ -769,6 +771,15 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
         const tc = projectFolder.titleCounts!;
         const k = omTitleKey || omTitle;
         tc[k] = { label: omTitle, count: (tc[k]?.count || 0) + 1 };
+      }
+      // Local da atividade predominante desta OM (mostrado no card)
+      const loc = (report.location || '').trim();
+      if (loc) {
+        const lc = projectFolder.locationCounts!;
+        const lk = normalizeOmTitle(loc) || loc;
+        lc[lk] = { label: loc, count: (lc[lk]?.count || 0) + 1 };
+        const best = Object.values(lc).sort((a, b) => b.count - a.count)[0];
+        projectFolder.mainLocation = best?.label || null;
       }
       projectFolder.totalWorkforce += report.actual_workforce || 0;
       projectFolder.progress = Math.min(
