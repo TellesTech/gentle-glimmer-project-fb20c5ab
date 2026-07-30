@@ -1167,6 +1167,7 @@ Deno.serve(async (req) => {
 
     // Look up site mapping
     let siteId: string | null = null;
+    let mappedGroupName: string | null = null;
 
     if (isGroup && groupId) {
       const { data: mapping } = await supabase
@@ -1176,6 +1177,7 @@ Deno.serve(async (req) => {
         .eq("is_active", true)
         .maybeSingle();
       siteId = mapping?.site_id || null;
+      mappedGroupName = mapping?.group_name || null;
     }
 
     if (!siteId && senderPhone) {
