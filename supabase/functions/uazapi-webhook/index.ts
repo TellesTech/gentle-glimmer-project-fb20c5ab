@@ -313,6 +313,21 @@ async function resolveCanonicalOmTitle(
 }
 
 /** Nome padronizado da atividade: "OM 900037786367 — Título" (sem prefixo quando não há número válido). */
+/**
+ * Extração determinística (regex) do número e do título da OM/OS direto do texto da mensagem.
+ * Usada como REDE DE SEGURANÇA quando a IA não devolve numeroOM/tituloOM — sem OM os RDOs
+ * caem em cards "SEM Nº DE OM" separados.
+ */
+function extractOmFromText(text: string): { number: string | null; title: string | null } {
+  const t = String(text || "");
+  const numMatch =
+    t.match(/(?:n[ºo°]?\.?\s*(?:d[ae]\s*)?)?\b(?:o\.?\s?m\.?|o\.?\s?s\.?|ordem\s+de\s+(?:manuten[çc][ãa]o|servi[çc]o))\b\s*[:\-]?\s*([\w./-]+)/i);
+  const number = sanitizeOmNumber(numMatch?.[1]);
+  const titleMatch = t.match(/t[íi]tulo\s*(?:d[ao]\s*)?(?:om|os)\s*[:\-]?\s*\n?\s*(.+)/i);
+  let title = titleMatch?.[1］?.trim() || null;
+  return { number, title };
+}
+
 function buildProjectName(omNumber: string | null, title: string): string {
   const cleanTitle = (title || "").trim().replace(/\s+/g, " ");
   const base = omNumber ? `OM ${omNumber} — ${cleanTitle}`.trim() : cleanTitle;
