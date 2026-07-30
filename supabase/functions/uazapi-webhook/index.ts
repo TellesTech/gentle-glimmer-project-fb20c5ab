@@ -282,7 +282,7 @@ function looksLikeSectionLabel(value: string): boolean {
     .trim()
     .toLowerCase();
   if (!v) return true;
-  return RDO_SECTION_KEYWORDS.some((k) => new RegExp(`^${k}`, "i").test(v));
+  return RDO_SECTION_KEYWORDS.some((k) => new RegExp(`^${k}\\b`, "i").test(v));
 }
 
 /**
@@ -1384,7 +1384,7 @@ Deno.serve(async (req) => {
       // 1. "Título da OM (obrigatório):" — tolera emoji, parênteses e valor na linha seguinte
       const omFromRaw = extractOmFromText(messageText);
       // 2. "Título:" / "Serviço:" / "Atividade Principal:"
-      const tituloAlt = extractLabeledValue(messageText, /(?:t[íi]tulo|atividade principal|servi[çc]o|descri[çc][ãa]o da om)\b/i);
+      const tituloAlt = extractLabeledValue(messageText, /(?:t[íi]tulo|atividade principal|servi[çc]o|descri[çc][ãa]o da om)\b/i, true);
       // 3. Local / área (último recurso antes do nome do grupo)
       const localAlt = extractLocationFromText(messageText);
       const omNumber = omFromRaw.number;
@@ -1679,6 +1679,15 @@ Deno.serve(async (req) => {
       reportData.maintenance_order_number,
       reportData.maintenance_order_title
     );
+    // Sem título de OM (campo em branco no WhatsApp): usa o local da atividade
+    // para o card ficar identificável — nunca uma linha de seção do modelo.
+    if (!reportData.maintenance_order_title || !String(reportData.maintenance_order_title).trim()) {
+      const fallbackTitle = extractLocationFromText(messageText) || (reportData.location ? String(reportData.location).trim() : "");
+      if (fallbackTitle && !looksLikeSectionLabel(fallbackTitle)) {
+        console.log(`[OM] Título ausente — usando local como título: "${fallbackTitle}"`);
+        reportData.maintenance_order_title = fallbackTitle;
+      }
+    }
     const resolvedShift = reportData.shift;
 
     // Check for existing report (same sender + date + group + SHIFT)
