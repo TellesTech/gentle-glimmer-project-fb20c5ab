@@ -1633,6 +1633,18 @@ Deno.serve(async (req) => {
     if (!reportData.maintenance_order_title && omFromText.title) {
       reportData.maintenance_order_title = omFromText.title;
     }
+    // Número da OM pode vir dentro do próprio "Título da OM" (grupos que não têm campo de número)
+    if (!reportData.maintenance_order_number && omFromText.number) {
+      reportData.maintenance_order_number = omFromText.number;
+    }
+    // Local da atividade: garante que o card mostre o local correto mesmo se a IA falhar
+    if (!reportData.location || !String(reportData.location).trim()) {
+      const localFromText = extractLocationFromText(messageText);
+      if (localFromText) {
+        console.log(`[LOCAL] Recuperado por regex: ${localFromText}`);
+        reportData.location = localFromText;
+      }
+    }
     // Garante que todos os RDOs da mesma OM/OS usem exatamente o mesmo título (mesmo card)
     reportData.maintenance_order_title = await resolveCanonicalOmTitle(
       supabase,
