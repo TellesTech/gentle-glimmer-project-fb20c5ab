@@ -863,15 +863,12 @@ function buildReportData(
   projectId: string,
   createdBy: string | null
 ): Record<string, any> {
+  // A data informada na mensagem é SEMPRE respeitada (sem "corrigir" o ano).
+  // Só cai para hoje quando a mensagem realmente não traz data.
   let reportDate = parsedData.data || new Date().toISOString().split("T")[0];
-  // Force current year if parsed year differs (e.g. user typed 2025 but we're in 2026)
-  if (parsedData.data) {
-    const [year, month, day] = parsedData.data.split("-").map(Number);
-    const currentYear = new Date().getFullYear();
-    if (year !== currentYear) {
-      reportDate = `${currentYear}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      console.log(`Date corrected from ${parsedData.data} to ${reportDate}`);
-    }
+  if (parsedData.data && !/^\d{4}-\d{2}-\d{2}$/.test(String(parsedData.data))) {
+    console.warn(`[DATA] Formato inesperado "${parsedData.data}" — usando data de hoje`);
+    reportDate = new Date().toISOString().split("T")[0];
   }
 
   // Map turno to shift enum, with fallback inferred from start time and title keywords
