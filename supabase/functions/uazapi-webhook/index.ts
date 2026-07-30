@@ -920,7 +920,9 @@ function buildReportData(
     start_time: parsedData.horaInicio || null,
     end_time: parsedData.horaFim || null,
     maintenance_order_number: sanitizeOmNumber(parsedData.numeroOM),
-    maintenance_order_title: parsedData.tituloOM || parsedData.tituloTrabalho || null,
+    // Somente o "Título da OM" oficial. `tituloTrabalho` (texto das atividades) é usado
+    // apenas como último recurso, depois do local — evita cards com nome de atividade.
+    maintenance_order_title: parsedData.tituloOM || null,
     blockage_status: parsedData.bloqueio || null,
     supervisor_name: parsedData.supervisor || null,
     technical_responsible_name: parsedData.responsavelTecnico || null,
