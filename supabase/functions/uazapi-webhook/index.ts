@@ -260,13 +260,56 @@ function matchCollaborator(
 
 const UAZAPI_BASE_URL = "https://chatwees.uazapi.com";
 
-const INVALID_OM_VALUES = ["na", "n/a", "n.a", "null", "nao informado", "não informado", "-", "--", "sem om", "0", ""];
+const INVALID_OM_VALUES = ["na", "n/a", "n.a", "null", "nao informado", "não informado", "-", "--", "sem om", "sem os", "nao se aplica", "não se aplica", "0", ""];
 
-/** Devolve o número da OM limpo, ou null quando for placeholder ("NA", "N/A", "null"...). */
+/**
+ * Devolve o número da OM/OS limpo (somente o código), ou null quando for placeholder.
+ * Ex.: "A 900035606252" → "900035606252"; "OM 4502365884" → "4502365884";
+ *      "900036405278 E 900036405279" → "900036405278" (o primeiro código é a chave do card).
+ */
 function sanitizeOmNumber(value: unknown): string | null {
-  const v = String(value ?? "").trim();
+  let v = String(value ?? "").trim();
+  if (!v) return null;
+  // remove prefixos textuais "OM", "O.M.", "OS", "O.S.", "Nº", "N°", "ordem..."
+  v = v.replace(/^(ordem\s+de\s+(manuten[çc][ãa]o|servi[çc]o)|o\.?\s?[ms]\.?|o\.?\s?s\.?|n[ºo°]?\.?)\s*[:\-]?\s*/i, "").trim();
   if (INVALID_OM_VALUES.includes(v.toLowerCase())) return null;
+  // pega o primeiro código com 4+ caracteres alfanuméricos (ignora "E", "/", " e ")
+  const codeMatch = v.match(/\d[\w./-]{3,}/);
+  if (codeMatch) {
+    return codeMatch[0].replace(/[.\-/]+$/, "");
+  }
+  if (INVALID_OM_VALUES.includes(v.toLowerCase()) || !/\d/.test(v)) return null;
   return v;
+}
+
+/**
+ * Título canônico da OM/OS: se essa OM já existe no sistema, reaproveita o título já usado
+ * para que TODOS os RDOs da mesma OM caiam no MESMO card, sem variações de escrita.
+ */
+async function resolveCanonicalOmTitle(
+  supabase: any,
+  omNumber: string | null,
+  newTitle: string | null
+): Promise<string | null> {
+  const clean = (newTitle || "").trim().replace(/\s+/g, " ") || null;
+  if (!omNumber) return clean;
+  try {
+    const { data } = await supabase
+      .from("reports")
+      .select("maintenance_order_title")
+      .eq("maintenance_order_number", omNumber)
+      .not("maintenance_order_title", "is", null)
+      .order("created_at", { ascending: true })
+      .limit(1);
+    const existing = data?.[0]?.maintenance_order_title?.trim();
+    if (existing) {
+      console.log(`[OM] Reutilizando título canônico da OM ${omNumber}: "${existing}" (recebido: "${clean}")`);
+      return existing;
+    }
+  } catch (e) {
+    console.error("[OM] Falha ao buscar título canônico:", e);
+  }
+  return clean;
 }
 
 /** Nome padronizado da atividade: "OM 900037786367 — Título" (sem prefixo quando não há número válido). */
@@ -1511,6 +1554,12 @@ Deno.serve(async (req) => {
 
     // Build report data using correct field mapping (needed early to know resolved shift)
     const reportData = buildReportData(parsedData, projectId, createdBy);
+    // Garante que todos os RDOs da mesma OM/OS usem exatamente o mesmo título (mesmo card)
+    reportData.maintenance_order_title = await resolveCanonicalOmTitle(
+      supabase,
+      reportData.maintenance_order_number,
+      reportData.maintenance_order_title
+    );
     const resolvedShift = reportData.shift;
 
     // Check for existing report (same sender + date + group + SHIFT)

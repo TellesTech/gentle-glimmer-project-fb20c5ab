@@ -5,12 +5,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const INVALID_OM_VALUES = ["na", "n/a", "n.a", "null", "nao informado", "não informado", "-", "--", "sem om", "0", ""];
+const INVALID_OM_VALUES = ["na", "n/a", "n.a", "null", "nao informado", "não informado", "-", "--", "sem om", "sem os", "nao se aplica", "não se aplica", "0", ""];
+
+/** Limpa o título da OM/OS: remove o número repetido, emojis, marcadores e pontuação final. */
+function sanitizeOmTitle(value: unknown, omNumber: string | null): string | null {
+  let t = String(value ?? "").trim();
+  if (!t) return null;
+  t = t.replace(/^[\s\-•*>]+/, "");
+  t = t.replace(/^(t[íi]tulo\s*(da\s*)?(om|os)|descri[çc][ãa]o\s*(da\s*)?(om|os)|servi[çc]o)\s*[:\-]\s*/i, "");
+  t = t.replace(/^(om|os|o\.m\.|o\.s\.)\s*n?[ºo°]?\.?\s*[\w./-]*\s*[—\-–:]\s*/i, "");
+  if (omNumber) t = t.replace(new RegExp(`\\b${omNumber.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\b`, "g"), "");
+  t = t.replace(/\s+/g, " ").replace(/^[\s\-—–:.]+|[\s\-—–:.]+$/g, "").trim();
+  if (!t || INVALID_OM_VALUES.includes(t.toLowerCase())) return null;
+  return t;
+}
 
 /** Devolve o número da OM limpo, ou null quando for placeholder ("NA", "N/A", "null"...). */
 function sanitizeOmNumber(value: unknown): string | null {
-  const v = String(value ?? "").trim();
+  let v = String(value ?? "").trim();
+  if (!v) return null;
+  v = v.replace(/^(ordem\s+de\s+(manuten[çc][ãa]o|servi[çc]o)|o\.?\s?m\.?|o\.?\s?s\.?|n[ºo°]?\.?)\s*[:\-]?\s*/i, "").trim();
   if (INVALID_OM_VALUES.includes(v.toLowerCase())) return null;
+  const codeMatch = v.match(/\d[\w./-]{3,}/);
+  if (codeMatch) return codeMatch[0].replace(/[.\-/]+$/, "");
+  if (!/\d/.test(v)) return null;
   return v;
 }
 
@@ -215,11 +233,13 @@ atividades:
 desvios/interferências:
   "Interferências:", "INTERFERENCIAS:", "Interferência:", "Desvios:", "Ocorrências:", "Interrupções:", "Problemas:"
 
-numeroOM:
-  "Nº OM:", "OM:", "Ordem:", "N° OM:", "Nº contrato:", "Contrato:", "Número da OM:", "Nº da OS:", "Número da OS:", "OS:", "Ordem de Serviço:"
+numeroOM (OM e OS são A MESMA COISA — sempre o mesmo campo):
+  "Nº OM:", "OM:", "N° OM:", "Número da OM:", "Ordem de Manutenção:",
+  "Nº OS:", "OS:", "N° OS:", "Número da OS:", "Nº da OS:", "Ordem de Serviço:", "Ordem:",
+  "Nº contrato:", "Contrato:" (apenas se não houver OM/OS explícita)
 
-tituloOM:
-  "Título da OM:", "Título OM:", "Descrição da OM:", "Serviço:"
+tituloOM (título da OM/OS):
+  "Título da OM:", "Título OM:", "Título da OS:", "Título OS:", "Descrição da OM:", "Descrição da OS:", "Serviço:"
 
 supervisor:
   "Supervisor:", "👷🏽 Supervisor:", "Encarregado:", "Enc:", "Responsável:", "Líder:"
@@ -243,11 +263,23 @@ Analise o texto e extraia os seguintes campos (retorne null se não encontrar):
 - horaFim: horário de fim no formato HH:MM (extraia do período de trabalho)
 - radioWees: canal/faixa de rádio da Wees (procurar "Faixa de rádio Wees:", "rádio Wees:")
 - radioOperacao: canal/faixa de rádio da Operação (procurar "Faixa de rádio Operação:", "Operação:")
-- numeroOM: APENAS o número/código da ordem de manutenção (ex.: "900037786367", "4502365884", "22461261"). Procurar "Nº da OM:", "Nº OM:", "OM:", "Ordem:", "N° OM:", "OS:". REGRAS: retorne SOMENTE dígitos/código, sem texto descritivo. Se o valor for "NA", "N/A", "-", "não informado", "sem OM" ou vazio → retorne null (JSON null, NUNCA a string). NUNCA coloque o título aqui.
-- tituloOM: descrição do SERVIÇO da ordem de manutenção (ex.: "Substituição do Telhado do Elevador AF", "Reparo Calhas Fabril Alto Forno"). Procurar "Título da OM:", "Título OM:", "Descrição da OM:", "Serviço:". NUNCA use o local/área aqui e NUNCA repita o número da OM.
-  ATENÇÃO: tituloOM (o que será feito) e localAtividade (onde será feito) são campos DIFERENTES e nunca devem ser trocados.
+- numeroOM: CAMPO MAIS IMPORTANTE DO RELATÓRIO — é a chave que agrupa os RDOs. É APENAS o número/código da ordem (ex.: "900037786367", "4502365884", "22461261"). "OM" e "OS" significam a MESMA coisa: qualquer um dos dois vai neste campo. Procurar "Nº da OM:", "Nº OM:", "OM:", "Nº da OS:", "OS:", "Ordem:", "Ordem de Serviço:", "Ordem de Manutenção:".
+  REGRAS OBRIGATÓRIAS:
+    * Retorne SOMENTE o código (dígitos/alfanumérico), SEM as palavras "OM", "OS", "Nº", "N°", sem dois-pontos e sem texto descritivo.
+    * Se houver mais de um número citado, retorne o PRIMEIRO (o principal).
+    * Se o valor for "NA", "N/A", "-", "não informado", "não se aplica", "sem OM", "sem OS" ou vazio → retorne null (JSON null, NUNCA a string "NA"/"null").
+    * NUNCA coloque o título, o local ou a data aqui.
+- tituloOM: descrição do SERVIÇO da ordem (ex.: "Substituição do Telhado do Elevador AF", "Reparo Calhas Fabril Alto Forno"). Procurar "Título da OM:", "Título OM:", "Título da OS:", "Descrição da OM/OS:", "Serviço:".
+  REGRAS OBRIGATÓRIAS:
+    * NUNCA repita o número da OM/OS dentro do título e NUNCA use o local/área como título.
+    * Escreva o título de forma limpa e padronizada: sem emojis, sem marcadores, sem ponto final, sem MAIÚSCULAS integrais (use capitalização normal com acentos corretos), sem sufixos de data/turno.
+    * Use o título EXATAMENTE como escrito na mensagem (apenas corrigindo grafia/caixa) — não resuma nem crie um título novo.
+    * Se não houver título explícito da OM/OS, retorne null (não invente e não use as atividades executadas).
+  ATENÇÃO: numeroOM (qual ordem), tituloOM (o que será feito) e localAtividade (onde será feito) são TRÊS campos DIFERENTES e nunca devem ser trocados ou misturados.
   Exemplo de formato usado nos grupos de WhatsApp:
     "Nº da OM: 900037786367"        → numeroOM: "900037786367"
+    "OS: 4502365884"                → numeroOM: "4502365884"
+    "OM 22461261 - Recuperação estrutural" → numeroOM: "22461261", tituloOM: "Recuperação estrutural"
     "Título da OM: Limpeza nas Calhas ADM 07" → tituloOM: "Limpeza nas Calhas ADM 07"
     "Local da Atividade: Convertedores 2 (Aciaria)" → localAtividade: "Convertedores 2 (Aciaria)"
 - tituloTrabalho: título ou descrição principal do trabalho/manutenção
