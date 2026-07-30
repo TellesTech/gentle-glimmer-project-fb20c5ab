@@ -5,7 +5,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const INVALID_OM_VALUES = ["na", "n/a", "n.a", "null", "nao informado", "não informado", "-", "--", "sem om", "0", ""];
+const INVALID_OM_VALUES = ["na", "n/a", "n.a", "null", "nao informado", "não informado", "-", "--", "sem om", "sem os", "nao se aplica", "não se aplica", "0", ""];
+
+/** Limpa o título da OM/OS: remove o número repetido, emojis, marcadores e pontuação final. */
+function sanitizeOmTitle(value: unknown, omNumber: string | null): string | null {
+  let t = String(value ?? "").trim();
+  if (!t) return null;
+  t = t.replace(/^[\s\-•*>]+/, "");
+  t = t.replace(/^(t[íi]tulo\s*(da\s*)?(om|os)|descri[çc][ãa]o\s*(da\s*)?(om|os)|servi[çc]o)\s*[:\-]\s*/i, "");
+  t = t.replace(/^(om|os|o\.m\.|o\.s\.)\s*n?[ºo°]?\.?\s*[\w./-]*\s*[—\-–:]\s*/i, "");
+  if (omNumber) t = t.replace(new RegExp(`\\b${omNumber.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\b`, "g"), "");
+  t = t.replace(/\s+/g, " ").replace(/^[\s\-—–:.]+|[\s\-—–:.]+$/g, "").trim();
+  if (!t || INVALID_OM_VALUES.includes(t.toLowerCase())) return null;
+  return t;
+}
 
 /** Devolve o número da OM limpo, ou null quando for placeholder ("NA", "N/A", "null"...). */
 function sanitizeOmNumber(value: unknown): string | null {
