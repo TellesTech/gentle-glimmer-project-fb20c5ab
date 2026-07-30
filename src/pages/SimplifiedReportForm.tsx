@@ -470,19 +470,28 @@ export default function SimplifiedReportForm() {
     },
     onSuccess: async (report, { data, status }) => {
       queryClient.invalidateQueries({ queryKey: ['reports'] });
-      toast.success(status === 'draft' ? 'Rascunho salvo!' : 'Relatório enviado!');
-      
-      // Remove the submitted tab if in tabs mode
-      if (showTabs && tabsHook.activeTabId) {
+
+      // Sequential mode: stay on the form so the user can create the next RDO
+      const sequential = showTabs && !!tabsHook.activeTabId;
+
+      toast.success(
+        status === 'draft' ? 'Rascunho salvo!' : 'Relatório enviado!',
+        sequential
+          ? {
+              description: 'Um novo RDO em branco já está pronto para preenchimento.',
+              action: {
+                label: 'Ver relatório',
+                onClick: () => navigate(`/reports/${report.id}`),
+              },
+            }
+          : undefined
+      );
+
+      if (sequential) {
+        // Removing the submitted tab automatically opens a fresh blank tab
+        // when it was the last one (see useReportTabs.removeTab).
         tabsHook.removeTab(tabsHook.activeTabId);
-        
-        // If there are remaining tabs, stay on the page
-        if (tabsHook.tabs.length > 1) {
-          return;
-        }
-        
-        // Clear storage if all tabs are done
-        tabsHook.clearStorage();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
 
       // Check if project reached 100% - trigger auto service report generation
@@ -508,7 +517,9 @@ export default function SimplifiedReportForm() {
           console.error('Error checking progress:', e);
         }
       }
-      
+
+      if (sequential) return; // keep the user on the form for the next RDO
+
       navigate(`/reports/${report.id}`, { replace: true });
     },
     onError: (error) => {
