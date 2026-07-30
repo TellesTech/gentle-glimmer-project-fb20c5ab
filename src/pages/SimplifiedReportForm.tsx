@@ -78,6 +78,9 @@ export default function SimplifiedReportForm() {
   const tabsHook = useReportTabs(projectId || '', dateFromUrl);
   const showTabs = !isEditMode && !!projectId;
 
+  // Origem da navegação (para o botão Voltar retornar à página anterior correta)
+  const returnTo = (navigationState as any)?.from as string | undefined;
+
   // Navigation blocker state
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
