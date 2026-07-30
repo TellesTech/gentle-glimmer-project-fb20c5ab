@@ -198,11 +198,19 @@ export interface CabinetBreadcrumbItem {
   onClick?: () => void;
 }
 
-interface DocumentCabinetProps {
-  onBreadcrumbChange?: (breadcrumbs: CabinetBreadcrumbItem[]) => void;
+export interface CabinetContext {
+  companyId: string | null;
+  companyName: string | null;
+  siteId: string | null;
+  siteName: string | null;
 }
 
-export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
+interface DocumentCabinetProps {
+  onBreadcrumbChange?: (breadcrumbs: CabinetBreadcrumbItem[]) => void;
+  onContextChange?: (context: CabinetContext) => void;
+}
+
+export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: DocumentCabinetProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { role } = useAuth();
