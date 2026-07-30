@@ -284,3 +284,76 @@ Deno.test("merge: valores determinísticos vencem a IA", () => {
   assertEquals(merged.tituloOM, "Transportadora 09");
   assertEquals(merged.data, "2026-07-29");
 });
+
+// ---------------------------------------------------------------------------
+// H) Rótulos presentes com valor em branco
+// ---------------------------------------------------------------------------
+const CASE_H = `📌 *RELATÓRIO DIÁRIO DE OBRA (RDO)*
+
+📆 *Data/Turno:* 30/07/2026 – Diurno
+
+📍 *Área da Atividade:* Alto Forno
+
+📄 *Título da OM (Obrigatório):*
+
+📝 *Número da OM:*
+
+━━━━━━━━━━━━━━━━━━━━
+
+🛠️ *Atividades Executadas*
+
+━━━━━━━━━━━━━━━━━━━━
+
+📌 *Desvios / Ocorrências*
+
+━━━━━━━━━━━━━━━━━━━━
+
+🧗‍♂️ *Efetivo do Dia*
+
+✅ *Observações:*
+
+📷 *Fotos abaixo:*`;
+
+Deno.test("H - OM vazia rotulada: IA não pode inventar número/título", () => {
+  const det = parseRdoDeterministic(CASE_H);
+  assertEquals(det.numeroOM, null);
+  assertEquals(det.tituloOM, null);
+  const merged = mergeParsed(det, {
+    numeroOM: "123456789",
+    tituloOM: "Serviço inventado pela IA",
+  });
+  assertEquals(merged.numeroOM, null);
+  assertEquals(merged.tituloOM, null);
+  assertEquals(merged.localAtividade, "Alto Forno");
+});
+
+Deno.test("H2 - seções vazias explícitas vencem a IA", () => {
+  const det = parseRdoDeterministic(CASE_H);
+  const merged = mergeParsed(det, {
+    atividades: ["Atividade inventada"],
+    desvios: [{ descricao: "Desvio inventado", tipo: "other" }],
+    efetivo: [{ nome: "Fulano Inventado" }],
+    comentarios: "Observação inventada",
+  });
+  assertEquals(merged.atividades.length, 0);
+  assertEquals(merged.desvios.length, 0);
+  assertEquals(merged.efetivo.length, 0);
+  assertEquals(merged.comentarios, null);
+});
+
+Deno.test("I - rótulo, linha vazia e valor na linha seguinte", () => {
+  const r = parseRdoDeterministic(
+    "Data: 30/07/2026\n\n📄 *Título da OM (Obrigatório):*\n\nReparo de calhas\n\n📝 *Número da OM:*\n\n900037786367"
+  );
+  assertEquals(r.tituloOM, "Reparo de calhas");
+  assertEquals(r.numeroOM, "900037786367");
+});
+
+Deno.test("J - campo vazio não engole o próximo rótulo", () => {
+  const r = parseRdoDeterministic(
+    "Data: 30/07/2026\n📝 *Número da OM:*\n📄 *Título da OM (Obrigatório):* Limpeza da TCM\n📍 *Área da Atividade:* Secagem C"
+  );
+  assertEquals(r.numeroOM, null);
+  assertEquals(r.tituloOM, "Limpeza da TCM");
+  assertEquals(r.localAtividade, "Secagem C");
+});
