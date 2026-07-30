@@ -313,6 +313,30 @@ async function resolveCanonicalOmTitle(
 }
 
 /** Nome padronizado da atividade: "OM 900037786367 — Título" (sem prefixo quando não há número válido). */
+/**
+ * Extração determinística (regex) do número e do título da OM/OS direto do texto da mensagem.
+ * Usada como REDE DE SEGURANÇA quando a IA não devolve numeroOM/tituloOM — sem OM os RDOs
+ * caem em cards "SEM Nº DE OM" separados.
+ */
+function extractOmFromText(text: string): { number: string | null; title: string | null } {
+  const t = String(text || "");
+  const numMatch =
+    t.match(/(?:n[ºo°]?\.?\s*(?:d[ae]\s*)?)?\b(?:o\.?\s?m\.?|o\.?\s?s\.?|ordem\s+de\s+(?:manuten[çc][ãa]o|servi[çc]o))\b\s*[:\-]?\s*([\w./-]+)/i);
+  const number = sanitizeOmNumber(numMatch?.[1]);
+  const titleMatch = t.match(/t[íi]tulo\s*(?:d[ao]\s*)?(?:om|os)\s*[:\-]?\s*\n?\s*(.+)/i);
+  let title = titleMatch?.[1]?.trim() || null;
+  if (title) {
+    title = title
+      .replace(/[*_~`]/g, "")
+      .replace(/^[\s\-–—:]+/, "")
+      .replace(/\s+/g, " ")
+      .replace(/[.\s]+$/, "")
+      .trim();
+    if (!title || INVALID_OM_VALUES.includes(title.toLowerCase())) title = null;
+  }
+  return { number, title };
+}
+
 function buildProjectName(omNumber: string | null, title: string): string {
   const cleanTitle = (title || "").trim().replace(/\s+/g, " ");
   const base = omNumber ? `OM ${omNumber} — ${cleanTitle}`.trim() : cleanTitle;
@@ -1554,6 +1578,15 @@ Deno.serve(async (req) => {
 
     // Build report data using correct field mapping (needed early to know resolved shift)
     const reportData = buildReportData(parsedData, projectId, createdBy);
+    // Rede de segurança: se a IA não trouxe a OM, extrai por regex do texto original
+    const omFromText = extractOmFromText(messageText);
+    if (!reportData.maintenance_order_number && omFromText.number) {
+      console.log(`[OM] Número recuperado por regex: ${omFromText.number}`);
+      reportData.maintenance_order_number = omFromText.number;
+    }
+    if (!reportData.maintenance_order_title && omFromText.title) {
+      reportData.maintenance_order_title = omFromText.title;
+    }
     // Garante que todos os RDOs da mesma OM/OS usem exatamente o mesmo título (mesmo card)
     reportData.maintenance_order_title = await resolveCanonicalOmTitle(
       supabase,
