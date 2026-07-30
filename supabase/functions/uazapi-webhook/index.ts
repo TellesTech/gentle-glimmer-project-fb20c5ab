@@ -324,7 +324,16 @@ function extractOmFromText(text: string): { number: string | null; title: string
     t.match(/(?:n[ºo°]?\.?\s*(?:d[ae]\s*)?)?\b(?:o\.?\s?m\.?|o\.?\s?s\.?|ordem\s+de\s+(?:manuten[çc][ãa]o|servi[çc]o))\b\s*[:\-]?\s*([\w./-]+)/i);
   const number = sanitizeOmNumber(numMatch?.[1]);
   const titleMatch = t.match(/t[íi]tulo\s*(?:d[ao]\s*)?(?:om|os)\s*[:\-]?\s*\n?\s*(.+)/i);
-  let title = titleMatch?.[1］?.trim() || null;
+  let title = titleMatch?.[1]?.trim() || null;
+  if (title) {
+    title = title
+      .replace(/[*_~`]/g, "")
+      .replace(/^[\s\-–—:]+/, "")
+      .replace(/\s+/g, " ")
+      .replace(/[.\s]+$/, "")
+      .trim();
+    if (!title || INVALID_OM_VALUES.includes(title.toLowerCase())) title = null;
+  }
   return { number, title };
 }
 
