@@ -193,6 +193,10 @@ export default function SimplifiedReportForm() {
         teamName: teamData?.name || null,
       } : null);
 
+  // Destino do botão "Voltar": prioriza a origem da navegação, senão a unidade/projeto atual
+  const contextProjectId = projectId || (existingReport as any)?.project_id || selection?.projectId;
+  const backTarget = returnTo || (contextProjectId ? `/projects/${contextProjectId}` : '/reports');
+
   // Build initial form data from existing report or duplicated data (for edit mode only)
   const editModeInitialData: ReportFormData | undefined = existingReport ? {
     date: existingReport.date,
