@@ -1043,6 +1043,12 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
 
   // Level 6: Inside a project folder - show reports list
   if (selectedCompany && selectedSiteFolder && selectedYearFolder && selectedMonthFolder && selectedProjectFolder) {
+    // Numeração sequencial única dentro da OM: mais antigo = 001
+    const omSeq = new Map<string, number>();
+    [...selectedProjectFolder.reports]
+      .sort((a, b) => (a.date === b.date ? a.id.localeCompare(b.id) : a.date.localeCompare(b.date)))
+      .forEach((r, i) => omSeq.set(r.id, i + 1));
+    const seqLabel = (id: string) => String(omSeq.get(id) ?? 1).padStart(3, '0');
     return (
       <>
         <div className="space-y-4">
