@@ -531,7 +531,10 @@ export default function Reports() {
                 <CheckSquare className="h-4 w-4" />
                 <span className="hidden xs:inline">Selecionar</span>
               </Button>
-              <Link to="/reports/new">
+              <Link
+                to="/reports/new"
+                state={cabinetContext?.siteId ? cabinetContext : undefined}
+              >
                 <Button size="sm" className="gap-1.5">
                   <Plus className="h-4 w-4" />
                   <span className="hidden xs:inline">Novo Relatório</span>
