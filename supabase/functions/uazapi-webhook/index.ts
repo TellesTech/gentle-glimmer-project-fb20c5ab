@@ -320,8 +320,10 @@ async function resolveCanonicalOmTitle(
  */
 function extractOmFromText(text: string): { number: string | null; title: string | null } {
   const t = String(text || "");
-  const numMatch =
-    t.match(/(?:n[ºo°]?\.?\s*(?:d[ae]\s*)?)?\b(?:o\.?\s?m\.?|o\.?\s?s\.?|ordem\s+de\s+(?:manuten[çc][ãa]o|servi[çc]o))\b\s*[:\-]?\s*([\w./-]+)/i);
+  // exige dígito e não atravessa quebra de linha (evita capturar o "Título da OM" quando o número vem vazio)
+  const numMatch = t.match(
+    /\b(?:o\.?\s?m\.?|o\.?\s?s\.?|ordem\s+de\s+(?:manuten[çc][ãa]o|servi[çc]o))\b[ \t]*[:\-]?[ \t]*(\d[\w./-]*)/i
+  );
   const number = sanitizeOmNumber(numMatch?.[1]);
   const titleMatch = t.match(/t[íi]tulo\s*(?:d[ao]\s*)?(?:om|os)\s*[:\-]?\s*\n?\s*(.+)/i);
   let title = titleMatch?.[1]?.trim() || null;
