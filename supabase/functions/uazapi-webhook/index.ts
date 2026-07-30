@@ -863,15 +863,12 @@ function buildReportData(
   projectId: string,
   createdBy: string | null
 ): Record<string, any> {
+  // A data informada na mensagem é SEMPRE respeitada (sem "corrigir" o ano).
+  // Só cai para hoje quando a mensagem realmente não traz data.
   let reportDate = parsedData.data || new Date().toISOString().split("T")[0];
-  // Force current year if parsed year differs (e.g. user typed 2025 but we're in 2026)
-  if (parsedData.data) {
-    const [year, month, day] = parsedData.data.split("-").map(Number);
-    const currentYear = new Date().getFullYear();
-    if (year !== currentYear) {
-      reportDate = `${currentYear}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      console.log(`Date corrected from ${parsedData.data} to ${reportDate}`);
-    }
+  if (parsedData.data && !/^\d{4}-\d{2}-\d{2}$/.test(String(parsedData.data))) {
+    console.warn(`[DATA] Formato inesperado "${parsedData.data}" — usando data de hoje`);
+    reportDate = new Date().toISOString().split("T")[0];
   }
 
   // Map turno to shift enum, with fallback inferred from start time and title keywords
@@ -1631,12 +1628,13 @@ Deno.serve(async (req) => {
 
     // Deterministic date extraction from raw message — overrides AI to avoid hallucinations
     // Supports: DD/MM/YYYY, DD/MM/YY, DD.MM.YYYY, DD.MM.YY, DD-MM-YY, DD-MM-YYYY
-    const dateRegex = /(?:data|dia)\s*[:：]?\s*(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/i;
+    // Aceita "Data: 27/07/2026", "*Data* 27-07-26", "📅 Data : 27.07.2026" e "Data: 27/07" (sem ano)
+    const dateRegex = /(?:data|dia)\s*[*_~`]*\s*[:：]?\s*[*_~`]*\s*(\d{1,2})[\/.\-](\d{1,2})(?:[\/.\-](\d{2,4}))?/i;
     const dateMatch = messageText.match(dateRegex);
     if (dateMatch) {
       const day = parseInt(dateMatch[1], 10);
       const month = parseInt(dateMatch[2], 10);
-      let year = parseInt(dateMatch[3], 10);
+      let year = dateMatch[3] ? parseInt(dateMatch[3], 10) : new Date().getFullYear();
       if (year < 100) year += 2000;
       if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 2000 && year <= 2100) {
         const extracted = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
@@ -1704,21 +1702,35 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(10);
 
+    // A OM também faz parte da chave: duas OMs diferentes no mesmo dia/turno são RDOs
+    // distintos e NUNCA podem sobrescrever um ao outro (era o que trocava data/título).
+    const omKey = (num: string | null, title: string | null) =>
+      (num && String(num).trim()) ||
+      (title ? String(title).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim() : "");
+    const currentOmKey = omKey(reportData.maintenance_order_number, reportData.maintenance_order_title);
+
     if (existingLogs && existingLogs.length > 0) {
       const candidateIds = existingLogs.map((l: any) => l.report_id).filter(Boolean);
       if (candidateIds.length > 0) {
         const { data: candidateReports } = await supabase
           .from("reports")
-          .select("id, shift")
+          .select("id, shift, date, maintenance_order_number, maintenance_order_title")
           .in("id", candidateIds)
-          .eq("shift", resolvedShift);
-        if (candidateReports && candidateReports.length > 0) {
-          // Preserve order from the logs query (most recent first)
-          const matchSet = new Set(candidateReports.map((r: any) => r.id));
+          .eq("shift", resolvedShift)
+          .eq("date", reportDate);
+        const sameOm = (candidateReports || []).filter(
+          (r: any) => omKey(r.maintenance_order_number, r.maintenance_order_title) === currentOmKey
+        );
+        if (sameOm.length > 0) {
+          const matchSet = new Set(sameOm.map((r: any) => r.id));
           const ordered = candidateIds.find((id: string) => matchSet.has(id));
-          if (ordered && (isCorrection || true)) {
-            existingReportId = ordered;
-          }
+          if (ordered) existingReportId = ordered;
+        } else if (isCorrection && (candidateReports || []).length > 0) {
+          // Mensagem explícita de correção: atualiza o RDO mais recente do mesmo dia/turno
+          const matchSet = new Set((candidateReports || []).map((r: any) => r.id));
+          existingReportId = candidateIds.find((id: string) => matchSet.has(id)) || null;
+        } else {
+          console.log(`[DEDUP] OM diferente no mesmo dia/turno (key="${currentOmKey}") — criando novo RDO`);
         }
       }
     }
