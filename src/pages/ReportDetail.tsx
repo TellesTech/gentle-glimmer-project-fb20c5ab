@@ -774,7 +774,7 @@ export default function ReportDetail() {
   return (
     <div className="space-y-6 pb-28 md:pb-6">
       {/* Back Button */}
-      <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-2">
+      <Button variant="ghost" size="sm" onClick={handleBack} className="gap-2">
         <ChevronLeft className="h-4 w-4" />
         Voltar
       </Button>
@@ -1554,7 +1554,7 @@ export default function ReportDetail() {
           
           {/* Grupo de Ações de Edição - Centralizado */}
           <div className="flex gap-1.5 sm:gap-2 flex-wrap justify-center w-full">
-            <Button variant="outline" size="sm" className="min-w-0 px-2 sm:px-3" onClick={() => navigate(-1)}>
+            <Button variant="outline" size="sm" className="min-w-0 px-2 sm:px-3" onClick={handleBack}>
               <ChevronLeft className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Voltar</span>
             </Button>
