@@ -230,6 +230,12 @@ Deno.serve(async (req) => {
             ].filter(Boolean).join("+") || "nenhuma"),
       });
 
+      if (dryRun) {
+        if (!locked && fixOmNumber) fixedOmNumber++;
+        if (!locked && fixOmTitle) fixedOmTitle++;
+        if (!locked) fixedActivities += actsToComplete.length;
+      }
+
       if (dryRun || locked || !hasChange) continue;
 
       // ---- escrita (com backup antes e rollback em caso de erro) ----
