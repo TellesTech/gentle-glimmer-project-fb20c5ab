@@ -1217,6 +1217,15 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                     <p className="text-sm font-semibold text-foreground truncate" title={projectFolder.name}>
                       {projectFolder.omTitle || projectFolder.name}
                     </p>
+                    {projectFolder.mainLocation && (
+                      <p
+                        className="text-[11px] text-muted-foreground flex items-center gap-1 truncate"
+                        title={`Local: ${projectFolder.mainLocation}`}
+                      >
+                        <MapPin className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{projectFolder.mainLocation}</span>
+                      </p>
+                    )}
                     {projectFolder.sourceProjects.length > 0 && (
                       <p
                         className="text-[11px] text-muted-foreground truncate"
