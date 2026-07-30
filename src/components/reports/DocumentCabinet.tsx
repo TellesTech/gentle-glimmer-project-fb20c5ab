@@ -1056,8 +1056,6 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                 <h2 className="font-semibold text-xl">{selectedProjectFolder.name}</h2>
                 <p className="text-sm text-muted-foreground">
                   {selectedProjectFolder.count} relatório(s) em {selectedMonthFolder.monthName}/{selectedYearFolder.year}
-                  {selectedProjectFolder.sourceProjects.length > 0 &&
-                    ` · ${selectedProjectFolder.sourceProjects.map(sp => sp.name).join(', ')}`}
                 </p>
               </div>
             </div>
@@ -1204,15 +1202,6 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                     <p className="text-sm font-semibold text-foreground truncate" title={projectFolder.name}>
                       {projectFolder.omTitle || projectFolder.name}
                     </p>
-                    {projectFolder.sourceProjects.length > 0 && (
-                      <p
-                        className="text-[11px] text-muted-foreground truncate"
-                        title={projectFolder.sourceProjects.map(sp => sp.name).join(' · ')}
-                      >
-                        {projectFolder.sourceProjects[0].name}
-                        {projectFolder.sourceProjects.length > 1 && ` +${projectFolder.sourceProjects.length - 1}`}
-                      </p>
-                    )}
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-foreground group-hover:translate-x-0.5 transition-transform" />
                 </div>
