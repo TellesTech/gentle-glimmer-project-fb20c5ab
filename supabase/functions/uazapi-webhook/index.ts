@@ -1701,21 +1701,35 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(10);
 
+    // A OM também faz parte da chave: duas OMs diferentes no mesmo dia/turno são RDOs
+    // distintos e NUNCA podem sobrescrever um ao outro (era o que trocava data/título).
+    const omKey = (num: string | null, title: string | null) =>
+      (num && String(num).trim()) ||
+      (title ? String(title).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim() : "");
+    const currentOmKey = omKey(reportData.maintenance_order_number, reportData.maintenance_order_title);
+
     if (existingLogs && existingLogs.length > 0) {
       const candidateIds = existingLogs.map((l: any) => l.report_id).filter(Boolean);
       if (candidateIds.length > 0) {
         const { data: candidateReports } = await supabase
           .from("reports")
-          .select("id, shift")
+          .select("id, shift, date, maintenance_order_number, maintenance_order_title")
           .in("id", candidateIds)
-          .eq("shift", resolvedShift);
-        if (candidateReports && candidateReports.length > 0) {
-          // Preserve order from the logs query (most recent first)
-          const matchSet = new Set(candidateReports.map((r: any) => r.id));
+          .eq("shift", resolvedShift)
+          .eq("date", reportDate);
+        const sameOm = (candidateReports || []).filter(
+          (r: any) => omKey(r.maintenance_order_number, r.maintenance_order_title) === currentOmKey
+        );
+        if (sameOm.length > 0) {
+          const matchSet = new Set(sameOm.map((r: any) => r.id));
           const ordered = candidateIds.find((id: string) => matchSet.has(id));
-          if (ordered && (isCorrection || true)) {
-            existingReportId = ordered;
-          }
+          if (ordered) existingReportId = ordered;
+        } else if (isCorrection && (candidateReports || []).length > 0) {
+          // Mensagem explícita de correção: atualiza o RDO mais recente do mesmo dia/turno
+          const matchSet = new Set((candidateReports || []).map((r: any) => r.id));
+          existingReportId = candidateIds.find((id: string) => matchSet.has(id)) || null;
+        } else {
+          console.log(`[DEDUP] OM diferente no mesmo dia/turno (key="${currentOmKey}") — criando novo RDO`);
         }
       }
     }
