@@ -456,6 +456,10 @@ export function parseRdoDeterministic(text: string): RdoParsed {
   let currentSection: "atividades" | "desvios" | "efetivo" | "observacoes" | null = null;
   let pendingField: FieldKey | null = null;
   const rawFields: Partial<Record<FieldKey, string>> = {};
+  /** Rótulos de campo presentes na mensagem, mesmo com valor em branco. */
+  const labelSeen = new Set<FieldKey>();
+  /** Cabeçalhos de seção presentes, mesmo sem itens. */
+  const sectionSeen = new Set<SectionKey>();
 
   const setField = (field: FieldKey, value: string) => {
     const v = cleanLine(value);
@@ -465,7 +469,7 @@ export function parseRdoDeterministic(text: string): RdoParsed {
 
   for (const line of lines) {
     if (!line) {
-      pendingField = null;
+      // Linha vazia NÃO descarta o rótulo pendente: o valor pode vir depois.
       continue;
     }
 
@@ -484,6 +488,7 @@ export function parseRdoDeterministic(text: string): RdoParsed {
           continue;
         }
         currentSection = sec;
+        sectionSeen.add(sec);
         if (labeled.value && !isPlaceholder(labeled.value)) {
           sectionBuffers[sec].push(labeled.value);
         }
@@ -491,6 +496,7 @@ export function parseRdoDeterministic(text: string): RdoParsed {
       }
       const field = labeled.match.field!;
       currentSection = null;
+      labelSeen.add(field);
       if (labeled.value) {
         setField(field, labeled.value);
       } else {
@@ -518,6 +524,7 @@ export function parseRdoDeterministic(text: string): RdoParsed {
 
   // ---- Data / turno --------------------------------------------------------
   const dataRaw = rawFields.dataTurno || "";
+  if (labelSeen.has("dataTurno")) explicit.add("data");
   if (dataRaw) {
     const d = parseDateBR(dataRaw);
     if (d) {
@@ -536,6 +543,8 @@ export function parseRdoDeterministic(text: string): RdoParsed {
   }
 
   // ---- Horários ------------------------------------------------------------
+  if (labelSeen.has("horarioTrabalho") || labelSeen.has("inicio")) explicit.add("horaInicio");
+  if (labelSeen.has("horarioTrabalho") || labelSeen.has("termino")) explicit.add("horaFim");
   if (rawFields.horarioTrabalho) {
     const { inicio, fim } = parsePeriod(rawFields.horarioTrabalho);
     if (inicio) {
@@ -584,20 +593,24 @@ export function parseRdoDeterministic(text: string): RdoParsed {
   ];
   for (const [src, dst] of simple) {
     const v = rawFields[src];
+    if (labelSeen.has(src)) explicit.add(dst as string);
     if (v && !isPlaceholder(v)) {
       (out as any)[dst] = v;
-      explicit.add(dst as string);
     }
   }
   if (out.atividade) out.tituloTrabalho = out.atividade;
+  if (explicit.has("atividade")) explicit.add("tituloTrabalho");
 
   // ---- OM ------------------------------------------------------------------
   const om = sanitizeOmNumber(rawFields.numeroOM);
   out.numeroOM = om;
-  if (rawFields.numeroOM !== undefined) explicit.add("numeroOM");
+  if (labelSeen.has("numeroOM") || rawFields.numeroOM !== undefined) explicit.add("numeroOM");
 
   // ---- Controle de liberação ----------------------------------------------
   const chegada = normalizeTime(rawFields.chegadaLiberador || "");
+  if (labelSeen.has("chegadaLiberador")) explicit.add("horarioChegadaLiberador");
+  if (labelSeen.has("liberacaoDoc")) explicit.add("horarioLiberacao");
+  if (labelSeen.has("revalidacaoBloqueio")) explicit.add("horarioRevalidacaoBloqueio");
   if (chegada) {
     out.horarioChegadaLiberador = chegada;
     explicit.add("horarioChegadaLiberador");
@@ -615,7 +628,7 @@ export function parseRdoDeterministic(text: string): RdoParsed {
 
   // ---- Seções --------------------------------------------------------------
   out.atividades = cleanListItems(sectionBuffers.atividades);
-  if (sectionBuffers.atividades.length) explicit.add("atividades");
+  if (sectionBuffers.atividades.length || sectionSeen.has("atividades")) explicit.add("atividades");
 
   const desviosItems = cleanListItems(sectionBuffers.desvios);
   out.desvios = desviosItems.map((d) => ({
@@ -624,16 +637,16 @@ export function parseRdoDeterministic(text: string): RdoParsed {
     impacto: "medium",
     acaoCorretiva: null,
   }));
-  if (sectionBuffers.desvios.length) explicit.add("desvios");
+  if (sectionBuffers.desvios.length || sectionSeen.has("desvios")) explicit.add("desvios");
 
   out.efetivo = parseEfetivo(sectionBuffers.efetivo);
-  if (sectionBuffers.efetivo.length) explicit.add("efetivo");
+  if (sectionBuffers.efetivo.length || sectionSeen.has("efetivo")) explicit.add("efetivo");
 
   const obs = cleanListItems(sectionBuffers.observacoes).join(" ");
   if (obs) {
     out.comentarios = obs;
     explicit.add("comentarios");
-  } else if (sectionBuffers.observacoes.length) {
+  } else if (sectionBuffers.observacoes.length || sectionSeen.has("observacoes")) {
     explicit.add("comentarios");
   }
 
@@ -744,11 +757,9 @@ export function mergeParsed(det: RdoParsed, ai: Record<string, any> | null | und
   for (const key of AI_ONLY_KEYS) {
     const detValue = (det as any)[key];
     if (explicit.has(key)) {
-      merged[key] = isEmptyValue(detValue) && key !== "numeroOM" ? (isEmptyValue(aiData[key]) ? detValue : aiData[key]) : detValue;
-      // Rótulo explícito com valor determinístico => vence, mesmo se vazio
-      if (!isEmptyValue(detValue)) merged[key] = detValue;
-      if (key === "numeroOM") merged[key] = detValue; // nunca aceita OM inventada pela IA
-      if (key === "atividades" || key === "desvios" || key === "efetivo") merged[key] = detValue;
+      // Rótulo/cabeçalho explícito SEMPRE vence a IA, inclusive quando o valor
+      // determinístico é null, "" ou [] (campo rotulado deixado em branco).
+      merged[key] = detValue;
       continue;
     }
     if (isEmptyValue(merged[key]) && !isEmptyValue(detValue)) {
@@ -758,7 +769,9 @@ export function mergeParsed(det: RdoParsed, ai: Record<string, any> | null | und
 
   // Saneamentos finais
   merged.numeroOM = sanitizeOmNumber(merged.numeroOM);
-  merged.atividade = det.atividade || merged.atividade || null;
+  merged.atividade = explicit.has("atividade")
+    ? det.atividade
+    : det.atividade || merged.atividade || null;
   if (!merged.tituloTrabalho) merged.tituloTrabalho = det.tituloTrabalho || det.atividade || null;
 
   // tituloOM nunca pode ser substituído pelo local
