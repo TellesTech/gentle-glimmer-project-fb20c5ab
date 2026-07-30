@@ -524,6 +524,7 @@ export function parseRdoDeterministic(text: string): RdoParsed {
 
   // ---- Data / turno --------------------------------------------------------
   const dataRaw = rawFields.dataTurno || "";
+  if (labelSeen.has("dataTurno")) explicit.add("data");
   if (dataRaw) {
     const d = parseDateBR(dataRaw);
     if (d) {
@@ -542,6 +543,8 @@ export function parseRdoDeterministic(text: string): RdoParsed {
   }
 
   // ---- Horários ------------------------------------------------------------
+  if (labelSeen.has("horarioTrabalho") || labelSeen.has("inicio")) explicit.add("horaInicio");
+  if (labelSeen.has("horarioTrabalho") || labelSeen.has("termino")) explicit.add("horaFim");
   if (rawFields.horarioTrabalho) {
     const { inicio, fim } = parsePeriod(rawFields.horarioTrabalho);
     if (inicio) {
@@ -590,20 +593,24 @@ export function parseRdoDeterministic(text: string): RdoParsed {
   ];
   for (const [src, dst] of simple) {
     const v = rawFields[src];
+    if (labelSeen.has(src)) explicit.add(dst as string);
     if (v && !isPlaceholder(v)) {
       (out as any)[dst] = v;
-      explicit.add(dst as string);
     }
   }
   if (out.atividade) out.tituloTrabalho = out.atividade;
+  if (explicit.has("atividade")) explicit.add("tituloTrabalho");
 
   // ---- OM ------------------------------------------------------------------
   const om = sanitizeOmNumber(rawFields.numeroOM);
   out.numeroOM = om;
-  if (rawFields.numeroOM !== undefined) explicit.add("numeroOM");
+  if (labelSeen.has("numeroOM") || rawFields.numeroOM !== undefined) explicit.add("numeroOM");
 
   // ---- Controle de liberação ----------------------------------------------
   const chegada = normalizeTime(rawFields.chegadaLiberador || "");
+  if (labelSeen.has("chegadaLiberador")) explicit.add("horarioChegadaLiberador");
+  if (labelSeen.has("liberacaoDoc")) explicit.add("horarioLiberacao");
+  if (labelSeen.has("revalidacaoBloqueio")) explicit.add("horarioRevalidacaoBloqueio");
   if (chegada) {
     out.horarioChegadaLiberador = chegada;
     explicit.add("horarioChegadaLiberador");
@@ -621,7 +628,7 @@ export function parseRdoDeterministic(text: string): RdoParsed {
 
   // ---- Seções --------------------------------------------------------------
   out.atividades = cleanListItems(sectionBuffers.atividades);
-  if (sectionBuffers.atividades.length) explicit.add("atividades");
+  if (sectionBuffers.atividades.length || sectionSeen.has("atividades")) explicit.add("atividades");
 
   const desviosItems = cleanListItems(sectionBuffers.desvios);
   out.desvios = desviosItems.map((d) => ({
@@ -630,16 +637,16 @@ export function parseRdoDeterministic(text: string): RdoParsed {
     impacto: "medium",
     acaoCorretiva: null,
   }));
-  if (sectionBuffers.desvios.length) explicit.add("desvios");
+  if (sectionBuffers.desvios.length || sectionSeen.has("desvios")) explicit.add("desvios");
 
   out.efetivo = parseEfetivo(sectionBuffers.efetivo);
-  if (sectionBuffers.efetivo.length) explicit.add("efetivo");
+  if (sectionBuffers.efetivo.length || sectionSeen.has("efetivo")) explicit.add("efetivo");
 
   const obs = cleanListItems(sectionBuffers.observacoes).join(" ");
   if (obs) {
     out.comentarios = obs;
     explicit.add("comentarios");
-  } else if (sectionBuffers.observacoes.length) {
+  } else if (sectionBuffers.observacoes.length || sectionSeen.has("observacoes")) {
     explicit.add("comentarios");
   }
 
