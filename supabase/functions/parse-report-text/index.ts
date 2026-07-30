@@ -1,20 +1,44 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import {
+  mergeParsed,
+  parseRdoDeterministic,
+  sanitizeOmNumber,
+} from "../_shared/rdoParser.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const INVALID_OM_VALUES = ["na", "n/a", "n.a", "null", "nao informado", "não informado", "-", "--", "sem om", "0", ""];
-
-/** Devolve o número da OM limpo, ou null quando for placeholder ("NA", "N/A", "null"...). */
-function sanitizeOmNumber(value: unknown): string | null {
-  const v = String(value ?? "").trim();
-  if (INVALID_OM_VALUES.includes(v.toLowerCase())) return null;
-  return v;
-}
-
 const systemPrompt = `Você é um assistente especializado em extrair informações de relatórios diários de obra brasileiros.
+
+FORMATO CANÔNICO OFICIAL (mais recente, com emojis e asteriscos):
+📆 Data/Turno: DD/MM/AAAA – Diurno/Noturno
+🔹 Atividade:            (frente/atividade — vai para "tituloTrabalho")
+📍 Área da Atividade:    (SOMENTE o local — vai para "localAtividade")
+⏰ Horário de Trabalho:
+📡 Faixa de Rádio (WEES): / 📡 Faixa de Rádio (Operação):
+📄 Título da OM (Obrigatório):  (SOMENTE o serviço — "tituloOM")
+📝 Número da OM:               (SOMENTE o código — "numeroOM")
+🚑 Ponto de Ambulância: / 🚨 Ponto de Encontro:
+⏱️ Controle de Liberação (chegada ao liberador, liberação da documentação, revalidação de bloqueio)
+🛠️ Atividades Executadas / 📌 Desvios / Ocorrências / 🧗 Efetivo do Dia / ✅ Observações / 📷 Fotos abaixo
+
+Formatos ANTIGOS também são válidos: "Data:", "Dia:", "Local:", "Área:", "Setor:",
+"Equipe de Trabalho" (lista de nomes sem marcador), "Registro de Horários" com
+"Início: 07:00" e "Término: 19:00", "Interferências:", "Nº da OM:", "Título da OM:".
+
+SEPARAÇÃO SEMÂNTICA OBRIGATÓRIA (nunca misture):
+- tituloTrabalho = campo "Atividade" (a frente de trabalho)
+- localAtividade = SOMENTE o local/área
+- tituloOM = SOMENTE o serviço descrito em "Título da OM"
+- numeroOM = SOMENTE o código da OM (contém dígitos), nunca título/local/horário/rótulo
+- efetivo = SOMENTE nomes da seção de equipe/efetivo; pare no próximo cabeçalho
+- atividades = SOMENTE itens de "Atividades Executadas"; pare no próximo cabeçalho
+- comentarios = SOMENTE "Observações"
+- "Fotos abaixo", legendas de mídia e linhas separadoras NUNCA viram atividade,
+  observação, título, local ou nome de pessoa.
+- PRESERVE EXATAMENTE dia/mês/ANO informados; nunca troque o ano para o ano atual.
 
 IMPORTANTE - FORMATAÇÃO DE TEXTO:
 Antes de retornar os dados, você DEVE formatar todos os textos seguindo estas regras:
@@ -287,12 +311,16 @@ serve(async (req) => {
       );
     }
 
+    // 1) Extração determinística a partir dos rótulos explícitos (sempre roda)
+    const deterministic = parseRdoDeterministic(text);
+    console.log('Deterministic fields:', deterministic.explicit.join(', '));
+
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
-      console.error('LOVABLE_API_KEY not configured');
+      console.error('LOVABLE_API_KEY not configured — returning deterministic parse only');
       return new Response(
-        JSON.stringify({ error: 'Configuração de IA não encontrada' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: true, data: mergeParsed(deterministic, {}), source: 'deterministic' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -399,9 +427,10 @@ serve(async (req) => {
       }
       const errorText = await response.text();
       console.error('AI gateway error:', response.status, errorText);
+      // Fallback: devolve o que foi extraído deterministicamente
       return new Response(
-        JSON.stringify({ error: 'Erro ao processar com IA' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: true, data: mergeParsed(deterministic, {}), source: 'deterministic_fallback' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -433,8 +462,8 @@ serve(async (req) => {
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
       return new Response(
-        JSON.stringify({ error: 'Não foi possível interpretar a resposta da IA. Tente novamente.' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: true, data: mergeParsed(deterministic, {}), source: 'deterministic_fallback' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -490,10 +519,13 @@ serve(async (req) => {
       });
     }
 
-    console.log('Successfully parsed and normalized report data:', normalizedData);
+    // 2) Mesclagem final: rótulos explícitos (determinístico) vencem a IA
+    const finalData = mergeParsed(deterministic, normalizedData);
+
+    console.log('Successfully parsed and normalized report data:', finalData);
 
     return new Response(
-      JSON.stringify({ success: true, data: normalizedData }),
+      JSON.stringify({ success: true, data: finalData, source: 'hybrid' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
