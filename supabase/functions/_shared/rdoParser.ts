@@ -456,6 +456,10 @@ export function parseRdoDeterministic(text: string): RdoParsed {
   let currentSection: "atividades" | "desvios" | "efetivo" | "observacoes" | null = null;
   let pendingField: FieldKey | null = null;
   const rawFields: Partial<Record<FieldKey, string>> = {};
+  /** Rótulos de campo presentes na mensagem, mesmo com valor em branco. */
+  const labelSeen = new Set<FieldKey>();
+  /** Cabeçalhos de seção presentes, mesmo sem itens. */
+  const sectionSeen = new Set<SectionKey>();
 
   const setField = (field: FieldKey, value: string) => {
     const v = cleanLine(value);
@@ -465,7 +469,7 @@ export function parseRdoDeterministic(text: string): RdoParsed {
 
   for (const line of lines) {
     if (!line) {
-      pendingField = null;
+      // Linha vazia NÃO descarta o rótulo pendente: o valor pode vir depois.
       continue;
     }
 
@@ -484,6 +488,7 @@ export function parseRdoDeterministic(text: string): RdoParsed {
           continue;
         }
         currentSection = sec;
+        sectionSeen.add(sec);
         if (labeled.value && !isPlaceholder(labeled.value)) {
           sectionBuffers[sec].push(labeled.value);
         }
@@ -491,6 +496,7 @@ export function parseRdoDeterministic(text: string): RdoParsed {
       }
       const field = labeled.match.field!;
       currentSection = null;
+      labelSeen.add(field);
       if (labeled.value) {
         setField(field, labeled.value);
       } else {
