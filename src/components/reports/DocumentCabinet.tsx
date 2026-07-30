@@ -1043,6 +1043,12 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
 
   // Level 6: Inside a project folder - show reports list
   if (selectedCompany && selectedSiteFolder && selectedYearFolder && selectedMonthFolder && selectedProjectFolder) {
+    // Numeração sequencial única dentro da OM: mais antigo = 001
+    const omSeq = new Map<string, number>();
+    [...selectedProjectFolder.reports]
+      .sort((a, b) => (a.date === b.date ? a.id.localeCompare(b.id) : a.date.localeCompare(b.date)))
+      .forEach((r, i) => omSeq.set(r.id, i + 1));
+    const seqLabel = (id: string) => String(omSeq.get(id) ?? 1).padStart(3, '0');
     return (
       <>
         <div className="space-y-4">
@@ -1056,8 +1062,6 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                 <h2 className="font-semibold text-xl">{selectedProjectFolder.name}</h2>
                 <p className="text-sm text-muted-foreground">
                   {selectedProjectFolder.count} relatório(s) em {selectedMonthFolder.monthName}/{selectedYearFolder.year}
-                  {selectedProjectFolder.sourceProjects.length > 0 &&
-                    ` · ${selectedProjectFolder.sourceProjects.map(sp => sp.name).join(', ')}`}
                 </p>
               </div>
             </div>
@@ -1084,7 +1088,7 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                     <CardActions
                       id={report.id}
                       type="report"
-                      name={`RDO Nº ${(report.rdo_number ?? 1).toString().padStart(3, '0')}`}
+                      name={`RDO Nº ${seqLabel(report.id)}`}
                       onEdit={() => navigate(`/reports/${report.id}/edit`)}
                     />
                   </div>
@@ -1097,7 +1101,7 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                       <FileText className="h-5 w-5 text-foreground/70" />
                     </div>
                     <span className="text-sm font-semibold text-foreground truncate">
-                      RDO Nº {(report.rdo_number ?? 1).toString().padStart(3, '0')}
+                      RDO Nº {seqLabel(report.id)}
                       {report.maintenance_order_number && (
                         <span className="ml-1.5 text-xs font-normal text-muted-foreground">
                           · OM {report.maintenance_order_number}
@@ -1204,15 +1208,6 @@ export function DocumentCabinet({ onBreadcrumbChange }: DocumentCabinetProps) {
                     <p className="text-sm font-semibold text-foreground truncate" title={projectFolder.name}>
                       {projectFolder.omTitle || projectFolder.name}
                     </p>
-                    {projectFolder.sourceProjects.length > 0 && (
-                      <p
-                        className="text-[11px] text-muted-foreground truncate"
-                        title={projectFolder.sourceProjects.map(sp => sp.name).join(' · ')}
-                      >
-                        {projectFolder.sourceProjects[0].name}
-                        {projectFolder.sourceProjects.length > 1 && ` +${projectFolder.sourceProjects.length - 1}`}
-                      </p>
-                    )}
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-foreground group-hover:translate-x-0.5 transition-transform" />
                 </div>

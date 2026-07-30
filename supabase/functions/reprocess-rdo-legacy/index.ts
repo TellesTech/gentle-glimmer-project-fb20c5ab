@@ -76,12 +76,63 @@ Deno.serve(async (req) => {
     const dryRun = body.dryRun !== false; // padrão: dry-run (nenhuma escrita)
     const format = body.format === "csv" ? "csv" : "json";
     const limit = Math.min(Number(body.limit) || 2000, 5000);
+    const siteId: string | null = body.siteId ?? null;
+    const companyId: string | null = body.companyId ?? null;
+    const dateFrom: string | null = body.dateFrom ?? null;
+    const dateTo: string | null = body.dateTo ?? null;
     const batchId = crypto.randomUUID();
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+
+    // --- autorização: somente admin/super_admin (ou chamada com service role) ---
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    if (token !== serviceKey) {
+      if (!token) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: userData, error: userErr } = await admin.auth.getUser(token);
+      if (userErr || !userData?.user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: roles } = await admin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userData.user.id);
+      const allowed = (roles ?? []).some((r: any) => ["admin", "super_admin"].includes(r.role));
+      if (!allowed) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // --- escopo: restringe aos projetos de uma unidade/empresa (evita tocar outras) ---
+    let scopedProjectIds: Set<string> | null = null;
+    if (siteId || companyId) {
+      let q = admin.from("projects").select("id, site_id, company_id");
+      if (siteId) q = q.eq("site_id", siteId);
+      if (companyId) q = q.eq("company_id", companyId);
+      const { data: scoped, error: scopeErr } = await q;
+      if (scopeErr) throw scopeErr;
+      scopedProjectIds = new Set((scoped ?? []).map((p: any) => p.id));
+      if (scopedProjectIds.size === 0) {
+        return new Response(JSON.stringify({ dryRun, scope_empty: true, reports_analyzed: 0, rows: [] }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     // 1. Logs vinculados a reports, com texto original (paginado)
     const logs: any[] = [];
@@ -118,10 +169,17 @@ Deno.serve(async (req) => {
     const { data: reports, error: repErr } = await admin
       .from("reports")
       .select(
-        "id, date, status, sent_at, finalized_at, signed_pdf_url, maintenance_order_number, maintenance_order_title, project_id",
+        "id, date, status, sent_at, finalized_at, signed_pdf_url, maintenance_order_number, maintenance_order_title, location, shift, start_time, end_time, project_id",
       )
       .in("id", reportIds);
     if (repErr) throw repErr;
+
+    const scopedReports = (reports ?? []).filter((r: any) => {
+      if (scopedProjectIds && !scopedProjectIds.has(r.project_id)) return false;
+      if (dateFrom && String(r.date) < dateFrom) return false;
+      if (dateTo && String(r.date) > dateTo) return false;
+      return true;
+    });
 
     const { data: sigs } = await admin
       .from("report_signatures")
@@ -149,8 +207,9 @@ Deno.serve(async (req) => {
     const errors: any[] = [];
 
     let fixedOmNumber = 0, fixedOmTitle = 0, fixedActivities = 0, noChange = 0, skippedLocked = 0;
+    let fixedLocation = 0, fixedShift = 0;
 
-    for (const r of reports ?? []) {
+    for (const r of scopedReports) {
       const log = bestByReport.get(r.id)!;
       const parsed = parseRdoDeterministic(log.text);
       const dbActs = actsByReport.get(r.id) ?? [];
@@ -166,6 +225,12 @@ Deno.serve(async (req) => {
       const fixOmNumber = isBadOmNumber(r.maintenance_order_number) && !!newOmNumber;
       const fixOmTitle =
         (!r.maintenance_order_title || !String(r.maintenance_order_title).trim()) && !!newOmTitle;
+
+      const newLocation = parsed.localAtividade && parsed.localAtividade.trim()
+        ? parsed.localAtividade.trim()
+        : null;
+      const fixLocation = (!r.location || !String(r.location).trim()) && !!newLocation;
+      const fixShift = !r.shift && !!parsed.turno;
 
       const actsToComplete = parsedKeys.length
         ? dbActs.filter(
@@ -186,7 +251,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      const hasChange = fixOmNumber || fixOmTitle || actsToComplete.length > 0;
+      const hasChange = fixOmNumber || fixOmTitle || fixLocation || fixShift || actsToComplete.length > 0;
 
       if (locked) {
         if (hasChange) {
@@ -199,6 +264,8 @@ Deno.serve(async (req) => {
             would_fix: [
               fixOmNumber ? "om_number" : null,
               fixOmTitle ? "om_title" : null,
+              fixLocation ? "location" : null,
+              fixShift ? "shift" : null,
               actsToComplete.length ? "activities" : null,
             ].filter(Boolean).join("+"),
           });
@@ -218,6 +285,10 @@ Deno.serve(async (req) => {
         om_number_after: !locked && fixOmNumber ? newOmNumber : r.maintenance_order_number,
         om_title_before: r.maintenance_order_title,
         om_title_after: !locked && fixOmTitle ? newOmTitle : r.maintenance_order_title,
+        location_before: r.location,
+        location_after: !locked && fixLocation ? newLocation : r.location,
+        shift_before: r.shift,
+        shift_after: !locked && fixShift ? parsed.turno : r.shift,
         activities_total: dbActs.length,
         activities_to_complete: locked ? 0 : actsToComplete.length,
         parsed_activities: parsed.atividades.length,
@@ -226,6 +297,8 @@ Deno.serve(async (req) => {
           : ([
               fixOmNumber ? "om_number" : null,
               fixOmTitle ? "om_title" : null,
+              fixLocation ? "location" : null,
+              fixShift ? "shift" : null,
               actsToComplete.length ? "activities" : null,
             ].filter(Boolean).join("+") || "nenhuma"),
       });
@@ -233,6 +306,8 @@ Deno.serve(async (req) => {
       if (dryRun) {
         if (!locked && fixOmNumber) fixedOmNumber++;
         if (!locked && fixOmTitle) fixedOmTitle++;
+        if (!locked && fixLocation) fixedLocation++;
+        if (!locked && fixShift) fixedShift++;
         if (!locked) fixedActivities += actsToComplete.length;
       }
 
@@ -258,6 +333,22 @@ Deno.serve(async (req) => {
           });
           patch.maintenance_order_title = newOmTitle;
         }
+        if (fixLocation) {
+          backupRows.push({
+            batch_id: batchId, report_id: r.id, entity: "reports", entity_id: r.id,
+            field: "location",
+            value_before: r.location ?? null, value_after: newLocation,
+          });
+          patch.location = newLocation;
+        }
+        if (fixShift) {
+          backupRows.push({
+            batch_id: batchId, report_id: r.id, entity: "reports", entity_id: r.id,
+            field: "shift",
+            value_before: r.shift ?? null, value_after: parsed.turno,
+          });
+          patch.shift = parsed.turno;
+        }
 
         for (const a of actsToComplete) {
           backupRows.push({
@@ -282,10 +373,14 @@ Deno.serve(async (req) => {
             await admin.from("reports").update({
               maintenance_order_number: r.maintenance_order_number,
               maintenance_order_title: r.maintenance_order_title,
+              location: r.location,
+              shift: r.shift,
             }).eq("id", r.id);
           });
           if (fixOmNumber) fixedOmNumber++;
           if (fixOmTitle) fixedOmTitle++;
+          if (fixLocation) fixedLocation++;
+          if (fixShift) fixedShift++;
         }
 
         for (const a of actsToComplete) {
@@ -313,16 +408,21 @@ Deno.serve(async (req) => {
     const summary = {
       dryRun,
       batch_id: dryRun ? null : batchId,
+      scope: { siteId, companyId, dateFrom, dateTo },
       reports_analyzed: rows.length,
       om_number_filled: fixedOmNumber,
       om_title_filled: fixedOmTitle,
+      location_filled: fixedLocation,
+      shift_filled: fixedShift,
       activities_completed: fixedActivities,
       reports_skipped_sent_or_signed: skippedLocked,
       manual_review: manualReview.length,
       reports_without_saved_activities: missingActivities.length,
       no_change: noChange,
       errors: errors.length,
-      writes_performed: dryRun ? 0 : fixedOmNumber + fixedOmTitle + fixedActivities,
+      writes_performed: dryRun
+        ? 0
+        : fixedOmNumber + fixedOmTitle + fixedLocation + fixedShift + fixedActivities,
     };
 
     if (format === "csv") {
