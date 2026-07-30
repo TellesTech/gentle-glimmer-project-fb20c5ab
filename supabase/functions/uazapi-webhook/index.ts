@@ -338,6 +338,49 @@ async function resolveCanonicalOmTitle(
 }
 
 /** Nome padronizado da atividade: "OM 900037786367 — Título" (sem prefixo quando não há número válido). */
+/** Chave normalizada de título (sem acentos/pontuação) usada para casar OMs iguais. */
+function normalizeTitleKey(value: unknown): string {
+  return String(value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/**
+ * Quando o RDO chega SEM número de OM, tenta herdar o número de um RDO já existente
+ * no mesmo projeto/unidade com o MESMO título de OM — evita cards "SEM Nº DE OM"
+ * duplicando uma OM que já existe no sistema.
+ */
+async function inheritOmNumberByTitle(
+  supabase: any,
+  projectId: string,
+  title: string | null
+): Promise<string | null> {
+  const key = normalizeTitleKey(title);
+  if (!key) return null;
+  try {
+    const { data } = await supabase
+      .from("reports")
+      .select("maintenance_order_number, maintenance_order_title, project_id")
+      .eq("project_id", projectId)
+      .not("maintenance_order_number", "is", null)
+      .order("created_at", { ascending: true })
+      .limit(200);
+    const hit = (data || []).find(
+      (r: any) => normalizeTitleKey(r.maintenance_order_title) === key
+    );
+    if (hit?.maintenance_order_number) {
+      console.log(`[OM] Número herdado pelo título "${title}": ${hit.maintenance_order_number}`);
+      return String(hit.maintenance_order_number);
+    }
+  } catch (e) {
+    console.error("[OM] Falha ao herdar número por título:", e);
+  }
+  return null;
+}
+
 /**
  * Extração determinística (regex) do número e do título da OM/OS direto do texto da mensagem.
  * Usada como REDE DE SEGURANÇA quando a IA não devolve numeroOM/tituloOM — sem OM os RDOs
