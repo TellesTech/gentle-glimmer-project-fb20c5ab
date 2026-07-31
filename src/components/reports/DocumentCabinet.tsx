@@ -741,6 +741,12 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
   // Group reports by company -> site -> year -> month -> project
   const companyFolders = useMemo<CompanyFolder[]>(() => {
     const map = new Map<string, CompanyFolder>();
+
+    // Fallbacks locais: se o join aninhado (project->site->company) vier vazio
+    // por RLS/relacionamento, resolvemos a hierarquia pelas listas já carregadas.
+    const projectsById = new Map<string, any>((allProjects as any[]).map(p => [p.id, p]));
+    const sitesByIdLocal = new Map<string, any>(allSites.map((s: any) => [s.id, s]));
+    const companiesByIdLocal = new Map<string, any>(allCompanies.map((c: any) => [c.id, c]));
     
     allCompanies.forEach(company => {
       map.set(company.id, {
@@ -755,10 +761,16 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     });
     
     reports.forEach(report => {
-      const company = report.project?.site?.company;
-      const site = report.project?.site;
-      const project = report.project;
-      if (!company || !site || !project) return;
+      const rawProjectId = report.project?.id || (report as any).project_id || null;
+      const fallbackProject = rawProjectId ? projectsById.get(rawProjectId) : null;
+      const project: any = report.project || fallbackProject;
+      if (!project) return;
+      const fallbackSite = sitesByIdLocal.get(report.project?.site?.id || project.site_id);
+      const site: any = report.project?.site || fallbackSite;
+      if (!site) return;
+      const company: any =
+        report.project?.site?.company || companiesByIdLocal.get(site.company_id);
+      if (!company) return;
       
       const reportDate = parseISO(report.date);
       const year = getYear(reportDate);
