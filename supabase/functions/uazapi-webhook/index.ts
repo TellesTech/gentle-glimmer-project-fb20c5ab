@@ -925,6 +925,22 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    // Automação pausada manualmente nas configurações do sistema
+    {
+      const { data: sysSettings } = await supabase
+        .from("system_settings")
+        .select("whatsapp_automation_paused")
+        .order("updated_at", { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+      if (sysSettings?.whatsapp_automation_paused) {
+        console.log("Automação do WhatsApp pausada — mensagem ignorada");
+        return new Response(JSON.stringify({ status: "ignored", reason: "automation_paused" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Detect group vs DM
     const isGroup = payload.isGroup || payload.chatId?.includes("@g.us");
     const rawText =
