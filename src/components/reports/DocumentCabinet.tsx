@@ -631,6 +631,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
   const REPORT_SELECT = `
             id,
             date,
+            project_id,
             shift,
             location,
             status,
