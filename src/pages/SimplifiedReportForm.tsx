@@ -307,6 +307,9 @@ export default function SimplifiedReportForm() {
   }, [showTabs, tabsHook]);
 
   // Create report mutation
+  // Maps a sequential tab to the report already created from it (prevents duplicates)
+  const [savedTabReports, setSavedTabReports] = useState<Record<string, string>>({});
+
   const createReportMutation = useMutation({
     mutationFn: async ({ data, status }: { data: ReportFormData; status: 'draft' | 'pending' }) => {
       const getCompanyIdFromProject = async (projId: string) => {
@@ -478,7 +481,7 @@ export default function SimplifiedReportForm() {
         status === 'draft' ? 'Rascunho salvo!' : 'Relatório enviado!',
         sequential
           ? {
-              description: 'Um novo RDO em branco já está pronto para preenchimento.',
+              description: 'RDO salvo. Use "+" na barra de abas para iniciar o próximo.',
               action: {
                 label: 'Ver relatório',
                 onClick: () => navigate(`/reports/${report.id}`),
@@ -488,10 +491,11 @@ export default function SimplifiedReportForm() {
       );
 
       if (sequential) {
-        // Removing the submitted tab automatically opens a fresh blank tab
-        // when it was the last one (see useReportTabs.removeTab).
-        tabsHook.removeTab(tabsHook.activeTabId);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Keep the filled tab on screen (clearing it made users think the save failed)
+        // and remember which report it created so a second click updates instead of
+        // inserting a duplicate.
+        setSavedTabReports(prev => ({ ...prev, [tabsHook.activeTabId]: report.id }));
+        tabsHook.markTabClean(tabsHook.activeTabId);
       }
 
       // Check if project reached 100% - trigger auto service report generation
@@ -765,9 +769,26 @@ export default function SimplifiedReportForm() {
   const handleSubmit = async (data: ReportFormData, status: 'draft' | 'pending') => {
     if (isEditMode) {
       await updateReportMutation.mutateAsync({ data, status });
-    } else {
-      await createReportMutation.mutateAsync({ data, status });
+      return;
     }
+
+    // Sequential mode: this tab already generated a report — avoid duplicates
+    const alreadySaved = showTabs && tabsHook.activeTabId
+      ? savedTabReports[tabsHook.activeTabId]
+      : undefined;
+
+    if (alreadySaved) {
+      toast.info('Este RDO já foi salvo', {
+        description: 'Abra o relatório para editar ou clique em "+" para criar o próximo.',
+        action: {
+          label: 'Abrir RDO',
+          onClick: () => navigate(`/reports/${alreadySaved}/edit-simple`),
+        },
+      });
+      return;
+    }
+
+    await createReportMutation.mutateAsync({ data, status });
   };
 
   const isLoading = isLoadingProject || isLoadingTeam || isLoadingReport;
