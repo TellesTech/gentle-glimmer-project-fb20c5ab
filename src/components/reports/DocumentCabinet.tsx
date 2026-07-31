@@ -142,6 +142,31 @@ interface YearFolder {
   months: MonthFolder[];
 }
 
+const TITLE_STOPWORDS = new Set([
+  'e', 'de', 'da', 'do', 'das', 'dos', 'no', 'na', 'nos', 'nas', 'em', 'a', 'o', 'as', 'os',
+  'com', 'para', 'por', 'um', 'uma', 'the', 's',
+]);
+
+/** Tokens significativos do título da OM (sem acento, sem stopwords, sem plural simples). */
+function omTitleTokens(value: string | null | undefined): Set<string> {
+  return new Set(
+    normalizeOmTitle(value)
+      .split(' ')
+      .map(t => t.replace(/s$/, ''))
+      .filter(t => t.length > 1 && !TITLE_STOPWORDS.has(t))
+  );
+}
+
+/** Similaridade de Jaccard entre dois conjuntos de tokens. */
+function tokenSimilarity(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0;
+  let inter = 0;
+  a.forEach(t => { if (b.has(t)) inter++; });
+  return inter / (a.size + b.size - inter);
+}
+
+const TITLE_MERGE_THRESHOLD = 0.6;
+
 interface SiteFolder {
   id: string;
   name: string;
