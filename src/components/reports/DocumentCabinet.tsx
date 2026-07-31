@@ -1233,8 +1233,9 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                   <div className="absolute top-2 right-2 z-10">
                     <CardActions
                       id={projectFolder.sourceProjects[0]?.id || projectFolder.id}
-                      type="project"
+                      type="reportGroup"
                       name={projectFolder.name}
+                      reportIds={projectFolder.reports.map((r) => r.id)}
                       onEdit={() => navigate(`/projects/${projectFolder.sourceProjects[0]?.id || ''}`)}
                     />
                   </div>
