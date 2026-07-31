@@ -371,18 +371,6 @@ export function WhatsAppSettingsTab() {
     },
   });
 
-  const _unusedDeleteMapping = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('whatsapp_group_projects').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({ title: 'Mapeamento removido' });
-      setDeleteId(null);
-      queryClient.invalidateQueries({ queryKey: ['whatsapp-group-mappings'] });
-    },
-  });
-
   const statusIcon = (status: string) => {
     switch (status) {
       case 'success': return <CheckCircle className="h-4 w-4 text-green-500" />;
