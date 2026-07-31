@@ -743,6 +743,7 @@ export function WhatsAppSettingsTab() {
                 <TableRow>
                   <TableHead className="text-xs">Grupo</TableHead>
                   <TableHead className="text-xs">Unidade</TableHead>
+                  <TableHead className="text-xs">Automação</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
                   <TableHead className="text-xs w-10"></TableHead>
                 </TableRow>
@@ -762,6 +763,28 @@ export function WhatsAppSettingsTab() {
                         {m.sites?.companies?.name && (
                           <p className="text-muted-foreground text-[10px]">{m.sites.companies.name}</p>
                         )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={!automationPaused && !m.automation_paused}
+                          disabled={automationPaused || toggleGroupPause.isPending}
+                          onCheckedChange={(checked) =>
+                            toggleGroupPause.mutate({ id: m.id, paused: !checked })
+                          }
+                          aria-label="Pausar automação desta unidade"
+                        />
+                        <Badge
+                          variant={automationPaused || m.automation_paused ? 'destructive' : 'default'}
+                          className="text-[10px]"
+                        >
+                          {automationPaused
+                            ? 'Pausada pelo global'
+                            : m.automation_paused
+                              ? 'Pausada'
+                              : 'Ativa'}
+                        </Badge>
                       </div>
                     </TableCell>
                     <TableCell>
