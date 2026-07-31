@@ -533,16 +533,28 @@ export default function SimplifiedReportForm() {
         }
       }
 
-      // Close the editor and show the agenda with the saved reports
-      navigate('/reports', {
-        replace: true,
-        state: {
-          companyId: selection?.companyId,
-          siteId: selection?.siteId,
-          projectId: selection?.projectId,
-          highlightReportId: report.id,
-        },
-      });
+      // Close the editor and open the agenda (cabinet) already drilled down to
+      // the company/site/month of the report that was just saved.
+      let companyId = selection?.companyId as string | undefined;
+      if (!companyId && selection?.projectId) {
+        const { data: proj } = await supabase
+          .from('projects')
+          .select('company_id')
+          .eq('id', selection.projectId)
+          .maybeSingle();
+        companyId = proj?.company_id || undefined;
+      }
+
+      const reportDate = new Date(`${data.date}T00:00:00`);
+      const params = new URLSearchParams();
+      if (companyId) params.set('company', companyId);
+      if (selection?.siteId) params.set('site', selection.siteId);
+      if (companyId && selection?.siteId && !isNaN(reportDate.getTime())) {
+        params.set('year', String(reportDate.getFullYear()));
+        params.set('month', String(reportDate.getMonth()));
+      }
+
+      navigate(params.toString() ? `/reports?${params.toString()}` : '/reports', { replace: true });
     },
     onError: (error) => {
       console.error('Error creating report:', error);
