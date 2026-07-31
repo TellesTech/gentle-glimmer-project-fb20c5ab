@@ -13,6 +13,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import FolderCard from '@/components/reports/FolderCard';
 import { StatusBadge, ConfirmDialog } from '@/components/shared';
+import { WhatsAppIcon } from '@/components/shared/WhatsAppIcon';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
