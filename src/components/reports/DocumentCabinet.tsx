@@ -1022,6 +1022,17 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     });
   }, [onContextChange, selectedCompany, selectedSiteFolder]);
 
+  /** Quantidade de RDOs removidos em cascata ao excluir empresa/unidade/atividade. */
+  const deleteImpactCount = !deletingItem
+    ? 0
+    : deletingItem.type === 'company'
+    ? reports.filter((r) => r.project?.site?.company?.id === deletingItem.id).length
+    : deletingItem.type === 'site'
+    ? reports.filter((r) => r.project?.site?.id === deletingItem.id).length
+    : deletingItem.type === 'project'
+    ? reports.filter((r) => r.project?.id === deletingItem.id).length
+    : deletingItem.reportIds?.length ?? 1;
+
   const dialogs = (
     <>
       <BatchDownloadOptionsDialog
