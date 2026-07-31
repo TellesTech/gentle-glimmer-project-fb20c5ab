@@ -2847,6 +2847,7 @@ export type Database = {
           system_name: string | null
           system_subtitle: string | null
           updated_at: string | null
+          whatsapp_automation_paused: boolean
         }
         Insert: {
           accent_color?: string | null
@@ -2865,6 +2866,7 @@ export type Database = {
           system_name?: string | null
           system_subtitle?: string | null
           updated_at?: string | null
+          whatsapp_automation_paused?: boolean
         }
         Update: {
           accent_color?: string | null
@@ -2883,6 +2885,7 @@ export type Database = {
           system_name?: string | null
           system_subtitle?: string | null
           updated_at?: string | null
+          whatsapp_automation_paused?: boolean
         }
         Relationships: []
       }

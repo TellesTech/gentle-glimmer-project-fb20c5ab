@@ -1,0 +1,1 @@
+ALTER TABLE public.system_settings ADD COLUMN IF NOT EXISTS whatsapp_automation_paused boolean NOT NULL DEFAULT false;
