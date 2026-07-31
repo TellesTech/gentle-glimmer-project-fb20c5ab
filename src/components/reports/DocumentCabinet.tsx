@@ -668,32 +668,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
       for (let i = 0; i < 50; i++) {
         let query = supabase
           .from('reports')
-          .select(`
-            id,
-            date,
-            shift,
-            location,
-            status,
-            rdo_number,
-            actual_workforce,
-            daily_progress,
-            maintenance_order_title,
-            maintenance_order_number,
-            project:projects(
-              id, 
-              name,
-              code,
-              status,
-              progress,
-              site:sites(
-                id,
-                name,
-                photo_url,
-                company:companies(id, name, logo_url, photo_url)
-              )
-            ),
-            signed_pdf_url
-          `)
+          .select(REPORT_SELECT)
           .in('status', ['completed', 'draft', 'sent', 'signed', 'finalized'])
           .is('archived_at', null)
           .order('date', { ascending: false })
@@ -714,6 +689,32 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     },
     enabled: !isRestrictedAdmin || (adminProjectIds !== undefined),
   });
+
+  // RDOs criados pelo usuário logado — sempre visíveis, independentemente da unidade.
+  const { data: ownReports = [] } = useQuery({
+    queryKey: ['reports-cabinet-own-v1', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('reports')
+        .select(REPORT_SELECT)
+        .eq('created_by', user!.id)
+        .in('status', ['completed', 'draft', 'sent', 'signed', 'finalized'])
+        .is('archived_at', null)
+        .order('date', { ascending: false })
+        .limit(1000);
+      if (error) throw error;
+      return (data || []) as Report[];
+    },
+    enabled: !!user?.id,
+  });
+
+  // União (sem duplicatas) entre o escopo da unidade e os RDOs do próprio usuário.
+  const reports = useMemo<Report[]>(() => {
+    const byId = new Map<string, Report>();
+    scopedReports.forEach(r => byId.set(r.id, r));
+    ownReports.forEach(r => { if (!byId.has(r.id)) byId.set(r.id, r); });
+    return Array.from(byId.values()).sort((a, b) => (a.date < b.date ? 1 : -1));
+  }, [scopedReports, ownReports]);
 
   // Fetch projects (to surface activities created this month even without RDOs)
   const { data: allProjects = [] } = useQuery({
