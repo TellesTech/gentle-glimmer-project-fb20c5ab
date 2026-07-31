@@ -275,7 +275,13 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
   const [exportProgress, setExportProgress] = useState<BatchExportProgress | null>(null);
   
   // Delete state
-  const [deletingItem, setDeletingItem] = useState<{ id: string; type: 'company' | 'site' | 'project' | 'report'; name: string } | null>(null);
+  const [deletingItem, setDeletingItem] = useState<{
+    id: string;
+    type: 'company' | 'site' | 'project' | 'report' | 'reportGroup';
+    name: string;
+    /** RDOs atingidos pela exclusão (usado para aviso e para exclusão seletiva em lote). */
+    reportIds?: string[];
+  } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Edit site state
