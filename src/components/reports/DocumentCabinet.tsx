@@ -1034,8 +1034,24 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
       <ConfirmDialog
         open={!!deletingItem}
         onOpenChange={(open) => !open && setDeletingItem(null)}
-        title={`Excluir ${deletingItem?.type === 'company' ? 'empresa' : deletingItem?.type === 'site' ? 'unidade' : deletingItem?.type === 'project' ? 'atividade' : 'relatório'}`}
-        description={`Tem certeza que deseja excluir "${deletingItem?.name}"? Esta ação não pode ser desfeita.`}
+        title={`Excluir ${
+          deletingItem?.type === 'company'
+            ? 'empresa'
+            : deletingItem?.type === 'site'
+            ? 'unidade'
+            : deletingItem?.type === 'project'
+            ? 'atividade'
+            : deletingItem?.type === 'reportGroup'
+            ? 'RDOs da pasta'
+            : 'relatório'
+        }`}
+        description={
+          deletingItem?.type === 'report'
+            ? `Tem certeza que deseja excluir apenas o "${deletingItem?.name}"? Os demais RDOs não serão afetados. Esta ação não pode ser desfeita.`
+            : deletingItem?.type === 'reportGroup'
+            ? `Serão excluídos ${deletingItem?.reportIds?.length ?? 0} RDO(s) da pasta "${deletingItem?.name}". Nenhum outro relatório será afetado. Esta ação não pode ser desfeita.`
+            : `ATENÇÃO: excluir "${deletingItem?.name}" também remove ${deleteImpactCount} RDO(s) vinculado(s) e todos os seus dados. Esta ação não pode ser desfeita.`
+        }
         confirmText="Excluir"
         variant="destructive"
         onConfirm={handleDelete}
