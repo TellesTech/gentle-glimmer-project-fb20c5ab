@@ -238,7 +238,7 @@ interface DocumentCabinetProps {
 export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: DocumentCabinetProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const queryClient = useQueryClient();
   const { siteIds } = useAdminSiteAccess();
   const isRestrictedAdmin = role === 'admin' && siteIds.length > 0;
