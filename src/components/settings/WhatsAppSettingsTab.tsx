@@ -13,6 +13,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Plus, Trash2, RefreshCw, CheckCircle, XCircle, Clock, AlertCircle, Search, ArrowUpRight, QrCode, Wifi } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Pause, Play } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/shared/WhatsAppIcon';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -438,10 +440,88 @@ export function WhatsAppSettingsTab() {
 
   const mappedGroupIds = new Set(mappings?.map((m: any) => m.group_id) || []);
 
+  const { data: waSettings, isLoading: settingsLoading } = useQuery({
+    queryKey: ['whatsapp-automation-paused'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('system_settings')
+        .select('id, whatsapp_automation_paused')
+        .order('updated_at', { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { id: string; whatsapp_automation_paused: boolean } | null;
+    },
+  });
+
+  const automationPaused = !!waSettings?.whatsapp_automation_paused;
+
+  const togglePause = useMutation({
+    mutationFn: async (paused: boolean) => {
+      if (!waSettings?.id) throw new Error('Configurações do sistema não encontradas');
+      const { error } = await (supabase as any)
+        .from('system_settings')
+        .update({ whatsapp_automation_paused: paused })
+        .eq('id', waSettings.id);
+      if (error) throw error;
+      return paused;
+    },
+    onSuccess: (paused) => {
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-automation-paused'] });
+      toast({
+        title: paused ? 'Automação pausada' : 'Automação reativada',
+        description: paused
+          ? 'Nenhum RDO será criado automaticamente a partir do WhatsApp.'
+          : 'As mensagens de RDO voltarão a ser processadas.',
+      });
+    },
+    onError: (err: any) => {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    },
+  });
+
   const webhookUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/uazapi-webhook`;
 
   return (
     <div className="space-y-6">
+      {/* Pausar automação */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            {automationPaused ? <Pause className="h-5 w-5 text-warning" /> : <Play className="h-5 w-5 text-green-600" />}
+            <CardTitle>Automação do WhatsApp</CardTitle>
+          </div>
+          <CardDescription>
+            Quando pausada, as mensagens continuam chegando mas nenhum RDO é criado automaticamente.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
+            <div className="space-y-1">
+              <Label htmlFor="wa-automation-toggle">
+                {automationPaused ? 'Automação pausada' : 'Automação ativa'}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {automationPaused
+                  ? 'As mensagens recebidas serão registradas como ignoradas (pausado).'
+                  : 'As mensagens de RDO recebidas serão processadas normalmente.'}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge variant={automationPaused ? 'destructive' : 'default'}>
+                {automationPaused ? 'Pausada' : 'Ativa'}
+              </Badge>
+              <Switch
+                id="wa-automation-toggle"
+                checked={!automationPaused}
+                disabled={togglePause.isPending || settingsLoading}
+                onCheckedChange={(checked) => togglePause.mutate(!checked)}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Webhook URL */}
       <Card>
         <CardHeader>
