@@ -626,7 +626,34 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
   });
 
   // Fetch completed AND draft reports with company hierarchy
-  const { data: reports = [], isLoading } = useQuery({
+  const REPORT_SELECT = `
+            id,
+            date,
+            shift,
+            location,
+            status,
+            rdo_number,
+            actual_workforce,
+            daily_progress,
+            maintenance_order_title,
+            maintenance_order_number,
+            project:projects(
+              id, 
+              name,
+              code,
+              status,
+              progress,
+              site:sites(
+                id,
+                name,
+                photo_url,
+                company:companies(id, name, logo_url, photo_url)
+              )
+            ),
+            signed_pdf_url
+          `;
+
+  const { data: scopedReports = [], isLoading } = useQuery({
     queryKey: ['reports-cabinet-all-v2', isRestrictedAdmin ? adminProjectIds : null],
     queryFn: async () => {
       if (isRestrictedAdmin && (!adminProjectIds || adminProjectIds.length === 0)) {
