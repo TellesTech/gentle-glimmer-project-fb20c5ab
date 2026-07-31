@@ -1,0 +1,1 @@
+ALTER TABLE public.whatsapp_group_projects ADD COLUMN IF NOT EXISTS automation_paused boolean NOT NULL DEFAULT false;

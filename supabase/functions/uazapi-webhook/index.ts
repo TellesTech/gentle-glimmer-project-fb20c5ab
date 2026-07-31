@@ -985,10 +985,17 @@ Deno.serve(async (req) => {
     if (isGroup && groupId) {
       const { data: groupMap } = await supabase
         .from("whatsapp_group_projects")
-        .select("site_id, sites:site_id(company_id)")
+        .select("site_id, automation_paused, sites:site_id(company_id)")
         .eq("group_id", groupId)
         .eq("is_active", true)
         .maybeSingle();
+      if ((groupMap as any)?.automation_paused) {
+        console.log(`Automação pausada para o grupo ${groupId} — mensagem ignorada`);
+        return new Response(
+          JSON.stringify({ status: "ignored", reason: "automation_paused_group" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
       if (groupMap?.site_id) {
         scopeSiteId = groupMap.site_id;
         scopeCompanyId = (groupMap as any).sites?.company_id || null;

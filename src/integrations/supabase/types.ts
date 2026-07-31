@@ -3069,6 +3069,7 @@ export type Database = {
       }
       whatsapp_group_projects: {
         Row: {
+          automation_paused: boolean
           created_at: string | null
           created_by: string | null
           group_id: string
@@ -3079,6 +3080,7 @@ export type Database = {
           site_id: string | null
         }
         Insert: {
+          automation_paused?: boolean
           created_at?: string | null
           created_by?: string | null
           group_id: string
@@ -3089,6 +3091,7 @@ export type Database = {
           site_id?: string | null
         }
         Update: {
+          automation_paused?: boolean
           created_at?: string | null
           created_by?: string | null
           group_id?: string

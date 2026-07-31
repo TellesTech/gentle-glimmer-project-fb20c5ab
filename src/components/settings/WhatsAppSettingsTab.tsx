@@ -347,6 +347,30 @@ export function WhatsAppSettingsTab() {
     },
   });
 
+  // Pause/resume automation per unit (group mapping)
+  const toggleGroupPause = useMutation({
+    mutationFn: async ({ id, paused }: { id: string; paused: boolean }) => {
+      const { error } = await (supabase as any)
+        .from('whatsapp_group_projects')
+        .update({ automation_paused: paused })
+        .eq('id', id);
+      if (error) throw error;
+      return paused;
+    },
+    onSuccess: (paused) => {
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-group-mappings'] });
+      toast({
+        title: paused ? 'Automação pausada nesta unidade' : 'Automação reativada nesta unidade',
+        description: paused
+          ? 'As mensagens desse grupo não gerarão RDOs automaticamente.'
+          : 'As mensagens desse grupo voltarão a gerar RDOs.',
+      });
+    },
+    onError: (err: any) => {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    },
+  });
+
   const statusIcon = (status: string) => {
     switch (status) {
       case 'success': return <CheckCircle className="h-4 w-4 text-green-500" />;
@@ -492,7 +516,8 @@ export function WhatsAppSettingsTab() {
             <CardTitle>Automação do WhatsApp</CardTitle>
           </div>
           <CardDescription>
-            Quando pausada, as mensagens continuam chegando mas nenhum RDO é criado automaticamente.
+            Chave mestra: quando pausada, nenhuma unidade cria RDOs automaticamente. Para pausar apenas
+            uma unidade, use o interruptor na lista "Mapeamento Grupo — Unidade" abaixo.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -719,6 +744,7 @@ export function WhatsAppSettingsTab() {
                 <TableRow>
                   <TableHead className="text-xs">Grupo</TableHead>
                   <TableHead className="text-xs">Unidade</TableHead>
+                  <TableHead className="text-xs">Automação</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
                   <TableHead className="text-xs w-10"></TableHead>
                 </TableRow>
@@ -738,6 +764,28 @@ export function WhatsAppSettingsTab() {
                         {m.sites?.companies?.name && (
                           <p className="text-muted-foreground text-[10px]">{m.sites.companies.name}</p>
                         )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={!automationPaused && !m.automation_paused}
+                          disabled={automationPaused || toggleGroupPause.isPending}
+                          onCheckedChange={(checked) =>
+                            toggleGroupPause.mutate({ id: m.id, paused: !checked })
+                          }
+                          aria-label="Pausar automação desta unidade"
+                        />
+                        <Badge
+                          variant={automationPaused || m.automation_paused ? 'destructive' : 'default'}
+                          className="text-[10px]"
+                        >
+                          {automationPaused
+                            ? 'Pausada pelo global'
+                            : m.automation_paused
+                              ? 'Pausada'
+                              : 'Ativa'}
+                        </Badge>
                       </div>
                     </TableCell>
                     <TableCell>
