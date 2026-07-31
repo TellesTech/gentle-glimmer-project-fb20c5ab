@@ -638,6 +638,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
             daily_progress,
             maintenance_order_title,
             maintenance_order_number,
+            source,
             project:projects(
               id, 
               name,
