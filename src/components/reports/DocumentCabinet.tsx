@@ -165,7 +165,7 @@ function tokenSimilarity(a: Set<string>, b: Set<string>): number {
   return inter / (a.size + b.size - inter);
 }
 
-const TITLE_MERGE_THRESHOLD = 0.6;
+const TITLE_MERGE_THRESHOLD = 0.7;
 
 interface SiteFolder {
   id: string;
@@ -944,6 +944,9 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
             month.projects.forEach(pf => {
               if (pf.omNumber) { merged.push(pf); return; }
               const tks = omTitleTokens(pf.omTitle || pf.name);
+              // Compara sempre com o conjunto ORIGINAL de tokens da pasta destino.
+              // (Unir tokens gerava efeito cascata: um título "ponte" acabava
+              // juntando serviços totalmente distintos no mesmo card.)
               const target = merged.find(m =>
                 !m.omNumber && tokenSimilarity(tokensOf.get(m) || new Set(), tks) >= TITLE_MERGE_THRESHOLD
               );
@@ -966,8 +969,6 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
               Object.entries(pf.titleCounts || {}).forEach(([k, v]) => {
                 tc[k] = { label: v.label, count: (tc[k]?.count || 0) + v.count };
               });
-              const union = new Set([...(tokensOf.get(target) || []), ...tks]);
-              tokensOf.set(target, union);
             });
             month.projects = merged;
 
