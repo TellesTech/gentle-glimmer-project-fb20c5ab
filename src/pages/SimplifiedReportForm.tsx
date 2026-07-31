@@ -492,28 +492,24 @@ export default function SimplifiedReportForm() {
     onSuccess: async (report, { data, status }) => {
       queryClient.invalidateQueries({ queryKey: ['reports'] });
 
-      // Sequential mode: stay on the form so the user can create the next RDO
       const sequential = showTabs && !!tabsHook.activeTabId;
 
       toast.success(
         status === 'draft' ? 'Rascunho salvo!' : 'Relatório enviado!',
-        sequential
-          ? {
-              description: 'RDO salvo. Use "+" na barra de abas para iniciar o próximo.',
-              action: {
-                label: 'Ver relatório',
-                onClick: () => navigate(`/reports/${report.id}`),
-              },
-            }
-          : undefined
+        {
+          description: 'RDO fechado e adicionado à lista de relatórios.',
+          action: {
+            label: 'Ver relatório',
+            onClick: () => navigate(`/reports/${report.id}`),
+          },
+        }
       );
 
       if (sequential) {
-        // Keep the filled tab on screen (clearing it made users think the save failed)
-        // and remember which report it created so a second click updates instead of
-        // inserting a duplicate.
+        // Close the finished RDO: remove its tab and drop the saved draft from storage
         setSavedTabReports(prev => ({ ...prev, [tabsHook.activeTabId]: report.id }));
         tabsHook.markTabClean(tabsHook.activeTabId);
+        tabsHook.removeTab(tabsHook.activeTabId);
       }
 
       // Check if project reached 100% - trigger auto service report generation
@@ -540,9 +536,16 @@ export default function SimplifiedReportForm() {
         }
       }
 
-      if (sequential) return; // keep the user on the form for the next RDO
-
-      navigate(`/reports/${report.id}`, { replace: true });
+      // Close the editor and show the agenda with the saved reports
+      navigate('/reports', {
+        replace: true,
+        state: {
+          companyId: selection?.companyId,
+          siteId: selection?.siteId,
+          projectId: selection?.projectId,
+          highlightReportId: report.id,
+        },
+      });
     },
     onError: (error) => {
       console.error('Error creating report:', error);
