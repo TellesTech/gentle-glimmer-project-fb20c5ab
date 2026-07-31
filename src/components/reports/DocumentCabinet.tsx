@@ -142,6 +142,31 @@ interface YearFolder {
   months: MonthFolder[];
 }
 
+const TITLE_STOPWORDS = new Set([
+  'e', 'de', 'da', 'do', 'das', 'dos', 'no', 'na', 'nos', 'nas', 'em', 'a', 'o', 'as', 'os',
+  'com', 'para', 'por', 'um', 'uma', 'the', 's',
+]);
+
+/** Tokens significativos do título da OM (sem acento, sem stopwords, sem plural simples). */
+function omTitleTokens(value: string | null | undefined): Set<string> {
+  return new Set(
+    normalizeOmTitle(value)
+      .split(' ')
+      .map(t => t.replace(/s$/, ''))
+      .filter(t => t.length > 1 && !TITLE_STOPWORDS.has(t))
+  );
+}
+
+/** Similaridade de Jaccard entre dois conjuntos de tokens. */
+function tokenSimilarity(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0;
+  let inter = 0;
+  a.forEach(t => { if (b.has(t)) inter++; });
+  return inter / (a.size + b.size - inter);
+}
+
+const TITLE_MERGE_THRESHOLD = 0.6;
+
 interface SiteFolder {
   id: string;
   name: string;
@@ -912,6 +937,40 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
         site.years.forEach(year => {
           year.months.sort((a, b) => b.month - a.month);
           year.months.forEach(month => {
+            // Mescla pastas SEM número de OM cujos títulos são variações do mesmo serviço
+            // (ex.: "Inspeção e reparo chaminé e FEA" / "Inspeção e reparo na chaminé").
+            const merged: ProjectFolder[] = [];
+            const tokensOf = new Map<ProjectFolder, Set<string>>();
+            month.projects.forEach(pf => {
+              if (pf.omNumber) { merged.push(pf); return; }
+              const tks = omTitleTokens(pf.omTitle || pf.name);
+              const target = merged.find(m =>
+                !m.omNumber && tokenSimilarity(tokensOf.get(m) || new Set(), tks) >= TITLE_MERGE_THRESHOLD
+              );
+              if (!target) {
+                tokensOf.set(pf, tks);
+                merged.push(pf);
+                return;
+              }
+              target.reports.push(...pf.reports);
+              target.count += pf.count;
+              target.totalWorkforce += pf.totalWorkforce;
+              target.progress = Math.min(Math.round((target.progress + pf.progress) * 10) / 10, 100);
+              if (!target.lastDate || (pf.lastDate && pf.lastDate > target.lastDate)) target.lastDate = pf.lastDate;
+              pf.omNumbers.forEach(n => { if (!target.omNumbers.includes(n)) target.omNumbers.push(n); });
+              pf.omTitles.forEach(t => { if (!target.omTitles.includes(t)) target.omTitles.push(t); });
+              pf.sourceProjects.forEach(sp => {
+                if (!target.sourceProjects.some(s => s.id === sp.id)) target.sourceProjects.push(sp);
+              });
+              const tc = target.titleCounts || (target.titleCounts = {});
+              Object.entries(pf.titleCounts || {}).forEach(([k, v]) => {
+                tc[k] = { label: v.label, count: (tc[k]?.count || 0) + v.count };
+              });
+              const union = new Set([...(tokensOf.get(target) || []), ...tks]);
+              tokensOf.set(target, union);
+            });
+            month.projects = merged;
+
             // Nome final do card: OM <número> — <título mais frequente>
             month.projects.forEach(pf => {
               const best = Object.values(pf.titleCounts || {}).sort((a, b) => b.count - a.count)[0];
