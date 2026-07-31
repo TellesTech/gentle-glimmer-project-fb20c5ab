@@ -137,7 +137,6 @@ export function normalizeOmTitle(value: string | null | undefined): string {
 
 interface YearFolder {
   year: number;
-
   reports: Report[];
   count: number;
   months: MonthFolder[];
