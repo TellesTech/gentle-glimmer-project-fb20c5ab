@@ -300,12 +300,41 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     if (!deletingItem) return;
     setIsDeleting(true);
     try {
+      // Exclusão seletiva de um único RDO (ou de um conjunto explícito de RDOs).
+      if (deletingItem.type === 'report' || deletingItem.type === 'reportGroup') {
+        const ids =
+          deletingItem.type === 'report'
+            ? [deletingItem.id]
+            : Array.from(new Set(deletingItem.reportIds || []));
+
+        if (ids.length === 0) {
+          toast({ title: 'Nada para excluir', description: 'Nenhum RDO selecionado.' });
+          return;
+        }
+
+        const { error, count } = await supabase
+          .from('reports')
+          .delete({ count: 'exact' })
+          .in('id', ids);
+
+        if (error) throw error;
+
+        queryClient.invalidateQueries({ queryKey: ['reports-cabinet-all-v2'] });
+        toast({
+          title: count === 0 ? 'RDO já removido' : 'Excluído com sucesso',
+          description:
+            count === 0
+              ? 'O registro não foi encontrado no banco. Lista atualizada.'
+              : `${count} RDO(s) removido(s). Os demais relatórios foram mantidos.`,
+        });
+        return;
+      }
+
       const table = {
-        report: 'reports',
         project: 'projects',
         site: 'sites',
         company: 'companies',
-      }[deletingItem.type] as 'reports' | 'projects' | 'sites' | 'companies';
+      }[deletingItem.type] as 'projects' | 'sites' | 'companies';
 
       const { error, count } = await supabase
         .from(table)
