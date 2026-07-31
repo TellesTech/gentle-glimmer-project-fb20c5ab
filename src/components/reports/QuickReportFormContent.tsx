@@ -839,6 +839,14 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
       return;
     }
 
+    // Evita salvar RDOs vazios (sem atividades e sem efetivo)
+    const hasActivities = formData.activities.some(a => a.description.trim() !== '');
+    const hasSteps = (formData.activitySteps || []).length > 0;
+    if (status === 'pending' && !formData.noActivity && !hasActivities && !hasSteps) {
+      toast.error('Informe ao menos uma atividade executada (ou marque "Sem atividade")');
+      return;
+    }
+
 
     // Validação de quantidade feita nas etapas (obrigatório quando há total definido e não é rascunho)
     if (formData.useWeightedProgress && status !== 'draft') {

@@ -782,7 +782,7 @@ export default function SimplifiedReportForm() {
         description: 'Abra o relatório para editar ou clique em "+" para criar o próximo.',
         action: {
           label: 'Abrir RDO',
-          onClick: () => navigate(`/reports/${alreadySaved}/edit`),
+          onClick: () => navigate(`/reports/${alreadySaved}/edit-simple`),
         },
       });
       return;
