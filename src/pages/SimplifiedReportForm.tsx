@@ -491,6 +491,8 @@ export default function SimplifiedReportForm() {
     },
     onSuccess: async (report, { data, status }) => {
       queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ['reports-cabinet-all-v2'] });
+      queryClient.invalidateQueries({ queryKey: ['reports-cabinet-own-v1'] });
 
       const sequential = showTabs && !!tabsHook.activeTabId;
 
