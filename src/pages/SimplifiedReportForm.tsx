@@ -319,12 +319,29 @@ export default function SimplifiedReportForm() {
 
       if (!selection || !user) throw new Error('Dados incompletos');
 
+      // Próximo número sequencial de RDO do projeto (evita "RDO Nº 001" em todos)
+      let nextRdoNumber: number | null = null;
+      try {
+        const { data: lastRdo } = await supabase
+          .from('reports')
+          .select('rdo_number')
+          .eq('project_id', selection.projectId!)
+          .not('rdo_number', 'is', null)
+          .order('rdo_number', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        nextRdoNumber = ((lastRdo?.rdo_number as number | null) ?? 0) + 1;
+      } catch {
+        nextRdoNumber = null;
+      }
+
       // Create the report
       const { data: report, error: reportError } = await supabase
         .from('reports')
         .insert({
           project_id: selection.projectId!,
           team_id: selection.teamId,
+          rdo_number: nextRdoNumber,
           date: data.date,
           shift: data.shift,
           start_time: data.startTime || null,
