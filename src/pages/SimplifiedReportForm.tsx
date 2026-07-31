@@ -481,7 +481,7 @@ export default function SimplifiedReportForm() {
         status === 'draft' ? 'Rascunho salvo!' : 'Relatório enviado!',
         sequential
           ? {
-              description: 'Um novo RDO em branco já está pronto para preenchimento.',
+              description: 'RDO salvo. Use "+" na barra de abas para iniciar o próximo.',
               action: {
                 label: 'Ver relatório',
                 onClick: () => navigate(`/reports/${report.id}`),
@@ -491,10 +491,11 @@ export default function SimplifiedReportForm() {
       );
 
       if (sequential) {
-        // Removing the submitted tab automatically opens a fresh blank tab
-        // when it was the last one (see useReportTabs.removeTab).
-        tabsHook.removeTab(tabsHook.activeTabId);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Keep the filled tab on screen (clearing it made users think the save failed)
+        // and remember which report it created so a second click updates instead of
+        // inserting a duplicate.
+        setSavedTabReports(prev => ({ ...prev, [tabsHook.activeTabId]: report.id }));
+        tabsHook.markTabClean(tabsHook.activeTabId);
       }
 
       // Check if project reached 100% - trigger auto service report generation
