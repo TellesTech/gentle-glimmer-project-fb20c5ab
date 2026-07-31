@@ -393,7 +393,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     }
   };
 
-  const CardActions = ({ id, type, name, onEdit }: { id: string; type: 'company' | 'site' | 'project' | 'report'; name: string; onEdit?: () => void }) => {
+  const CardActions = ({ id, type, name, onEdit, reportIds }: { id: string; type: 'company' | 'site' | 'project' | 'report' | 'reportGroup'; name: string; onEdit?: () => void; reportIds?: string[] }) => {
     if (!isSuperAdmin) return null;
     return (
       <DropdownMenu>
@@ -412,9 +412,9 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
             <Pencil className="h-3.5 w-3.5 mr-2" />
             Editar
           </DropdownMenuItem>
-          <DropdownMenuItem className="text-destructive" onClick={() => setDeletingItem({ id, type, name })}>
+          <DropdownMenuItem className="text-destructive" onClick={() => setDeletingItem({ id, type, name, reportIds })}>
             <Trash2 className="h-3.5 w-3.5 mr-2" />
-            Excluir
+            {type === 'reportGroup' ? `Excluir ${reportIds?.length ?? 0} RDO(s) desta pasta` : 'Excluir'}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
