@@ -769,9 +769,26 @@ export default function SimplifiedReportForm() {
   const handleSubmit = async (data: ReportFormData, status: 'draft' | 'pending') => {
     if (isEditMode) {
       await updateReportMutation.mutateAsync({ data, status });
-    } else {
-      await createReportMutation.mutateAsync({ data, status });
+      return;
     }
+
+    // Sequential mode: this tab already generated a report — avoid duplicates
+    const alreadySaved = showTabs && tabsHook.activeTabId
+      ? savedTabReports[tabsHook.activeTabId]
+      : undefined;
+
+    if (alreadySaved) {
+      toast.info('Este RDO já foi salvo', {
+        description: 'Abra o relatório para editar ou clique em "+" para criar o próximo.',
+        action: {
+          label: 'Abrir RDO',
+          onClick: () => navigate(`/reports/${alreadySaved}/edit`),
+        },
+      });
+      return;
+    }
+
+    await createReportMutation.mutateAsync({ data, status });
   };
 
   const isLoading = isLoadingProject || isLoadingTeam || isLoadingReport;
