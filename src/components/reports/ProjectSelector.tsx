@@ -1266,6 +1266,7 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
       await queryClient.invalidateQueries({ queryKey: ['project-daily-workforce', projectId] });
       await queryClient.invalidateQueries({ queryKey: ['document-cabinet-projects'] });
       await queryClient.invalidateQueries({ queryKey: ['reports-cabinet-all-v2'] });
+      await queryClient.invalidateQueries({ queryKey: ['reports-cabinet-own-v1'] });
       setCreateProjectOpen(false);
       setProjectFormData(initialProjectFormData);
       projectPhotoUrlRef.current = '';
