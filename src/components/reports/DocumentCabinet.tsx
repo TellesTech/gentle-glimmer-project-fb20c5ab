@@ -54,6 +54,7 @@ interface Report {
   daily_progress: number | null;
   maintenance_order_title: string | null;
   maintenance_order_number: string | null;
+  source?: string | null;
   project: {
     id: string;
     name: string;
