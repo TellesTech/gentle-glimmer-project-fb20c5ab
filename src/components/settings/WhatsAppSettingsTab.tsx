@@ -347,6 +347,42 @@ export function WhatsAppSettingsTab() {
     },
   });
 
+  // Pause/resume automation per unit (group mapping)
+  const toggleGroupPause = useMutation({
+    mutationFn: async ({ id, paused }: { id: string; paused: boolean }) => {
+      const { error } = await (supabase as any)
+        .from('whatsapp_group_projects')
+        .update({ automation_paused: paused })
+        .eq('id', id);
+      if (error) throw error;
+      return paused;
+    },
+    onSuccess: (paused) => {
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-group-mappings'] });
+      toast({
+        title: paused ? 'Automação pausada nesta unidade' : 'Automação reativada nesta unidade',
+        description: paused
+          ? 'As mensagens desse grupo não gerarão RDOs automaticamente.'
+          : 'As mensagens desse grupo voltarão a gerar RDOs.',
+      });
+    },
+    onError: (err: any) => {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    },
+  });
+
+  const _unusedDeleteMapping = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('whatsapp_group_projects').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: 'Mapeamento removido' });
+      setDeleteId(null);
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-group-mappings'] });
+    },
+  });
+
   const statusIcon = (status: string) => {
     switch (status) {
       case 'success': return <CheckCircle className="h-4 w-4 text-green-500" />;
