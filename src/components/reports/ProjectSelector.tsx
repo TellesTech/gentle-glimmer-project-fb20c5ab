@@ -554,7 +554,7 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
       try {
         const { data, error } = await supabase
           .from('reports')
-          .select('id, project_id, date, daily_progress, actual_workforce')
+          .select('id, project_id, date, daily_progress, actual_workforce, maintenance_order_number, maintenance_order_title')
           .in('project_id', projectIds);
         if (error) {
           console.error('Error fetching reports for folders:', error);
@@ -659,28 +659,75 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
 
   // When inside a monthly folder, recalculate metrics using only that month's reports
   const monthScopedProjects = useMemo(() => {
-    if (!selectedFolder || selectedFolder === 'all') return filteredProjects;
-    
-    const monthReports = reportsForFolders.filter(r => r.date.substring(0, 7) === selectedFolder);
-    
-    return filteredProjects.map(p => {
-      const projReports = monthReports.filter(r => r.project_id === p.id);
-      const rdoCount = projReports.length;
-      const totalWorkforce = projReports.reduce((sum, r) => sum + (Number(r.actual_workforce) || 0), 0);
-      const lastReport = projReports.sort((a, b) => b.date.localeCompare(a.date))[0];
-      const monthProgress = Math.min(
-        Math.round(projReports.reduce((sum, r) => sum + (Number(r.daily_progress) || 0), 0) * 10) / 10,
-        100
-      );
-      return {
-        ...p,
-        reportsCount: rdoCount,
-        totalWorkforce,
-        lastReportDate: lastReport?.date || null,
-        progress: monthProgress,
-      };
+    if (!selectedFolder || selectedFolder === 'all' || activitySearch.trim()) return filteredProjects;
+
+    const monthReports = reportsForFolders.filter(r => (r.date || '').substring(0, 7) === selectedFolder);
+
+    // Agrupa por OM (número > título), espelhando "Meus Relatórios",
+    // para que as mesmas atividades apareçam nos dois caminhos.
+    const normOm = (v?: string | null) => {
+      const s = (v || '').trim();
+      if (!s || /^(na|n\/a|null|undefined|-|sem om|s\/n|0)$/i.test(s)) return null;
+      const digits = s.replace(/\D/g, '');
+      return digits.length >= 4 ? digits : s.toUpperCase();
+    };
+    const projById = new Map(filteredProjects.map(p => [p.id, p as any]));
+    type Group = {
+      key: string; omNumber: string | null; titleCounts: Record<string, number>;
+      projectCounts: Record<string, number>; count: number; workforce: number;
+      progress: number; lastDate: string | null;
+    };
+    const groups = new Map<string, Group>();
+    monthReports.forEach((r: any) => {
+      if (!projById.has(r.project_id)) return;
+      const om = normOm(r.maintenance_order_number);
+      const title = (r.maintenance_order_title || '').trim();
+      const key = om ? `om:${om}` : title ? `title:${title.toLowerCase()}` : `project:${r.project_id}`;
+      let g = groups.get(key);
+      if (!g) {
+        g = { key, omNumber: om, titleCounts: {}, projectCounts: {}, count: 0, workforce: 0, progress: 0, lastDate: null };
+        groups.set(key, g);
+      }
+      if (title) g.titleCounts[title] = (g.titleCounts[title] || 0) + 1;
+      g.projectCounts[r.project_id] = (g.projectCounts[r.project_id] || 0) + 1;
+      g.count++;
+      g.workforce += Number(r.actual_workforce) || 0;
+      g.progress += Number(r.daily_progress) || 0;
+      if (!g.lastDate || (r.date || '') > g.lastDate) g.lastDate = r.date || null;
     });
-  }, [selectedFolder, filteredProjects, reportsForFolders]);
+
+    const usedProjectIds = new Set<string>();
+    const items = Array.from(groups.values()).map(g => {
+      const repProjectId = Object.entries(g.projectCounts).sort((a, b) => b[1] - a[1])[0][0];
+      usedProjectIds.add(repProjectId);
+      Object.keys(g.projectCounts).forEach(id => usedProjectIds.add(id));
+      const base = projById.get(repProjectId) || {};
+      const bestTitle = Object.entries(g.titleCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+      const name = g.omNumber
+        ? (bestTitle ? `OM ${g.omNumber} — ${bestTitle}` : `OM ${g.omNumber}`)
+        : (bestTitle || base.name || 'Atividade');
+      return {
+        ...base,
+        __key: g.key,
+        id: repProjectId,
+        name,
+        reportsCount: g.count,
+        totalWorkforce: g.workforce,
+        lastReportDate: g.lastDate,
+        progress: Math.min(Math.round(g.progress * 10) / 10, 100),
+      } as any;
+    });
+
+    // Atividades da pasta sem RDOs (ex.: criadas neste mês) continuam visíveis
+    filteredProjects.forEach(p => {
+      if (!usedProjectIds.has(p.id)) {
+        items.push({ ...(p as any), __key: `project:${p.id}`, reportsCount: 0, totalWorkforce: 0, lastReportDate: null, progress: 0 });
+      }
+    });
+
+    return items.sort((a, b) => (b.lastReportDate || '').localeCompare(a.lastReportDate || ''));
+  }, [selectedFolder, filteredProjects, reportsForFolders, activitySearch]);
+
 
   const { data: projectReports = [] } = useQuery({
     queryKey: ['project-reports-calendar', selection.projectId],
@@ -1731,7 +1778,7 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
                           const status = proj.status || 'planning';
                           return (
                           <div
-                            key={project.id}
+                            key={proj.__key || project.id}
                             className="group rounded-xl border bg-card p-3.5 hover:bg-muted/60 transition-colors cursor-pointer shadow-sm"
                             onClick={() => handleProjectSelect(project)}
                           >
