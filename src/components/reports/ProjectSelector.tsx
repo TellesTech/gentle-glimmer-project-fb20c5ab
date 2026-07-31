@@ -728,27 +728,6 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
     return items.sort((a, b) => (b.lastReportDate || '').localeCompare(a.lastReportDate || ''));
   }, [selectedFolder, filteredProjects, reportsForFolders, activitySearch]);
 
-  const legacyMonthScoped = useMemo(() => {
-    if (!selectedFolder || selectedFolder === 'all') return filteredProjects;
-    const monthReports = reportsForFolders.filter(r => r.date.substring(0, 7) === selectedFolder);
-    return filteredProjects.map(p => {
-      const projReports = monthReports.filter(r => r.project_id === p.id);
-      const rdoCount = projReports.length;
-      const totalWorkforce = projReports.reduce((sum, r) => sum + (Number(r.actual_workforce) || 0), 0);
-      const lastReport = projReports.sort((a, b) => b.date.localeCompare(a.date))[0];
-      const monthProgress = Math.min(
-        Math.round(projReports.reduce((sum, r) => sum + (Number(r.daily_progress) || 0), 0) * 10) / 10,
-        100
-      );
-      return {
-        ...p,
-        reportsCount: rdoCount,
-        totalWorkforce,
-        lastReportDate: lastReport?.date || null,
-        progress: monthProgress,
-      };
-    });
-  }, [selectedFolder, filteredProjects, reportsForFolders]);
 
   const { data: projectReports = [] } = useQuery({
     queryKey: ['project-reports-calendar', selection.projectId],
@@ -1799,7 +1778,7 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
                           const status = proj.status || 'planning';
                           return (
                           <div
-                            key={project.id}
+                            key={proj.__key || project.id}
                             className="group rounded-xl border bg-card p-3.5 hover:bg-muted/60 transition-colors cursor-pointer shadow-sm"
                             onClick={() => handleProjectSelect(project)}
                           >
