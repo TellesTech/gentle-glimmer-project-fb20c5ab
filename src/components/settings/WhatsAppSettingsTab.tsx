@@ -516,7 +516,8 @@ export function WhatsAppSettingsTab() {
             <CardTitle>Automação do WhatsApp</CardTitle>
           </div>
           <CardDescription>
-            Quando pausada, as mensagens continuam chegando mas nenhum RDO é criado automaticamente.
+            Chave mestra: quando pausada, nenhuma unidade cria RDOs automaticamente. Para pausar apenas
+            uma unidade, use o interruptor na lista "Mapeamento Grupo — Unidade" abaixo.
           </CardDescription>
         </CardHeader>
         <CardContent>
