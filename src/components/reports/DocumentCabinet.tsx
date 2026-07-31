@@ -298,6 +298,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
 
   const handleDelete = async () => {
     if (!deletingItem) return;
+    if (!deletingItem) return;
     setIsDeleting(true);
     try {
       // Exclusão seletiva de um único RDO (ou de um conjunto explícito de RDOs).
