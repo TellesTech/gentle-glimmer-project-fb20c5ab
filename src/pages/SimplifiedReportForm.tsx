@@ -494,16 +494,13 @@ export default function SimplifiedReportForm() {
 
       const sequential = showTabs && !!tabsHook.activeTabId;
 
-      toast.success(
-        status === 'draft' ? 'Rascunho salvo!' : 'Relatório enviado!',
-        {
-          description: 'RDO fechado e adicionado à lista de relatórios.',
-          action: {
-            label: 'Ver relatório',
-            onClick: () => navigate(`/reports/${report.id}`),
-          },
-        }
-      );
+      toast.success('Relatório salvo', {
+        description: 'Abrindo a agenda para criar um novo relatório.',
+        action: {
+          label: 'Ver relatório',
+          onClick: () => navigate(`/reports/${report.id}`),
+        },
+      });
 
       if (sequential) {
         // Close the finished RDO: remove its tab and drop the saved draft from storage
