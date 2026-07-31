@@ -1128,7 +1128,13 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     [...selectedProjectFolder.reports]
       .sort((a, b) => (a.date === b.date ? a.id.localeCompare(b.id) : a.date.localeCompare(b.date)))
       .forEach((r, i) => omSeq.set(r.id, i + 1));
-    const seqLabel = (id: string) => String(omSeq.get(id) ?? 1).padStart(3, '0');
+    // Prioriza o número real gravado no RDO (mesmo exibido na criação/visualização).
+    // Só usa a sequência calculada quando o registro ainda não tem rdo_number.
+    const seqLabel = (report: { id: string; rdo_number: number | null }) => {
+      const real = Number(report.rdo_number);
+      if (Number.isFinite(real) && real > 0) return String(real).padStart(3, '0');
+      return String(omSeq.get(report.id) ?? 1).padStart(3, '0');
+    };
     return (
       <>
         <div className="space-y-4">
@@ -1168,7 +1174,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                     <CardActions
                       id={report.id}
                       type="report"
-                      name={`RDO Nº ${seqLabel(report.id)}`}
+                      name={`RDO Nº ${seqLabel(report)}`}
                       onEdit={() => navigate(`/reports/${report.id}/edit`)}
                     />
                   </div>
@@ -1181,7 +1187,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                       <FileText className="h-5 w-5 text-foreground/70" />
                     </div>
                     <span className="text-sm font-semibold text-foreground truncate">
-                      RDO Nº {seqLabel(report.id)}
+                      RDO Nº {seqLabel(report)}
                       {report.maintenance_order_number && (
                         <span className="ml-1.5 text-xs font-normal text-muted-foreground">
                           · OM {report.maintenance_order_number}
