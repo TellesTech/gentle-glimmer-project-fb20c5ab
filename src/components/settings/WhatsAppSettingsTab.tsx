@@ -13,6 +13,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Plus, Trash2, RefreshCw, CheckCircle, XCircle, Clock, AlertCircle, Search, ArrowUpRight, QrCode, Wifi } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Pause, Play } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/shared/WhatsAppIcon';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -442,6 +444,44 @@ export function WhatsAppSettingsTab() {
 
   return (
     <div className="space-y-6">
+      {/* Pausar automação */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            {automationPaused ? <Pause className="h-5 w-5 text-warning" /> : <Play className="h-5 w-5 text-green-600" />}
+            <CardTitle>Automação do WhatsApp</CardTitle>
+          </div>
+          <CardDescription>
+            Quando pausada, as mensagens continuam chegando mas nenhum RDO é criado automaticamente.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
+            <div className="space-y-1">
+              <Label htmlFor="wa-automation-toggle">
+                {automationPaused ? 'Automação pausada' : 'Automação ativa'}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {automationPaused
+                  ? 'As mensagens recebidas serão registradas como ignoradas (pausado).'
+                  : 'As mensagens de RDO recebidas serão processadas normalmente.'}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge variant={automationPaused ? 'destructive' : 'default'}>
+                {automationPaused ? 'Pausada' : 'Ativa'}
+              </Badge>
+              <Switch
+                id="wa-automation-toggle"
+                checked={!automationPaused}
+                disabled={togglePause.isPending || settingsLoading}
+                onCheckedChange={(checked) => togglePause.mutate(!checked)}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Webhook URL */}
       <Card>
         <CardHeader>
