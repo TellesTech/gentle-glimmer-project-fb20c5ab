@@ -275,7 +275,13 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
   const [exportProgress, setExportProgress] = useState<BatchExportProgress | null>(null);
   
   // Delete state
-  const [deletingItem, setDeletingItem] = useState<{ id: string; type: 'company' | 'site' | 'project' | 'report'; name: string } | null>(null);
+  const [deletingItem, setDeletingItem] = useState<{
+    id: string;
+    type: 'company' | 'site' | 'project' | 'report' | 'reportGroup';
+    name: string;
+    /** RDOs atingidos pela exclusão (usado para aviso e para exclusão seletiva em lote). */
+    reportIds?: string[];
+  } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Edit site state
@@ -294,12 +300,41 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     if (!deletingItem) return;
     setIsDeleting(true);
     try {
+      // Exclusão seletiva de um único RDO (ou de um conjunto explícito de RDOs).
+      if (deletingItem.type === 'report' || deletingItem.type === 'reportGroup') {
+        const ids =
+          deletingItem.type === 'report'
+            ? [deletingItem.id]
+            : Array.from(new Set(deletingItem.reportIds || []));
+
+        if (ids.length === 0) {
+          toast({ title: 'Nada para excluir', description: 'Nenhum RDO selecionado.' });
+          return;
+        }
+
+        const { error, count } = await supabase
+          .from('reports')
+          .delete({ count: 'exact' })
+          .in('id', ids);
+
+        if (error) throw error;
+
+        queryClient.invalidateQueries({ queryKey: ['reports-cabinet-all-v2'] });
+        toast({
+          title: count === 0 ? 'RDO já removido' : 'Excluído com sucesso',
+          description:
+            count === 0
+              ? 'O registro não foi encontrado no banco. Lista atualizada.'
+              : `${count} RDO(s) removido(s). Os demais relatórios foram mantidos.`,
+        });
+        return;
+      }
+
       const table = {
-        report: 'reports',
         project: 'projects',
         site: 'sites',
         company: 'companies',
-      }[deletingItem.type] as 'reports' | 'projects' | 'sites' | 'companies';
+      }[deletingItem.type] as 'projects' | 'sites' | 'companies';
 
       const { error, count } = await supabase
         .from(table)
@@ -358,7 +393,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     }
   };
 
-  const CardActions = ({ id, type, name, onEdit }: { id: string; type: 'company' | 'site' | 'project' | 'report'; name: string; onEdit?: () => void }) => {
+  const CardActions = ({ id, type, name, onEdit, reportIds }: { id: string; type: 'company' | 'site' | 'project' | 'report' | 'reportGroup'; name: string; onEdit?: () => void; reportIds?: string[] }) => {
     if (!isSuperAdmin) return null;
     return (
       <DropdownMenu>
@@ -377,9 +412,9 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
             <Pencil className="h-3.5 w-3.5 mr-2" />
             Editar
           </DropdownMenuItem>
-          <DropdownMenuItem className="text-destructive" onClick={() => setDeletingItem({ id, type, name })}>
+          <DropdownMenuItem className="text-destructive" onClick={() => setDeletingItem({ id, type, name, reportIds })}>
             <Trash2 className="h-3.5 w-3.5 mr-2" />
-            Excluir
+            {type === 'reportGroup' ? `Excluir ${reportIds?.length ?? 0} RDO(s) desta pasta` : 'Excluir'}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -987,6 +1022,17 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     });
   }, [onContextChange, selectedCompany, selectedSiteFolder]);
 
+  /** Quantidade de RDOs removidos em cascata ao excluir empresa/unidade/atividade. */
+  const deleteImpactCount = !deletingItem
+    ? 0
+    : deletingItem.type === 'company'
+    ? reports.filter((r) => r.project?.site?.company?.id === deletingItem.id).length
+    : deletingItem.type === 'site'
+    ? reports.filter((r) => r.project?.site?.id === deletingItem.id).length
+    : deletingItem.type === 'project'
+    ? reports.filter((r) => r.project?.id === deletingItem.id).length
+    : deletingItem.reportIds?.length ?? 1;
+
   const dialogs = (
     <>
       <BatchDownloadOptionsDialog
@@ -999,8 +1045,24 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
       <ConfirmDialog
         open={!!deletingItem}
         onOpenChange={(open) => !open && setDeletingItem(null)}
-        title={`Excluir ${deletingItem?.type === 'company' ? 'empresa' : deletingItem?.type === 'site' ? 'unidade' : deletingItem?.type === 'project' ? 'atividade' : 'relatório'}`}
-        description={`Tem certeza que deseja excluir "${deletingItem?.name}"? Esta ação não pode ser desfeita.`}
+        title={`Excluir ${
+          deletingItem?.type === 'company'
+            ? 'empresa'
+            : deletingItem?.type === 'site'
+            ? 'unidade'
+            : deletingItem?.type === 'project'
+            ? 'atividade'
+            : deletingItem?.type === 'reportGroup'
+            ? 'RDOs da pasta'
+            : 'relatório'
+        }`}
+        description={
+          deletingItem?.type === 'report'
+            ? `Tem certeza que deseja excluir apenas o "${deletingItem?.name}"? Os demais RDOs não serão afetados. Esta ação não pode ser desfeita.`
+            : deletingItem?.type === 'reportGroup'
+            ? `Serão excluídos ${deletingItem?.reportIds?.length ?? 0} RDO(s) da pasta "${deletingItem?.name}". Nenhum outro relatório será afetado. Esta ação não pode ser desfeita.`
+            : `ATENÇÃO: excluir "${deletingItem?.name}" também remove ${deleteImpactCount} RDO(s) vinculado(s) e todos os seus dados. Esta ação não pode ser desfeita.`
+        }
         confirmText="Excluir"
         variant="destructive"
         onConfirm={handleDelete}
@@ -1198,8 +1260,9 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                   <div className="absolute top-2 right-2 z-10">
                     <CardActions
                       id={projectFolder.sourceProjects[0]?.id || projectFolder.id}
-                      type="project"
+                      type="reportGroup"
                       name={projectFolder.name}
+                      reportIds={projectFolder.reports.map((r) => r.id)}
                       onEdit={() => navigate(`/projects/${projectFolder.sourceProjects[0]?.id || ''}`)}
                     />
                   </div>
