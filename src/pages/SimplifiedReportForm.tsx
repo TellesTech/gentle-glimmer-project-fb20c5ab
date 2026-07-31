@@ -387,8 +387,9 @@ export default function SimplifiedReportForm() {
 
       if (reportError) throw reportError;
 
-      // Insert activity steps (weighted progress)
-      if (data.useWeightedProgress && data.activitySteps && data.activitySteps.length > 0) {
+      // Insert activity steps (sempre grava o que o usuário preencheu,
+      // mesmo que o modo de progresso ponderado esteja desligado)
+      if (data.activitySteps && data.activitySteps.length > 0) {
         const stepsData = data.activitySteps.map(step => ({
           report_id: report.id,
           description: step.description,
@@ -482,7 +483,7 @@ export default function SimplifiedReportForm() {
 
         if (delaysData.length > 0) {
           const { error: delaysError } = await supabase.from('workforce_delays').insert(delaysData);
-          if (delaysError) console.error('Erro ao salvar atrasos adicionais:', delaysError);
+          if (delaysError) throw new Error('Erro ao salvar atrasos adicionais: ' + delaysError.message);
         }
       }
 
@@ -614,8 +615,8 @@ export default function SimplifiedReportForm() {
       const deleteError = deleteResults.find(r => r.error);
       if (deleteError?.error) throw new Error('Erro ao limpar dados anteriores: ' + deleteError.error.message);
 
-      // Re-insert activity steps (weighted progress)
-      if (data.useWeightedProgress && data.activitySteps && data.activitySteps.length > 0) {
+      // Re-insert activity steps (sempre grava o que foi preenchido)
+      if (data.activitySteps && data.activitySteps.length > 0) {
         const stepsData = data.activitySteps.map(step => ({
           report_id: reportId,
           description: step.description,
