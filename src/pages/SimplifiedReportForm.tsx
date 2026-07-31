@@ -307,6 +307,9 @@ export default function SimplifiedReportForm() {
   }, [showTabs, tabsHook]);
 
   // Create report mutation
+  // Maps a sequential tab to the report already created from it (prevents duplicates)
+  const [savedTabReports, setSavedTabReports] = useState<Record<string, string>>({});
+
   const createReportMutation = useMutation({
     mutationFn: async ({ data, status }: { data: ReportFormData; status: 'draft' | 'pending' }) => {
       const getCompanyIdFromProject = async (projId: string) => {
