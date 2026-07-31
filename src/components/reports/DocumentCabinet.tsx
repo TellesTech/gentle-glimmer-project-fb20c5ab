@@ -13,6 +13,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import FolderCard from '@/components/reports/FolderCard';
 import { StatusBadge, ConfirmDialog } from '@/components/shared';
+import { WhatsAppIcon } from '@/components/shared/WhatsAppIcon';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -54,6 +55,7 @@ interface Report {
   daily_progress: number | null;
   maintenance_order_title: string | null;
   maintenance_order_number: string | null;
+  source?: string | null;
   project: {
     id: string;
     name: string;
@@ -637,6 +639,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
             daily_progress,
             maintenance_order_title,
             maintenance_order_number,
+            source,
             project:projects(
               id, 
               name,
@@ -1306,6 +1309,16 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                 {/* Status badges */}
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <StatusBadge status={report.status} />
+                  {report.source === 'whatsapp_ai' && (
+                    <Badge
+                      variant="secondary"
+                      className="text-[10px] px-2 py-0.5 gap-1 bg-green-500/10 text-green-600 border border-green-500/20"
+                      title="Registro criado automaticamente pela IA a partir de mensagem no WhatsApp"
+                    >
+                      <WhatsAppIcon className="h-3 w-3" />
+                      IA via WhatsApp
+                    </Badge>
+                  )}
                 </div>
               </div>
             ))}

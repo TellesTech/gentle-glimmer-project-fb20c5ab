@@ -749,6 +749,7 @@ function buildReportData(
     comments: parsedData.comentarios || "",
     weather: "clear",
     created_by: createdBy,
+    source: "whatsapp_ai",
     updated_at: new Date().toISOString(),
     // New fields from AI parsing
     start_time: parsedData.horaInicio || null,

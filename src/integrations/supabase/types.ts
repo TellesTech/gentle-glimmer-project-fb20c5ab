@@ -2264,6 +2264,7 @@ export type Database = {
           sent_at: string | null
           shift: Database["public"]["Enums"]["shift_type"]
           signed_pdf_url: string | null
+          source: string
           start_time: string | null
           status: Database["public"]["Enums"]["report_status"] | null
           supervisor_name: string | null
@@ -2324,6 +2325,7 @@ export type Database = {
           sent_at?: string | null
           shift?: Database["public"]["Enums"]["shift_type"]
           signed_pdf_url?: string | null
+          source?: string
           start_time?: string | null
           status?: Database["public"]["Enums"]["report_status"] | null
           supervisor_name?: string | null
@@ -2384,6 +2386,7 @@ export type Database = {
           sent_at?: string | null
           shift?: Database["public"]["Enums"]["shift_type"]
           signed_pdf_url?: string | null
+          source?: string
           start_time?: string | null
           status?: Database["public"]["Enums"]["report_status"] | null
           supervisor_name?: string | null
