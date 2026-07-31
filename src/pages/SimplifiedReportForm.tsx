@@ -537,11 +537,12 @@ export default function SimplifiedReportForm() {
       // the company/site/month of the report that was just saved.
       let companyId = selection?.companyId as string | undefined;
       if (!companyId && selection?.projectId) {
-        try {
-          companyId = await getCompanyIdFromProject(selection.projectId);
-        } catch {
-          companyId = undefined;
-        }
+        const { data: proj } = await supabase
+          .from('projects')
+          .select('company_id')
+          .eq('id', selection.projectId)
+          .maybeSingle();
+        companyId = proj?.company_id || undefined;
       }
 
       const reportDate = new Date(`${data.date}T00:00:00`);
