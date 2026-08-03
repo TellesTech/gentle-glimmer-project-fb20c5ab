@@ -1,12 +1,13 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, Building2, ChevronLeft } from 'lucide-react';
+import { Loader2, Building2, ChevronLeft, ShieldPlus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { CreateClientAdminDialog } from '@/components/client/CreateClientAdminDialog';
 
 interface PortalSite {
   id: string;
@@ -26,6 +27,7 @@ interface PortalSite {
 export default function ClientPortalPicker() {
   const { user, role } = useAuth();
   const navigate = useNavigate();
+  const [adminDialogOpen, setAdminDialogOpen] = useState(false);
 
   const { data: sites, isLoading } = useQuery({
     queryKey: ['client-portal-picker-sites', user?.id, role],
@@ -65,6 +67,38 @@ export default function ClientPortalPicker() {
 
   const onlySite = useMemo(() => (sites && sites.length === 1 ? sites[0] : null), [sites]);
 
+  const canCreateAdmin = role === 'admin' || role === 'super_admin';
+  const unitOptions = useMemo(
+    () =>
+      (sites || []).map((s) => ({
+        id: s.id,
+        name: s.name,
+        company_id: s.company_id,
+        companyName: s.companies?.name || null,
+      })),
+    [sites]
+  );
+
+  const CreateAdminAction = () =>
+    canCreateAdmin ? (
+      <>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={() => setAdminDialogOpen(true)}
+        >
+          <ShieldPlus className="h-4 w-4" />
+          Criar Acesso de Administrador
+        </Button>
+        <CreateClientAdminDialog
+          open={adminDialogOpen}
+          onOpenChange={setAdminDialogOpen}
+          units={unitOptions}
+        />
+      </>
+    ) : null;
+
   useEffect(() => {
     if (onlySite) {
       navigate(
@@ -84,7 +118,7 @@ export default function ClientPortalPicker() {
 
   const Header = ({ subtitle }: { subtitle: string }) => (
     <div className="space-y-3 mb-6">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap justify-between">
         <Button
           variant="ghost"
           size="sm"
@@ -94,6 +128,7 @@ export default function ClientPortalPicker() {
           <ChevronLeft className="h-4 w-4 mr-1" />
           Início
         </Button>
+        <CreateAdminAction />
       </div>
       <div className="flex items-center gap-3 flex-wrap">
         <h1 className="text-xl xs:text-2xl font-bold">Área de Assinatura do Cliente</h1>
