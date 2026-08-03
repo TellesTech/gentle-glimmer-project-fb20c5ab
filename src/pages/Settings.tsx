@@ -22,6 +22,7 @@ import { SignatureInput } from '@/components/client/SignatureInput';
 import { WhatsAppIcon } from '@/components/shared/WhatsAppIcon';
 import { ClientPortalSettingsTab } from '@/components/settings/ClientPortalSettingsTab';
 import { WhatsAppSettingsTab } from '@/components/settings/WhatsAppSettingsTab';
+import { ClientMessagesTab } from '@/components/settings/ClientMessagesTab';
 import { PdfHeaderPreview } from '@/components/shared/PdfHeaderPreview';
 
 import { useSystemSettings } from '@/hooks/useSystemSettings';
@@ -391,6 +392,12 @@ export default function Settings() {
             <TabsTrigger value="whatsapp" className="gap-1.5 px-3 py-2 flex-shrink-0">
               <WhatsAppIcon className="h-4 w-4 shrink-0" />
               <span className="text-xs sm:text-sm">WhatsApp</span>
+            </TabsTrigger>
+          )}
+          {canManagePortal && (
+            <TabsTrigger value="client-messages" className="gap-1.5 px-3 py-2 flex-shrink-0">
+              <PenLine className="h-4 w-4 shrink-0" />
+              <span className="text-xs sm:text-sm">Mensagens</span>
             </TabsTrigger>
           )}
           {canManageBrand && (
@@ -965,6 +972,12 @@ export default function Settings() {
         {canManageWhatsApp && (
           <TabsContent value="whatsapp" className="mt-6">
             <WhatsAppSettingsTab />
+          </TabsContent>
+        )}
+
+        {canManagePortal && (
+          <TabsContent value="client-messages" className="mt-6">
+            <ClientMessagesTab canEdit />
           </TabsContent>
         )}
 

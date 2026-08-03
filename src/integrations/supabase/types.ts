@@ -150,6 +150,101 @@ export type Database = {
           },
         ]
       }
+      client_message_edits: {
+        Row: {
+          created_at: string
+          edited_by: string | null
+          id: string
+          message_id: string
+          new_content: string
+          previous_content: string
+        }
+        Insert: {
+          created_at?: string
+          edited_by?: string | null
+          id?: string
+          message_id: string
+          new_content: string
+          previous_content: string
+        }
+        Update: {
+          created_at?: string
+          edited_by?: string | null
+          id?: string
+          message_id?: string
+          new_content?: string
+          previous_content?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_message_edits_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "client_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_messages: {
+        Row: {
+          channel: string
+          company_id: string | null
+          content: string
+          created_at: string
+          created_by: string | null
+          edited_at: string | null
+          edited_by: string | null
+          error_message: string | null
+          id: string
+          provider_message_id: string | null
+          recipient_email: string | null
+          recipient_name: string | null
+          recipient_phone: string | null
+          sent_at: string | null
+          site_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          channel?: string
+          company_id?: string | null
+          content: string
+          created_at?: string
+          created_by?: string | null
+          edited_at?: string | null
+          edited_by?: string | null
+          error_message?: string | null
+          id?: string
+          provider_message_id?: string | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string | null
+          sent_at?: string | null
+          site_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          company_id?: string | null
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          edited_at?: string | null
+          edited_by?: string | null
+          error_message?: string | null
+          id?: string
+          provider_message_id?: string | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string | null
+          sent_at?: string | null
+          site_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_portal_settings: {
         Row: {
           all_clear_message: string | null
