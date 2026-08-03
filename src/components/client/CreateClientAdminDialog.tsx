@@ -90,6 +90,8 @@ export function CreateClientAdminDialog({ open, onOpenChange, units }: Props) {
                 password,
                 phone: phone.trim(),
                 companyName: unit?.companyName || null,
+                companyId: unit?.company_id || null,
+                siteId: unit?.id || null,
                 portalUrl: `${window.location.origin}/client/login`,
               },
             }
