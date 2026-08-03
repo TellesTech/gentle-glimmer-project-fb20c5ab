@@ -151,8 +151,10 @@ const TITLE_STOPWORDS = new Set([
 
 /** Tokens significativos do título da OM (sem acento, sem stopwords, sem plural simples). */
 function omTitleTokens(value: string | null | undefined): Set<string> {
+  const norm = normalizeOmTitle(value);
+  // Se o título tiver números (ex: 22461261), eles são tokens fortíssimos
   return new Set(
-    normalizeOmTitle(value)
+    norm
       .split(' ')
       .map(t => t.replace(/s$/, ''))
       .filter(t => t.length > 1 && !TITLE_STOPWORDS.has(t))
@@ -167,7 +169,7 @@ function tokenSimilarity(a: Set<string>, b: Set<string>): number {
   return inter / (a.size + b.size - inter);
 }
 
-const TITLE_MERGE_THRESHOLD = 0.7;
+const TITLE_MERGE_THRESHOLD = 0.8;
 
 interface SiteFolder {
   id: string;
