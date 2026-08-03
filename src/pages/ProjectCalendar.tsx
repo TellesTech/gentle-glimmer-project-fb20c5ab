@@ -1000,11 +1000,6 @@ export default function ProjectCalendar() {
                       </div>
                     </div>
                   )}
-                      {dayReportsLocal.length > 3 && (
-                        <span className="text-[8px] leading-none">+</span>
-                      )}
-                    </div>
-                  )}
                   
                   {dayReportsLocal.length > 1 && (
                     <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full h-4 w-4 text-[10px] flex items-center justify-center shadow-md font-bold">
