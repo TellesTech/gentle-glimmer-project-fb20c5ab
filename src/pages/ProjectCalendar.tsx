@@ -1011,7 +1011,31 @@ export default function ProjectCalendar() {
             })}
           </div>
 
-          {/* Calendar legend */}
+          {/* Informações de Dias e Horas */}
+          <div className="mt-4 p-3 bg-emerald-500/5 rounded-lg border border-emerald-500/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-emerald-600" />
+              <span className="font-semibold text-emerald-700">Resumo de Atividades Criadas:</span>
+            </div>
+            <div className="flex gap-4">
+              <div className="flex items-center gap-1">
+                <CalendarIcon className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="text-emerald-700 font-medium">{reports.length} dias</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="text-emerald-700 font-medium">
+                  {reports.reduce((acc, r) => {
+                    const start = r.start_time ? r.start_time.split(':').map(Number) : [7, 0];
+                    const end = r.end_time ? r.end_time.split(':').map(Number) : [17, 0];
+                    const mins = (end[0] * 60 + end[1]) - (start[0] * 60 + start[1]);
+                    return acc + Math.max(0, mins / 60);
+                  }, 0).toFixed(1)}h acumuladas
+                </span>
+              </div>
+            </div>
+          </div>
+
           <div className="flex items-center justify-center gap-4 sm:gap-6 mt-6 text-xs text-muted-foreground flex-wrap border-t pt-4">
             <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-muted/30">
               <div className="w-3 h-3 rounded-full bg-muted-foreground" />
