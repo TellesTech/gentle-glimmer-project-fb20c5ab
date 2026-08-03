@@ -977,18 +977,29 @@ export default function ProjectCalendar() {
                   <span className={cn(hasReports && "font-bold")}>{format(day, 'd')}</span>
                   
                   {hasReports && (
-                    <div className="flex gap-0.5 mt-1">
-                      {dayReportsLocal.slice(0, 3).map((r, i) => (
-                        <div 
-                          key={r.id} 
-                          className={cn(
-                            "w-1.5 h-1.5 rounded-full border-[0.5px] border-black/10",
-                            r.status === 'draft' ? "bg-muted-foreground" :
-                            r.status === 'sent' ? "bg-blue-500" :
-                            "bg-success"
-                          )} 
-                        />
-                      ))}
+                    <div className="flex flex-col items-center">
+                      <div className="flex gap-0.5 mt-0.5">
+                        {dayReportsLocal.slice(0, 3).map((r, i) => (
+                          <div 
+                            key={r.id} 
+                            className={cn(
+                              "w-1.5 h-1.5 rounded-full border-[0.5px] border-black/10",
+                              r.status === 'draft' ? "bg-muted-foreground" :
+                              r.status === 'sent' ? "bg-blue-500" :
+                              "bg-success"
+                            )} 
+                          />
+                        ))}
+                      </div>
+                      <div className="text-[8px] text-muted-foreground mt-0.5 font-bold">
+                        {Math.round(dayReportsLocal.reduce((acc, r) => {
+                          const start = r.start_time ? r.start_time.split(':').map(Number) : [7, 0];
+                          const end = r.end_time ? r.end_time.split(':').map(Number) : [17, 0];
+                          return acc + ((end[0] * 60 + end[1]) - (start[0] * 60 + start[1])) / 60;
+                        }, 0))}h
+                      </div>
+                    </div>
+                  )}
                       {dayReportsLocal.length > 3 && (
                         <span className="text-[8px] leading-none">+</span>
                       )}
