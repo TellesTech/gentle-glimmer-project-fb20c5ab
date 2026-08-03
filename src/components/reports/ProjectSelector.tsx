@@ -924,6 +924,11 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
       teamId: null,
       teamName: null,
     }));
+    // Abre o calendário no mês da pasta selecionada (ex.: Julho), não no mês atual
+    if (selectedFolder && /^\d{4}-\d{2}$/.test(selectedFolder)) {
+      const [y, m] = selectedFolder.split('-').map(Number);
+      setCurrentMonth(new Date(y, m - 1, 1));
+    }
     setCurrentStep(4);
   };
 
