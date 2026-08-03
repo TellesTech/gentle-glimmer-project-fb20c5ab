@@ -1544,37 +1544,23 @@ Deno.serve(async (req) => {
     const reportData = buildReportData(parsedData, projectId, createdBy);
     const resolvedShift = reportData.shift;
 
-    // Check for existing report (same sender + date + group + SHIFT)
-    // Shift is part of the dedup key so diurno/noturno on the same date don't overwrite each other.
+    // Check for existing report (same PROJECT + date + shift)
+    // We check PROJECT instead of SENDER/GROUP to avoid duplicates when multiple people
+    // report for the same Maintenance Order (OM) on the same shift.
     let existingReportId: string | null = null;
-    const { data: existingLogs } = await supabase
-      .from("whatsapp_rdo_logs")
-      .select("report_id, report_date")
-      .eq("group_id", groupId)
-      .eq("sender_phone", senderPhone)
-      .eq("report_date", reportDate)
-      .eq("status", "success")
-      .not("report_id", "is", null)
+    const { data: existingReports } = await supabase
+      .from("reports")
+      .select("id, rdo_number")
+      .eq("project_id", projectId)
+      .eq("date", reportDate)
+      .eq("shift", resolvedShift)
+      .in("status", ["completed", "draft", "sent", "signed", "finalized"])
       .order("created_at", { ascending: false })
-      .limit(10);
+      .limit(1);
 
-    if (existingLogs && existingLogs.length > 0) {
-      const candidateIds = existingLogs.map((l: any) => l.report_id).filter(Boolean);
-      if (candidateIds.length > 0) {
-        const { data: candidateReports } = await supabase
-          .from("reports")
-          .select("id, shift")
-          .in("id", candidateIds)
-          .eq("shift", resolvedShift);
-        if (candidateReports && candidateReports.length > 0) {
-          // Preserve order from the logs query (most recent first)
-          const matchSet = new Set(candidateReports.map((r: any) => r.id));
-          const ordered = candidateIds.find((id: string) => matchSet.has(id));
-          if (ordered && (isCorrection || true)) {
-            existingReportId = ordered;
-          }
-        }
-      }
+    if (existingReports && existingReports.length > 0) {
+      existingReportId = existingReports[0].id;
+      console.log(`Duplicate detected: found existing report ${existingReportId} for project ${projectId} on ${reportDate} (${resolvedShift})`);
     }
 
 
