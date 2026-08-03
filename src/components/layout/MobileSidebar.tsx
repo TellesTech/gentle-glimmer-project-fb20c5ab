@@ -25,7 +25,7 @@ const getMainNavItem = (role: string | null): NavItem => {
 
 const quickActionItems: NavItem[] = [
   { icon: FilePlus, label: 'Criar RDO', href: '/reports/new' },
-  { icon: ClipboardList, label: 'Corrija a duplicidade do WhatsApp.', href: '/reports' },
+  { icon: ClipboardList, label: 'Meus RDOs', href: '/reports' },
   { icon: PenLine, label: 'Assinaturas', href: '/client/select', roles: ['admin', 'super_admin', 'collaborator'] },
 ];
 
