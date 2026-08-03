@@ -235,7 +235,7 @@ export default function ClientReports() {
         }}
         className="hover:text-foreground transition-colors"
       >
-        Corrija a duplicidade do WhatsApp.
+        Meus Relatórios
       </button>
       {currentActivity && (
         <>
@@ -293,7 +293,7 @@ export default function ClientReports() {
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
             <FileText className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h1 className="text-2xl font-semibold mb-2">Corrija a duplicidade do WhatsApp.</h1>
+          <h1 className="text-2xl font-semibold mb-2">Meus Relatórios</h1>
           <p className="text-muted-foreground">
             Você ainda não possui RDOs assinados. Quando aprovar relatórios, eles aparecerão aqui
             organizados por atividade.
@@ -326,7 +326,7 @@ export default function ClientReports() {
                 </Button>
               )}
             </div>
-            <h1 className="text-2xl font-semibold tracking-tight">Corrija a duplicidade do WhatsApp.</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Meus Relatórios</h1>
             {renderBreadcrumbs()}
           </div>
 
