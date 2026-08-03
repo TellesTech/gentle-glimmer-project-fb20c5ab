@@ -40,11 +40,12 @@ export function CreateClientAdminDialog({ open, onOpenChange, units }: Props) {
   const [unitId, setUnitId] = useState<string>(units.length === 1 ? units[0].id : '');
   const [canApprove, setCanApprove] = useState(true);
   const [sendEmail, setSendEmail] = useState(true);
+  const [sendWhatsapp, setSendWhatsapp] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const reset = () => {
     setName(''); setEmail(''); setPhone(''); setPassword(''); setConfirmPassword('');
-    setUnitId(units.length === 1 ? units[0].id : ''); setCanApprove(true); setSendEmail(true);
+    setUnitId(units.length === 1 ? units[0].id : ''); setCanApprove(true); setSendEmail(true); setSendWhatsapp(true);
   };
 
   const handleSubmit = async () => {
@@ -54,6 +55,9 @@ export function CreateClientAdminDialog({ open, onOpenChange, units }: Props) {
     if (issues.length) return toast.error(`Senha fraca: falta ${issues.join(', ')}`);
     if (password !== confirmPassword) return toast.error('As senhas não conferem');
     if (!unitId) return toast.error('Selecione a unidade');
+    if (sendWhatsapp && phone.replace(/\D/g, '').length < 10) {
+      return toast.error('Informe um telefone válido para enviar por WhatsApp');
+    }
 
     const unit = units.find((u) => u.id === unitId);
     setSaving(true);
@@ -74,8 +78,35 @@ export function CreateClientAdminDialog({ open, onOpenChange, units }: Props) {
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
 
+      let whatsappSent = false;
+      if (sendWhatsapp) {
+        try {
+          const { data: waData, error: waError } = await supabase.functions.invoke(
+            'send-portal-credentials-whatsapp',
+            {
+              body: {
+                name: name.trim(),
+                email: email.trim(),
+                password,
+                phone: phone.trim(),
+                companyName: unit?.companyName || null,
+                portalUrl: `${window.location.origin}/client/login`,
+              },
+            }
+          );
+          whatsappSent = !waError && !(waData as any)?.error;
+          if (!whatsappSent) {
+            toast.warning('Acesso criado, mas o envio por WhatsApp falhou');
+          }
+        } catch {
+          toast.warning('Acesso criado, mas o envio por WhatsApp falhou');
+        }
+      }
+
       toast.success(
-        (data as any)?.emailSent
+        whatsappSent
+          ? 'Acesso criado e credenciais enviadas por WhatsApp'
+          : (data as any)?.emailSent
           ? 'Acesso criado e e-mail enviado ao administrador'
           : 'Acesso de administrador criado com sucesso'
       );
@@ -126,6 +157,7 @@ export function CreateClientAdminDialog({ open, onOpenChange, units }: Props) {
           <div className="space-y-1.5">
             <Label htmlFor="cca-phone">Telefone de contato</Label>
             <Input id="cca-phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(00) 00000-0000" />
+            <p className="text-[11px] text-muted-foreground">Usado para enviar as credenciais por WhatsApp.</p>
           </div>
           <div className="space-y-1.5">
             <Label>Unidade *</Label>
@@ -153,6 +185,13 @@ export function CreateClientAdminDialog({ open, onOpenChange, units }: Props) {
               <p className="text-xs text-muted-foreground">Envia login e senha para o administrador</p>
             </div>
             <Switch checked={sendEmail} onCheckedChange={setSendEmail} />
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p className="text-sm font-medium">Enviar credenciais por WhatsApp</p>
+              <p className="text-xs text-muted-foreground">Mensagem profissional com usuário, senha e link do portal</p>
+            </div>
+            <Switch checked={sendWhatsapp} onCheckedChange={setSendWhatsapp} />
           </div>
         </div>
 
