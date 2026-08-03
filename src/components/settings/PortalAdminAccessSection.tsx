@@ -27,9 +27,9 @@ export function PortalAdminAccessSection({ companies, companySites, filterCompan
       const { data } = await supabase
         .from('user_roles')
         .select('user_id')
-        .eq('role', 'admin');
+        .in('role', ['admin', 'super_admin']);
       if (!data || data.length === 0) return [];
-      const userIds = data.map(d => d.user_id);
+      const userIds = [...new Set(data.map(d => d.user_id))];
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, name, email')
