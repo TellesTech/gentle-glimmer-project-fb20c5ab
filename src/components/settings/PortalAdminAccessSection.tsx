@@ -1,12 +1,17 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ShieldCheck, MapPin, ChevronDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Loader2, ShieldCheck, MapPin, ChevronDown, ShieldPlus, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { CreateClientAdminDialog } from '@/components/client/CreateClientAdminDialog';
 
 interface PortalAdminAccessSectionProps {
   companies?: { id: string; name: string }[];
@@ -14,12 +19,18 @@ interface PortalAdminAccessSectionProps {
   filterCompanyId?: string;
   /** When provided, renders only the inline admin selector for this single site (no Card/Collapsible wrapper). */
   siteId?: string;
+  /** Company of the single site (enables creating a client admin from the selector). */
+  companyId?: string;
+  siteName?: string;
+  companyName?: string;
 }
 
-export function PortalAdminAccessSection({ companies, companySites, filterCompanyId, siteId }: PortalAdminAccessSectionProps) {
+export function PortalAdminAccessSection({ companies, companySites, filterCompanyId, siteId, companyId, siteName, companyName }: PortalAdminAccessSectionProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [createAdminOpen, setCreateAdminOpen] = useState(false);
 
   const { data: admins, isLoading: loadingAdmins } = useQuery({
     queryKey: ['portal-admins-list'],
@@ -52,6 +63,25 @@ export function PortalAdminAccessSection({ companies, companySites, filterCompan
   const getAdminForSite = (siteId: string): string | undefined => {
     const record = accessRecords?.find(r => r.site_id === siteId);
     return record?.user_id;
+  };
+
+  const getAdminsForSite = (site: string): string[] =>
+    (accessRecords || []).filter(r => r.site_id === site).map(r => r.user_id);
+
+  const toggleAdminForSite = async (site: string, adminId: string, checked: boolean) => {
+    setSaving(site);
+    try {
+      if (checked) {
+        await supabase.from('portal_admin_access').insert({ user_id: adminId, site_id: site });
+      } else {
+        await supabase.from('portal_admin_access').delete().eq('site_id', site).eq('user_id', adminId);
+      }
+      await queryClient.invalidateQueries({ queryKey: ['portal-admin-access-all'] });
+    } catch {
+      toast({ title: 'Erro ao atualizar acesso', variant: 'destructive' });
+    } finally {
+      setSaving(null);
+    }
   };
 
   const setAdminForSite = async (siteId: string, adminId: string | null) => {
@@ -96,26 +126,87 @@ export function PortalAdminAccessSection({ companies, companySites, filterCompan
 
   // ===== INLINE SINGLE-SITE MODE =====
   if (siteId) {
-    const currentAdmin = getAdminForSite(siteId);
-    return saving === siteId ? (
-      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-    ) : (
-      <Select
-        value={currentAdmin || '_none'}
-        onValueChange={(val) => setAdminForSite(siteId, val === '_none' ? null : val)}
-      >
-        <SelectTrigger className="h-8 text-xs flex-1">
-          <SelectValue placeholder="Selecionar administrador" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="_none">Nenhum</SelectItem>
-          {admins.map(admin => (
-            <SelectItem key={admin.id} value={admin.id}>
-              {admin.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    const selected = getAdminsForSite(siteId);
+    const selectedNames = admins
+      .filter(a => selected.includes(a.id))
+      .map(a => a.name)
+      .filter(Boolean) as string[];
+
+    return (
+      <div className="flex items-center gap-1.5 min-w-0">
+        <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="h-8 flex-1 justify-between text-xs font-normal min-w-0">
+              <span className="truncate">
+                {selectedNames.length === 0
+                  ? 'Selecionar contatos'
+                  : selectedNames.length === 1
+                    ? selectedNames[0]
+                    : `${selectedNames.length} contatos com acesso`}
+              </span>
+              {saving === siteId ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[300px] p-0" align="start">
+            <Command>
+              <CommandInput placeholder="Buscar contato..." className="h-9" />
+              <CommandList>
+                <CommandEmpty>Nenhum contato encontrado.</CommandEmpty>
+                <CommandGroup heading="Contatos com acesso ao portal">
+                  {admins.map(admin => {
+                    const checked = selected.includes(admin.id);
+                    return (
+                      <CommandItem
+                        key={admin.id}
+                        value={`${admin.name} ${admin.email || ''}`}
+                        onSelect={() => toggleAdminForSite(siteId, admin.id, !checked)}
+                        className="gap-2"
+                      >
+                        <Checkbox checked={checked} className="pointer-events-none" />
+                        <div className="min-w-0">
+                          <p className="text-sm truncate">{admin.name}</p>
+                          {admin.email && (
+                            <p className="text-[10px] text-muted-foreground truncate">{admin.email}</p>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+            <div className="border-t p-2 space-y-1">
+              <p className="text-[10px] text-muted-foreground px-1 flex items-center gap-1">
+                <Users className="h-3 w-3" />
+                {selected.length} selecionado(s) nesta unidade
+              </p>
+              {companyId && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full h-8 gap-2 text-xs"
+                  onClick={() => { setPickerOpen(false); setCreateAdminOpen(true); }}
+                >
+                  <ShieldPlus className="h-3.5 w-3.5" />
+                  Criar contato administrador do cliente
+                </Button>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {companyId && (
+          <CreateClientAdminDialog
+            open={createAdminOpen}
+            onOpenChange={setCreateAdminOpen}
+            units={[{ id: siteId, name: siteName || 'Unidade', company_id: companyId, companyName: companyName || null }]}
+          />
+        )}
+      </div>
     );
   }
 
