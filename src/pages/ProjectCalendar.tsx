@@ -830,16 +830,21 @@ export default function ProjectCalendar() {
               </div>
             </div>
             
-            {/* Número do Contrato */}
-            <div className="group flex items-center gap-2 xs:gap-3 p-2 xs:p-3 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 transition-all duration-300 hover:border-purple-500/40 hover:bg-purple-500/10 min-h-[56px] xs:min-h-[64px]">
-              <div className="h-7 w-7 xs:h-9 xs:w-9 rounded-lg bg-purple-500/15 flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-110">
-                <FileText className="h-3.5 w-3.5 xs:h-4 xs:w-4 text-purple-500" />
+            {/* Horas Totais Trabalhadas */}
+            <div className="group flex items-center gap-2 xs:gap-3 p-2 xs:p-3 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 transition-all duration-300 hover:border-emerald-500/40 hover:bg-emerald-500/10 min-h-[56px] xs:min-h-[64px]">
+              <div className="h-7 w-7 xs:h-9 xs:w-9 rounded-lg bg-emerald-500/15 flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-110">
+                <Clock className="h-3.5 w-3.5 xs:h-4 xs:w-4 text-emerald-500" />
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs xs:text-sm font-bold truncate">
-                  {company?.contract_number || 'N/D'}
+              <div>
+                <p className="text-lg xs:text-xl font-bold bg-gradient-to-r from-emerald-500 to-emerald-400 bg-clip-text text-transparent">
+                  {reports.reduce((acc, r) => {
+                    const start = r.start_time ? r.start_time.split(':').map(Number) : [7, 0];
+                    const end = r.end_time ? r.end_time.split(':').map(Number) : [17, 0];
+                    const mins = (end[0] * 60 + end[1]) - (start[0] * 60 + start[1]);
+                    return acc + Math.max(0, (mins / 60) * (r.actual_workforce || 0));
+                  }, 0).toFixed(0)}h
                 </p>
-                <p className="text-[10px] xs:text-xs uppercase tracking-wider text-muted-foreground font-medium">Contrato</p>
+                <p className="text-[10px] xs:text-xs uppercase tracking-wider text-muted-foreground font-medium">Horas Totais</p>
               </div>
             </div>
 
