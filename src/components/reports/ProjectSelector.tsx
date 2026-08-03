@@ -734,7 +734,7 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
     queryFn: async () => {
       const { data } = await supabase
         .from('reports')
-        .select('id, date, shift, status')
+        .select('id, date, shift, status, rdo_number, routine, maintenance_order_title, maintenance_order_number, no_activity')
         .eq('project_id', selection.projectId!)
         .order('date', { ascending: false });
       return data || [];
