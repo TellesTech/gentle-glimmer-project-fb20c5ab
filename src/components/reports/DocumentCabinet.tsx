@@ -15,9 +15,11 @@ import FolderCard from '@/components/reports/FolderCard';
 import { StatusBadge, ConfirmDialog } from '@/components/shared';
 import { WhatsAppIcon } from '@/components/shared/WhatsAppIcon';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+
 import { useAdminSiteAccess } from '@/hooks/useAdminSiteAccess';
 import {
   DropdownMenu,
@@ -422,7 +424,60 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     }
   };
 
+  const mergeReportsMutation = useMutation({
+    mutationFn: async ({ sourceReportId, targetFolder }: { sourceReportId: string, targetFolder: ProjectFolder }) => {
+      // Find the source report
+      const report = reports.find(r => r.id === sourceReportId);
+      if (!report) throw new Error('Relatório não encontrado');
+
+      // Prepare data to sync with target folder
+      const updateData: any = {};
+      
+      // If target folder is an OM, apply that OM info
+      if (targetFolder.omNumber) {
+        updateData.maintenance_order_number = targetFolder.omNumber;
+      }
+      
+      // Use the most frequent title from target folder
+      if (targetFolder.omTitle) {
+        updateData.maintenance_order_title = targetFolder.omTitle;
+      }
+
+      // If the target folder is rooted in a specific project, ensure we might want to link it?
+      // For now, we mainly normalize the OM fields which drives the grouping.
+      
+      const { error } = await supabase
+        .from('reports')
+        .update(updateData)
+        .eq('id', sourceReportId);
+
+      if (error) throw error;
+      return { sourceReportId, targetFolder };
+    },
+    onSuccess: () => {
+      toast({ title: 'Organização atualizada', description: 'O relatório foi movido com sucesso.' });
+      queryClient.invalidateQueries({ queryKey: ['reports-cabinet-all-v2'] });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Erro ao mover', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  const onDragEnd = (result: DropResult) => {
+    const { source, destination, draggableId } = result;
+    if (!destination) return;
+    
+    // Check if dropping onto a folder (droppableId will be the folder ID)
+    if (source.droppableId === 'reports-list' && destination.droppableId !== 'reports-list') {
+      const targetFolder = selectedMonthFolder?.projects.find(p => p.id === destination.droppableId);
+      if (targetFolder) {
+        mergeReportsMutation.mutate({ sourceReportId: draggableId, targetFolder });
+      }
+    }
+  };
+
   const CardActions = ({ id, type, name, onEdit, reportIds }: { id: string; type: 'company' | 'site' | 'project' | 'report' | 'reportGroup'; name: string; onEdit?: () => void; reportIds?: string[] }) => {
+
     if (!isSuperAdmin) return null;
     return (
       <DropdownMenu>
@@ -1266,79 +1321,160 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
             />
           </div>
 
-          {/* Reports list */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {selectedProjectFolder.reports.map((report) => (
-              <div
-                key={report.id}
-                onClick={() => navigate(`/reports/${report.id}`)}
-                className="relative rounded-xl border bg-card p-4 hover:bg-muted/60 transition-colors cursor-pointer shadow-sm group"
-              >
-                {/* Actions */}
-                {isSuperAdmin && (
-                  <div className="absolute top-2 right-2 z-10">
-                    <CardActions
-                      id={report.id}
-                      type="report"
-                      name={`RDO Nº ${seqLabel(report)}`}
-                      onEdit={() => navigate(`/reports/${report.id}/edit`)}
-                    />
-                  </div>
-                )}
-
-                {/* Header: RDO number + status badges */}
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="p-2 rounded-lg bg-foreground/10 shrink-0">
-                      <FileText className="h-5 w-5 text-foreground/70" />
-                    </div>
-                    <span className="text-sm font-semibold text-foreground truncate">
-                      RDO Nº {seqLabel(report)}
-                      {report.maintenance_order_number && (
-                        <span className="ml-1.5 text-xs font-normal text-muted-foreground">
-                          · OM {report.maintenance_order_number}
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-foreground group-hover:translate-x-0.5 transition-transform" />
-                </div>
-
-                {/* Date + shift */}
-                <p className="text-xs text-muted-foreground mb-1.5">
-                  {format(parseISO(report.date), "dd 'de' MMMM, yyyy", { locale: ptBR })}
-                </p>
-
-                <div className="flex items-center gap-2 mb-2.5">
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
-                    {shiftLabels[report.shift] || report.shift}
-                  </span>
-                  {report.location && (
-                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground truncate">
-                      <MapPin className="h-3 w-3 shrink-0" />
-                      <span className="truncate">{report.location}</span>
-                    </span>
-                  )}
-                </div>
-
-                {/* Status badges */}
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <StatusBadge status={report.status} />
-                  {report.source === 'whatsapp_ai' && (
-                    <Badge
-                      variant="secondary"
-                      className="text-[10px] px-2 py-0.5 gap-1 bg-green-500/10 text-green-600 border border-green-500/20"
-                      title="Registro criado automaticamente pela IA a partir de mensagem no WhatsApp"
+          {/* Reports list with Drag and Drop */}
+          <DragDropContext onDragEnd={onDragEnd}>
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* Main reports list (Draggable items) */}
+              <div className="flex-1">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">Relatórios (Arraste para organizar)</h3>
+                <Droppable droppableId="reports-list">
+                  {(provided) => (
+                    <div 
+                      {...provided.droppableProps}
+                      ref={provided.innerRef}
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-3"
                     >
-                      <WhatsAppIcon className="h-3 w-3" />
-                      IA via WhatsApp
-                    </Badge>
+                      {selectedProjectFolder.reports.map((report, index) => (
+                        <Draggable key={report.id} draggableId={report.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              onClick={() => navigate(`/reports/${report.id}`)}
+                              className={cn(
+                                "relative rounded-xl border bg-card p-4 hover:bg-muted/60 transition-colors cursor-pointer shadow-sm group",
+                                snapshot.isDragging && "shadow-xl border-primary/50 ring-2 ring-primary/20 scale-105 z-50 bg-accent"
+                              )}
+                            >
+                              {/* Actions */}
+                              {isSuperAdmin && (
+                                <div className="absolute top-2 right-2 z-10">
+                                  <CardActions
+                                    id={report.id}
+                                    type="report"
+                                    name={`RDO Nº ${seqLabel(report)}`}
+                                    onEdit={() => navigate(`/reports/${report.id}/edit`)}
+                                  />
+                                </div>
+                              )}
+
+                              {/* Header: RDO number + status badges */}
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className="p-2 rounded-lg bg-foreground/10 shrink-0">
+                                    <FileText className="h-5 w-5 text-foreground/70" />
+                                  </div>
+                                  <span className="text-sm font-semibold text-foreground truncate">
+                                    RDO Nº {seqLabel(report)}
+                                    {report.maintenance_order_number && (
+                                      <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                                        · OM {report.maintenance_order_number}
+                                      </span>
+                                    )}
+                                  </span>
+                                </div>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-foreground group-hover:translate-x-0.5 transition-transform" />
+                              </div>
+
+                              {/* Date + shift */}
+                              <p className="text-xs text-muted-foreground mb-1.5">
+                                {format(parseISO(report.date), "dd 'de' MMMM, yyyy", { locale: ptBR })}
+                              </p>
+
+                              <div className="flex items-center gap-2 mb-2.5">
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+                                  {shiftLabels[report.shift] || report.shift}
+                                </span>
+                                {report.location && (
+                                  <span className="flex items-center gap-1 text-[10px] text-muted-foreground truncate">
+                                    <MapPin className="h-3 w-3 shrink-0" />
+                                    <span className="truncate">{report.location}</span>
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Status badges */}
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <StatusBadge status={report.status} />
+                                {report.source === 'whatsapp_ai' && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-[10px] px-2 py-0.5 gap-1 bg-green-500/10 text-green-600 border border-green-500/20"
+                                    title="Registro criado automaticamente pela IA a partir de mensagem no WhatsApp"
+                                  >
+                                    <WhatsAppIcon className="h-3 w-3" />
+                                    IA via WhatsApp
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </div>
+
+              {/* Destination folders (Drop targets) */}
+              <div className="w-full lg:w-72 shrink-0">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">Mover para outra Atividade/OM</h3>
+                <div className="flex flex-col gap-2">
+                  {selectedMonthFolder.projects
+                    .filter(p => p.id !== selectedProjectFolder.id)
+                    .map((otherProject) => (
+                      <Droppable key={otherProject.id} droppableId={otherProject.id}>
+                        {(provided, snapshot) => (
+                          <div
+                            {...provided.droppableProps}
+                            ref={provided.innerRef}
+                            className={cn(
+                              "rounded-lg border p-3 transition-all duration-200",
+                              snapshot.isDraggingOver 
+                                ? "bg-primary/5 border-primary shadow-inner scale-102 ring-2 ring-primary/20" 
+                                : "bg-card hover:bg-muted/50"
+                            )}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={cn(
+                                "p-2 rounded-md transition-colors",
+                                snapshot.isDraggingOver ? "bg-primary/20" : "bg-muted"
+                              )}>
+                                <HardHat className={cn(
+                                  "h-4 w-4",
+                                  snapshot.isDraggingOver ? "text-primary" : "text-muted-foreground"
+                                )} />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className={cn(
+                                  "text-xs font-semibold truncate",
+                                  snapshot.isDraggingOver ? "text-primary" : "text-card-foreground"
+                                )}>
+                                  {otherProject.name}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground truncate">
+                                  {otherProject.count} RDOs
+                                </p>
+                              </div>
+                            </div>
+                            {provided.placeholder}
+                          </div>
+                        )}
+                      </Droppable>
+                    ))}
+                  {selectedMonthFolder.projects.filter(p => p.id !== selectedProjectFolder.id).length === 0 && (
+                    <div className="text-center py-6 px-4 rounded-lg border-2 border-dashed border-muted bg-muted/20">
+                      <p className="text-xs text-muted-foreground">Nenhuma outra pasta disponível neste mês.</p>
+                    </div>
                   )}
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          </DragDropContext>
         </div>
+
         {dialogs}
       </>
     );
