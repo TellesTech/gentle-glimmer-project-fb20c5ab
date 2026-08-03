@@ -830,16 +830,21 @@ export default function ProjectCalendar() {
               </div>
             </div>
             
-            {/* Número do Contrato */}
-            <div className="group flex items-center gap-2 xs:gap-3 p-2 xs:p-3 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 transition-all duration-300 hover:border-purple-500/40 hover:bg-purple-500/10 min-h-[56px] xs:min-h-[64px]">
-              <div className="h-7 w-7 xs:h-9 xs:w-9 rounded-lg bg-purple-500/15 flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-110">
-                <FileText className="h-3.5 w-3.5 xs:h-4 xs:w-4 text-purple-500" />
+            {/* Horas Totais Trabalhadas */}
+            <div className="group flex items-center gap-2 xs:gap-3 p-2 xs:p-3 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 transition-all duration-300 hover:border-emerald-500/40 hover:bg-emerald-500/10 min-h-[56px] xs:min-h-[64px]">
+              <div className="h-7 w-7 xs:h-9 xs:w-9 rounded-lg bg-emerald-500/15 flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-110">
+                <Clock className="h-3.5 w-3.5 xs:h-4 xs:w-4 text-emerald-500" />
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs xs:text-sm font-bold truncate">
-                  {company?.contract_number || 'N/D'}
+              <div>
+                <p className="text-lg xs:text-xl font-bold bg-gradient-to-r from-emerald-500 to-emerald-400 bg-clip-text text-transparent">
+                  {reports.reduce((acc, r) => {
+                    const start = r.start_time ? r.start_time.split(':').map(Number) : [7, 0];
+                    const end = r.end_time ? r.end_time.split(':').map(Number) : [17, 0];
+                    const mins = (end[0] * 60 + end[1]) - (start[0] * 60 + start[1]);
+                    return acc + Math.max(0, (mins / 60) * (r.actual_workforce || 0));
+                  }, 0).toFixed(0)}h
                 </p>
-                <p className="text-[10px] xs:text-xs uppercase tracking-wider text-muted-foreground font-medium">Contrato</p>
+                <p className="text-[10px] xs:text-xs uppercase tracking-wider text-muted-foreground font-medium">Horas Totais</p>
               </div>
             </div>
 
@@ -965,28 +970,34 @@ export default function ProjectCalendar() {
                     "h-12 md:h-14 rounded-lg text-sm md:text-base font-medium transition-all relative flex flex-col items-center justify-center border",
                     isToday && "ring-2 ring-primary ring-offset-2",
                     isSelected && "ring-2 ring-primary bg-primary/10",
-                    hasReports ? statusColor : "hover:bg-muted/50 border-transparent",
+                    hasReports ? (dayReportsLocal.some(r => r.status === 'completed') ? "bg-success/20 border-success/30" : statusColor) : "hover:bg-muted/50 border-transparent",
                     !hasReports && "text-muted-foreground shadow-sm"
                   )}
                 >
                   <span className={cn(hasReports && "font-bold")}>{format(day, 'd')}</span>
                   
                   {hasReports && (
-                    <div className="flex gap-0.5 mt-1">
-                      {dayReportsLocal.slice(0, 3).map((r, i) => (
-                        <div 
-                          key={r.id} 
-                          className={cn(
-                            "w-1.5 h-1.5 rounded-full border-[0.5px] border-black/10",
-                            r.status === 'draft' ? "bg-muted-foreground" :
-                            r.status === 'sent' ? "bg-blue-500" :
-                            "bg-success"
-                          )} 
-                        />
-                      ))}
-                      {dayReportsLocal.length > 3 && (
-                        <span className="text-[8px] leading-none">+</span>
-                      )}
+                    <div className="flex flex-col items-center">
+                      <div className="flex gap-0.5 mt-0.5">
+                        {dayReportsLocal.slice(0, 3).map((r, i) => (
+                          <div 
+                            key={r.id} 
+                            className={cn(
+                              "w-1.5 h-1.5 rounded-full border-[0.5px] border-black/10",
+                              r.status === 'draft' ? "bg-muted-foreground" :
+                              r.status === 'sent' ? "bg-blue-500" :
+                              "bg-success"
+                            )} 
+                          />
+                        ))}
+                      </div>
+                      <div className="text-[8px] text-muted-foreground mt-0.5 font-bold">
+                        {Math.round(dayReportsLocal.reduce((acc, r) => {
+                          const start = r.start_time ? r.start_time.split(':').map(Number) : [7, 0];
+                          const end = r.end_time ? r.end_time.split(':').map(Number) : [17, 0];
+                          return acc + ((end[0] * 60 + end[1]) - (start[0] * 60 + start[1])) / 60;
+                        }, 0))}h
+                      </div>
                     </div>
                   )}
                   
@@ -1000,7 +1011,31 @@ export default function ProjectCalendar() {
             })}
           </div>
 
-          {/* Calendar legend */}
+          {/* Informações de Dias e Horas */}
+          <div className="mt-4 p-3 bg-emerald-500/5 rounded-lg border border-emerald-500/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-emerald-600" />
+              <span className="font-semibold text-emerald-700">Resumo de Atividades Criadas:</span>
+            </div>
+            <div className="flex gap-4">
+              <div className="flex items-center gap-1">
+                <CalendarIcon className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="text-emerald-700 font-medium">{reports.length} dias</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="text-emerald-700 font-medium">
+                  {reports.reduce((acc, r) => {
+                    const start = r.start_time ? r.start_time.split(':').map(Number) : [7, 0];
+                    const end = r.end_time ? r.end_time.split(':').map(Number) : [17, 0];
+                    const mins = (end[0] * 60 + end[1]) - (start[0] * 60 + start[1]);
+                    return acc + Math.max(0, mins / 60);
+                  }, 0).toFixed(1)}h acumuladas
+                </span>
+              </div>
+            </div>
+          </div>
+
           <div className="flex items-center justify-center gap-4 sm:gap-6 mt-6 text-xs text-muted-foreground flex-wrap border-t pt-4">
             <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-muted/30">
               <div className="w-3 h-3 rounded-full bg-muted-foreground" />
