@@ -734,7 +734,7 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
     queryFn: async () => {
       const { data } = await supabase
         .from('reports')
-        .select('id, date, shift, status')
+        .select('id, date, shift, status, rdo_number, routine, maintenance_order_title, maintenance_order_number, no_activity')
         .eq('project_id', selection.projectId!)
         .order('date', { ascending: false });
       return data || [];
@@ -1986,13 +1986,13 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
             <div className="grid grid-cols-7 gap-1">
               {/* Empty cells for offset */}
               {Array.from({ length: firstDayOffset }).map((_, i) => (
-                <div key={`empty-${i}`} className="aspect-square" />
+                <div key={`empty-${i}`} className="min-h-[92px]" />
               ))}
 
               {/* Days */}
               {daysInMonth.map((date) => {
-                const statusColor = getDateStatusColor(date);
-                const reportsCount = getReportsForDate(date).length;
+                const dayReports = getReportsForDate(date);
+                const reportsCount = dayReports.length;
                 const today = isToday(date);
 
                 return (
@@ -2000,26 +2000,46 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
                     key={date.toISOString()}
                     onClick={() => handleDateClick(date)}
                     className={cn(
-                      "aspect-square rounded-lg flex flex-col items-center justify-center relative transition-all",
+                      "min-h-[92px] rounded-lg flex flex-col items-stretch justify-start gap-1 p-1 text-left relative transition-all border border-transparent",
                       "hover:bg-primary/10 hover:scale-105 active:scale-95",
                       "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1",
+                      reportsCount > 0 && "bg-success/10 border-success/30",
                       today && "ring-2 ring-primary ring-offset-1"
                     )}
                   >
                     <span className={cn(
-                      "text-sm font-medium",
+                      "text-sm font-medium px-1",
                       today && "text-primary font-bold"
                     )}>
                       {format(date, 'd')}
                     </span>
-                    {statusColor && (
-                      <div className="flex items-center gap-0.5 mt-0.5">
-                        <div className={cn("h-1.5 w-1.5 rounded-full", statusColor)} />
-                        {reportsCount > 1 && (
-                          <span className="text-[10px] text-muted-foreground">+{reportsCount - 1}</span>
-                        )}
-                      </div>
-                    )}
+                    <div className="flex flex-col gap-0.5 w-full">
+                      {dayReports.slice(0, 2).map((r: any) => {
+                        const label = r.no_activity
+                          ? 'Sem atividade'
+                          : (r.maintenance_order_title || r.routine || selection.projectName || 'RDO');
+                        return (
+                          <div
+                            key={r.id}
+                            title={label}
+                            className={cn(
+                              "rounded px-1 py-0.5 text-[10px] leading-tight truncate text-white",
+                              r.status === 'draft' ? "bg-amber-500" : "bg-success"
+                            )}
+                          >
+                            <span className="font-semibold">
+                              {r.rdo_number ? `#${r.rdo_number} ` : ''}
+                            </span>
+                            {label}
+                          </div>
+                        );
+                      })}
+                      {reportsCount > 2 && (
+                        <span className="text-[10px] text-muted-foreground px-1">
+                          +{reportsCount - 2} RDO(s)
+                        </span>
+                      )}
+                    </div>
                   </button>
                 );
               })}
@@ -2028,11 +2048,11 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
             {/* Legenda */}
             <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t flex-wrap">
               <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-green-500" />
-                <span className="text-xs text-muted-foreground">Concluído</span>
+                <div className="h-3 w-5 rounded bg-success" />
+                <span className="text-xs text-muted-foreground">RDO criado</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-amber-500" />
+                <div className="h-3 w-5 rounded bg-amber-500" />
                 <span className="text-xs text-muted-foreground">Rascunho</span>
               </div>
               <div className="flex items-center gap-2">
