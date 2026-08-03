@@ -948,7 +948,6 @@ export default function ProjectCalendar() {
                   onClick={() => {
                     if (hasReports) {
                       if (dayReportsLocal.length === 1) {
-                        // Ensure month is in URL before navigating
                         const currentParams = new URLSearchParams(searchParams);
                         if (!currentParams.has('month')) {
                           currentParams.set('month', formatMonthParam(currentMonth));
@@ -956,7 +955,6 @@ export default function ProjectCalendar() {
                         }
                         navigate(`/reports/${dayReportsLocal[0].id}`);
                       } else {
-                        // Múltiplos relatórios - mostrar lista
                         setSelectedDate(isSelected ? null : day);
                       }
                     } else {
@@ -964,16 +962,36 @@ export default function ProjectCalendar() {
                     }
                   }}
                   className={cn(
-                    "h-12 md:h-14 rounded-lg text-sm md:text-base font-medium transition-all relative flex items-center justify-center border",
+                    "h-12 md:h-14 rounded-lg text-sm md:text-base font-medium transition-all relative flex flex-col items-center justify-center border",
                     isToday && "ring-2 ring-primary ring-offset-2",
                     isSelected && "ring-2 ring-primary bg-primary/10",
                     hasReports ? statusColor : "hover:bg-muted/50 border-transparent",
-                    !hasReports && "text-muted-foreground"
+                    !hasReports && "text-muted-foreground shadow-sm"
                   )}
                 >
-                  {format(day, 'd')}
+                  <span className={cn(hasReports && "font-bold")}>{format(day, 'd')}</span>
+                  
+                  {hasReports && (
+                    <div className="flex gap-0.5 mt-1">
+                      {dayReportsLocal.slice(0, 3).map((r, i) => (
+                        <div 
+                          key={r.id} 
+                          className={cn(
+                            "w-1.5 h-1.5 rounded-full border-[0.5px] border-black/10",
+                            r.status === 'draft' ? "bg-muted-foreground" :
+                            r.status === 'sent' ? "bg-blue-500" :
+                            "bg-success"
+                          )} 
+                        />
+                      ))}
+                      {dayReportsLocal.length > 3 && (
+                        <span className="text-[8px] leading-none">+</span>
+                      )}
+                    </div>
+                  )}
+                  
                   {dayReportsLocal.length > 1 && (
-                    <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full h-4 w-4 text-[10px] flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full h-4 w-4 text-[10px] flex items-center justify-center shadow-md font-bold">
                       {dayReportsLocal.length}
                     </span>
                   )}
@@ -983,22 +1001,26 @@ export default function ProjectCalendar() {
           </div>
 
           {/* Calendar legend */}
-          <div className="flex items-center justify-center gap-4 sm:gap-6 mt-4 text-xs text-muted-foreground flex-wrap">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-muted border border-muted-foreground/30" />
-              <span>Rascunho</span>
+          <div className="flex items-center justify-center gap-4 sm:gap-6 mt-6 text-xs text-muted-foreground flex-wrap border-t pt-4">
+            <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-muted/30">
+              <div className="w-3 h-3 rounded-full bg-muted-foreground" />
+              <span className="font-medium">Rascunho</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-success/20 border border-success/50" />
-              <span>Concluído</span>
+            <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-success/10 border border-success/20">
+              <div className="w-3 h-3 rounded-full bg-success" />
+              <span className="font-medium text-success-foreground">Concluído / Assinado</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-blue-100 border border-blue-300/50" />
-              <span>Enviado</span>
+            <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-blue-50 border border-blue-200">
+              <div className="w-3 h-3 rounded-full bg-blue-500" />
+              <span className="font-medium text-blue-700">Enviado</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-red-100 border border-red-300/50" />
-              <span>Sem Atividade</span>
+            <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-red-50 border border-red-200">
+              <div className="w-3 h-3 rounded-full bg-red-500" />
+              <span className="font-medium text-red-700">Sem Atividade</span>
+            </div>
+            <div className="flex items-center gap-2 ml-auto text-[10px] italic">
+              <CalendarIcon className="h-3 w-3" />
+              <span>Clique no dia para ver detalhes</span>
             </div>
           </div>
         </CardContent>
