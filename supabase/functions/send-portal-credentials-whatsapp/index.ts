@@ -89,6 +89,9 @@ serve(async (req) => {
     const email = String(body.email || "").toLowerCase().trim();
     const password = body.password ? String(body.password) : null;
     const companyName = body.companyName ? String(body.companyName) : null;
+    const companyId: string | null = body.companyId || null;
+    const siteId: string | null = body.siteId || null;
+    const customContent = body.content ? String(body.content) : null;
     const origin = req.headers.get("origin") || "https://rdo.wees.com.br";
     const portalUrl = String(body.portalUrl || `${origin}/client/login`);
     const phone = normalizePhone(String(body.phone || ""));
@@ -98,7 +101,9 @@ serve(async (req) => {
     if (!phone) return json({ error: "Telefone de WhatsApp inválido" }, 400);
     if (!/^https?:\/\//.test(portalUrl)) return json({ error: "Link do portal inválido" }, 400);
 
-    const text = buildMessage({ name, email, password, portalUrl, companyName });
+    const text = customContent?.trim()
+      ? customContent
+      : buildMessage({ name, email, password, portalUrl, companyName });
 
     const response = await fetch(`${UAZAPI_BASE_URL}/send/text`, {
       method: "POST",
@@ -107,8 +112,27 @@ serve(async (req) => {
     });
 
     const raw = await response.text();
+
+    const logMessage = async (status: string, errorMessage: string | null, providerMessageId: string | null) => {
+      const { error: logErr } = await admin.from("client_messages").insert({
+        channel: "whatsapp",
+        recipient_name: name,
+        recipient_email: email,
+        recipient_phone: phone,
+        company_id: companyId,
+        site_id: siteId,
+        content: text,
+        status,
+        error_message: errorMessage,
+        provider_message_id: providerMessageId,
+        created_by: userData.user.id,
+      });
+      if (logErr) console.error("client_messages log error", logErr);
+    };
+
     if (!response.ok) {
       console.error(`UAZAPI send failed [${response.status}]: ${raw}`);
+      await logMessage("failed", `HTTP ${response.status}: ${raw}`.slice(0, 1000), null);
       return json(
         { error: "Falha ao enviar mensagem no WhatsApp", status: response.status, details: raw },
         response.status,
@@ -117,6 +141,8 @@ serve(async (req) => {
 
     let parsed: any = null;
     try { parsed = JSON.parse(raw); } catch { /* resposta não-JSON */ }
+
+    await logMessage("sent", null, parsed?.id || parsed?.messageid || null);
 
     console.log(`Credenciais do portal enviadas por WhatsApp para ${phone} (usuário ${email})`);
     return json({ success: true, phone, messageId: parsed?.id || parsed?.messageid || null });
