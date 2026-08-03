@@ -249,7 +249,12 @@ function CompanyEditView({ company, sites, onBack, onSlugSaved }: CompanyEditVie
                 />
 
                 {/* Admin select */}
-                <PortalAdminAccessSection siteId={site.id} />
+                <PortalAdminAccessSection
+                  siteId={site.id}
+                  companyId={company.id}
+                  siteName={site.name}
+                  companyName={company.name}
+                />
 
                 {/* Contacts button */}
                 <Button
