@@ -970,7 +970,7 @@ export default function ProjectCalendar() {
                     "h-12 md:h-14 rounded-lg text-sm md:text-base font-medium transition-all relative flex flex-col items-center justify-center border",
                     isToday && "ring-2 ring-primary ring-offset-2",
                     isSelected && "ring-2 ring-primary bg-primary/10",
-                    hasReports ? statusColor : "hover:bg-muted/50 border-transparent",
+                    hasReports ? (dayReportsLocal.some(r => r.status === 'completed') ? "bg-success/20 border-success/30" : statusColor) : "hover:bg-muted/50 border-transparent",
                     !hasReports && "text-muted-foreground shadow-sm"
                   )}
                 >
