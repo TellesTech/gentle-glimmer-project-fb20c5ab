@@ -493,7 +493,7 @@ export default function Reports() {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl xs:text-2xl font-bold text-foreground truncate">Meus Relatórios</h1>
+          <h1 className="text-xl xs:text-2xl font-bold text-foreground truncate">Corrija a duplicidade do WhatsApp.</h1>
           <p className="text-sm text-muted-foreground">
             {getStatusCount('completed')} concluído(s)
             {selectionMode && ` • ${selectedReports.size} selecionado(s)`}
