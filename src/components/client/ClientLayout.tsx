@@ -30,6 +30,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useClientPortalSettings } from '@/hooks/useClientPortalSettings';
 import { useClientPreviewMode } from '@/hooks/useClientPreviewMode';
+import { FirstAccessPinDialog } from '@/components/client/FirstAccessPinDialog';
 
 interface ClientLayoutProps {
   children: ReactNode;
