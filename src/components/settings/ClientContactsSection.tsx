@@ -498,17 +498,22 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
 
   const getWhatsAppMessage = () => {
     if (!credentialsDialog.credentials) return '';
-    const { contactName, pin, loginUrl } = credentialsDialog.credentials;
+    const { contactName, pin, loginUrl, email, password } = credentialsDialog.credentials;
+    const accessLines = [
+      pin ? `🔐 *Seu PIN de acesso:* ${pin}` : '',
+      password ? `📧 *E-mail:* ${email}` : '',
+      password ? `🔑 *Senha:* ${password}` : '',
+      `🔹 *Acesse aqui:* ${loginUrl}`,
+    ].filter(Boolean).join('\n');
     return `Olá, *${contactName}*! 👋
 
 A *Equipe WEES* preparou seu acesso ao *Portal ${companyName}*.
 
 Através dele, você poderá acompanhar os *Diários de Obra (RDOs)*, visualizar o andamento das atividades, fotos e aprovar relatórios da sua obra.
 
-🔐 *Seu PIN de acesso:* ${pin}
-🔹 *Acesse aqui:* ${loginUrl}
+${accessLines}
 
-Abra o link acima, selecione seu perfil e digite o PIN informado para entrar no portal.
+Abra o link acima e entre com o PIN (ou com e-mail e senha, se informados acima).
 
 Atenciosamente,
 *Equipe WEES* 🏗️`;
