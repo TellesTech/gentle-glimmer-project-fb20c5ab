@@ -556,6 +556,7 @@ Atenciosamente,
   };
 
   const formatInvitationStatus = (contact: Contact) => {
+
     if (contact.invitation_sent_at) {
       const date = format(new Date(contact.invitation_sent_at), "dd/MM/yyyy", { locale: ptBR });
       const count = contact.invitation_count || 1;
