@@ -31,10 +31,13 @@ import {
   Wrench,
   ChevronRight,
   Building2,
+  Calendar,
 } from 'lucide-react';
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { format, parseISO, subDays, startOfDay, endOfDay, isWithinInterval, differenceInDays } from 'date-fns';
+import { format, parseISO, subDays, startOfDay, endOfDay, isWithinInterval, differenceInDays, getYear, getMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
 import { cn } from '@/lib/utils';
 import { ResponsiveContainer, BarChart, Bar, XAxis as RechartsXAxis, YAxis as RechartsYAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -90,7 +93,13 @@ function buildRdoCardImage(rdoNumber: number | null | undefined, dateLabel: stri
 
 // Native portal-only flow
 
+const monthNames = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
 export default function ClientDashboard() {
+
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [chartPeriod, setChartPeriod] = useState<'7d' | '30d'>('7d');
   const [selectedActivity, setSelectedActivity] = useState<string>('all');
@@ -407,39 +416,70 @@ export default function ClientDashboard() {
     return pendingList.filter(r => r.report?.project?.name === selectedActivity);
   }, [pendingList, selectedActivity]);
 
-  // Aggregate by Activity (project) — for the new "Atividades" cards grid
+  // Aggregate by Month/Year and then by Activity (project)
   type ActivityReport = { id: string; date: string | null; status: string; rdoNumber: number | null };
-  const activityCards = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; total: number; pending: number; signed: number; lastDate: string | null; reports: ActivityReport[] }>();
+  
+  const monthFolders = useMemo(() => {
+    const monthsMap = new Map<string, {
+      id: string;
+      year: number;
+      month: number;
+      monthName: string;
+      activities: Map<string, { id: string; name: string; total: number; pending: number; signed: number; lastDate: string | null; reports: ActivityReport[] }>;
+    }>();
+
     (reportsData || []).forEach(r => {
       const proj = r.report?.project;
-      if (!proj?.id) return;
-      const cur = map.get(proj.id) || { id: proj.id, name: proj.name, total: 0, pending: 0, signed: 0, lastDate: null, reports: [] };
+      const dateStr = r.report?.date;
+      if (!proj?.id || !dateStr) return;
+
+      const dateObj = parseISO(dateStr);
+      const year = getYear(dateObj);
+      const month = getMonth(dateObj);
+      const monthKey = `${year}-${month}`;
+
+      if (!monthsMap.has(monthKey)) {
+        monthsMap.set(monthKey, {
+          id: monthKey,
+          year,
+          month,
+          monthName: monthNames[month],
+          activities: new Map()
+        });
+      }
+
+      const monthEntry = monthsMap.get(monthKey)!;
+      const activityMap = monthEntry.activities;
+      
+      const cur = activityMap.get(proj.id) || { id: proj.id, name: proj.name, total: 0, pending: 0, signed: 0, lastDate: null, reports: [] };
       cur.total += 1;
       if (r.status === 'approved') cur.signed += 1;
       else cur.pending += 1;
-      const d = r.report?.date || null;
-      if (d && (!cur.lastDate || d > cur.lastDate)) cur.lastDate = d;
-      cur.reports.push({ id: r.report_id, date: d, status: r.status, rdoNumber: r.report?.rdo_number ?? null });
-      map.set(proj.id, cur);
+      
+      if (!cur.lastDate || dateStr > cur.lastDate) cur.lastDate = dateStr;
+      cur.reports.push({ id: r.report_id, date: dateStr, status: r.status, rdoNumber: r.report?.rdo_number ?? null });
+      activityMap.set(proj.id, cur);
     });
-    // Sort each activity's reports by date desc
-    map.forEach((v) => {
-      v.reports.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-    });
-    return Array.from(map.values()).sort((a, b) => {
-      // Pending first, then by lastDate desc
-      if ((b.pending > 0 ? 1 : 0) !== (a.pending > 0 ? 1 : 0)) return (b.pending > 0 ? 1 : 0) - (a.pending > 0 ? 1 : 0);
-      return (b.lastDate || '').localeCompare(a.lastDate || '');
-    });
+
+    // Convert maps to sorted arrays
+    return Array.from(monthsMap.values())
+      .map(m => ({
+        ...m,
+        activities: Array.from(m.activities.values()).sort((a, b) => (b.lastDate || '').localeCompare(a.lastDate || ''))
+      }))
+      .sort((a, b) => {
+        if (a.year !== b.year) return b.year - a.year;
+        return b.month - a.month;
+      });
   }, [reportsData]);
 
-  // Cover photo per RDO (1st photo) for the folder previews
+  // Folder previews (cover photos)
   const folderReportIds = useMemo(() => {
     const ids = new Set<string>();
-    activityCards.forEach((a) => a.reports.slice(0, 5).forEach((r) => ids.add(r.id)));
+    monthFolders.forEach(m => m.activities.forEach(a => a.reports.slice(0, 5).forEach(r => ids.add(r.id))));
     return Array.from(ids);
-  }, [activityCards]);
+  }, [monthFolders]);
+
 
   const { data: coverPhotosMap } = useQuery({
     queryKey: ['client-activity-cover-photos', folderReportIds],
@@ -661,73 +701,82 @@ export default function ClientDashboard() {
 
         {/* Histórico chart removed */}
 
-        {/* ===== ATIVIDADES ===== */}
-        {activityCards.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-primary" />
-                  <CardTitle className="text-lg">Atividades</CardTitle>
-                  <Badge variant="default">{activityCards.length}</Badge>
-                </div>
-              </div>
-              <CardDescription>Clique em uma atividade para ver os RDOs e acompanhar as assinaturas em tempo real</CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-12 p-3 sm:p-6 pt-8">
-              {activityCards.map((a) => {
-                const status = a.pending === 0 ? 'completed' : a.signed > 0 ? 'partial' : 'pending';
-                const gradient = 'linear-gradient(135deg, #f4c430, #d4a017)';
-                const subtitle = a.lastDate
-                  ? `${a.total} RDO(s) · ${format(parseISO(a.lastDate), 'dd/MM/yyyy', { locale: ptBR })}`
-                  : `${a.total} RDO(s)`;
-                // Real RDOs as preview "papers" — up to 5 most recent.
-                // Use the cover photo when the RDO has one; otherwise render a stylized
-                // SVG card with the RDO number, date and status so it never shows as blank.
-                const realReports = a.reports.slice(0, 5);
-                const projects: FolderProject[] = realReports.length > 0
-                  ? realReports.map((r) => {
-                      const dateLabel = r.date ? format(parseISO(r.date), 'dd/MM/yyyy', { locale: ptBR }) : 'Sem data';
-                      const numLabel = r.rdoNumber != null ? `RDO ${r.rdoNumber}` : 'RDO';
-                      return {
-                        id: r.id,
-                        image: coverPhotosMap?.get(r.id) || buildRdoCardImage(r.rdoNumber, dateLabel, r.status),
-                        title: `${numLabel} · ${dateLabel} · ${r.status === 'approved' ? 'Assinado' : 'Pendente'}`,
-                      };
-                    })
-                  : [{ id: `${a.id}-empty`, image: buildRdoCardImage(null, 'Sem RDOs', 'pending'), title: 'Sem RDOs' }];
-                return (
-                  <div key={a.id} className="flex flex-col items-center gap-2">
-                    <AnimatedFolder
-                      title={a.name}
-                      subtitle={subtitle}
-                      projects={projects}
-                      gradient={gradient}
-                      onFolderClick={() => navigate(`/client/activity/${a.id}?${searchParams.toString()}`)}
-                    />
-                    <div className="mt-2 flex items-center gap-1.5 flex-wrap justify-center min-h-[24px]">
-                      {status === 'completed' && (
-                        <Badge className="bg-[hsl(var(--success))] hover:bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] gap-1 text-[10px] px-2 py-0">
-                          <CheckCircle className="h-3 w-3" /> Tudo assinado
-                        </Badge>
-                      )}
-                      {status === 'partial' && (
-                        <Badge variant="secondary" className="gap-1 text-[10px] px-2 py-0">
-                          <Clock className="h-3 w-3" /> {a.pending} pendente(s)
-                        </Badge>
-                      )}
-                      {status === 'pending' && (
-                        <Badge variant="outline" className="gap-1 bg-yellow-500 border-transparent text-white text-[10px] px-2 py-0">
-                          <Clock className="h-3 w-3" /> {a.pending} pendente(s)
-                        </Badge>
-                      )}
+        {/* ===== PASTAS DE MESES E ATIVIDADES ===== */}
+        {monthFolders.length > 0 && (
+          <div className="space-y-8">
+            {monthFolders.map((month) => (
+              <Card key={month.id} className="overflow-hidden border-t-4 border-t-primary/20 shadow-sm">
+                <CardHeader className="pb-3 bg-muted/30">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <Calendar className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">{month.monthName} {month.year}</CardTitle>
+                        <CardDescription>
+                          {month.activities.length} atividade(s) · {month.activities.reduce((sum, a) => sum + a.total, 0)} RDO(s)
+                        </CardDescription>
+                      </div>
                     </div>
                   </div>
-                );
-              })}
-            </CardContent>
-          </Card>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-12 p-3 sm:p-6 pt-10">
+                  {month.activities.map((a) => {
+                    const status = a.pending === 0 ? 'completed' : a.signed > 0 ? 'partial' : 'pending';
+                    const gradient = 'linear-gradient(135deg, #f4c430, #d4a017)';
+                    const subtitle = a.lastDate
+                      ? `${a.total} RDO(s) · ${format(parseISO(a.lastDate), 'dd/MM/yyyy', { locale: ptBR })}`
+                      : `${a.total} RDO(s)`;
+                    
+                    const realReports = a.reports.slice(0, 5);
+                    const projects: FolderProject[] = realReports.length > 0
+                      ? realReports.map((r) => {
+                          const dateLabel = r.date ? format(parseISO(r.date), 'dd/MM/yyyy', { locale: ptBR }) : 'Sem data';
+                          const numLabel = r.rdoNumber != null ? `RDO ${r.rdoNumber}` : 'RDO';
+                          return {
+                            id: r.id,
+                            image: coverPhotosMap?.get(r.id) || buildRdoCardImage(r.rdoNumber, dateLabel, r.status),
+                            title: `${numLabel} · ${dateLabel} · ${r.status === 'approved' ? 'Assinado' : 'Pendente'}`,
+                          };
+                        })
+                      : [{ id: `${a.id}-empty`, image: buildRdoCardImage(null, 'Sem RDOs', 'pending'), title: 'Sem RDOs' }];
+                    
+                    return (
+                      <div key={a.id} className="flex flex-col items-center gap-2 group">
+                        <AnimatedFolder
+                          title={a.name}
+                          subtitle={subtitle}
+                          projects={projects}
+                          gradient={gradient}
+                          onFolderClick={() => navigate(`/client/activity/${a.id}?${searchParams.toString()}`)}
+                        />
+                        <div className="mt-2 flex items-center gap-1.5 flex-wrap justify-center min-h-[24px]">
+                          {status === 'completed' && (
+                            <Badge className="bg-[hsl(var(--success))] hover:bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] gap-1 text-[10px] px-2 py-0">
+                              <CheckCircle className="h-3 w-3" /> Tudo assinado
+                            </Badge>
+                          )}
+                          {status === 'partial' && (
+                            <Badge variant="secondary" className="gap-1 text-[10px] px-2 py-0 border-primary/20">
+                              <Clock className="h-3 w-3" /> {a.pending} pendente(s)
+                            </Badge>
+                          )}
+                          {status === 'pending' && (
+                            <Badge variant="outline" className="gap-1 bg-yellow-500 border-transparent text-white text-[10px] px-2 py-0">
+                              <Clock className="h-3 w-3" /> {a.pending} pendente(s)
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
+
 
         {/* All clear message */}
         {pendingList.length === 0 && !reportsLoading && (
