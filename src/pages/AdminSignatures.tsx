@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText, Loader2, Search, Download, CheckCircle2, Clock, XCircle, ExternalLink, Eye, EyeOff, Copy, Send, ChevronDown, ChevronRight, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
@@ -249,8 +249,8 @@ export default function AdminSignatures() {
                   const meta = statusMeta[r.status] || statusMeta.pending;
                   const Icon = meta.icon;
                   return (
-                    <>
-                    <TableRow key={r.id}>
+                    <Fragment key={r.id}>
+                    <TableRow>
                       <TableCell>
                         <div className="font-medium text-sm">{(r.contact?.name || '—').replace(/\s*-\s*Wees$/i, '').trim()}</div>
                         <div className="text-xs text-muted-foreground">{r.contact?.email}</div>
@@ -373,7 +373,7 @@ export default function AdminSignatures() {
                         </TableCell>
                       </TableRow>
                     )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </TableBody>
