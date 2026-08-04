@@ -57,22 +57,22 @@ export default function ClientActivityList() {
       let reportIds: string[] = [];
 
       if (clientProfile) {
-        // Visibilidade automática por unidade: todo RDO assinado da obra.
+        // Visibilidade automática por unidade: RDOs enviados para assinatura e assinados.
         // A RLS já bloqueia obras de outras unidades e meses ocultados.
         const { data: projReports } = await supabase
           .from('reports')
           .select('id')
           .eq('project_id', projectId!)
-          .in('status', ['signed', 'finalized']);
+          .in('status', ['sent', 'signed', 'finalized']);
         reportIds = (projReports || []).map((r: any) => r.id);
       } else if (isAdminView) {
         // Admin/colaborador no portal segue o mesmo escopo do cliente:
-        // apenas RDOs assinados.
+        // RDOs enviados para assinatura e assinados.
         const { data: projReports } = await supabase
           .from('reports')
           .select('id')
           .eq('project_id', projectId!)
-          .in('status', ['signed', 'finalized']);
+          .in('status', ['sent', 'signed', 'finalized']);
         reportIds = (projReports || []).map((r: any) => r.id);
       }
 
@@ -99,8 +99,8 @@ export default function ClientActivityList() {
       });
 
       return (rs || [])
-        // REGRA OBRIGATÓRIA: portal do cliente exibe SOMENTE RDOs assinados.
-        .filter((r: any) => r.status === 'signed' || r.status === 'finalized')
+        // Portal do cliente: RDOs enviados para assinatura e assinados.
+        .filter((r: any) => r.status === 'sent' || r.status === 'signed' || r.status === 'finalized')
         .map((r: any) => {
           const c = counts.get(r.id) || { total: 0, signed: 0 };
           const externallySigned = r.status === 'signed' || r.status === 'finalized';
