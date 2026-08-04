@@ -57,16 +57,14 @@ export default function ClientActivityList() {
       let reportIds: string[] = [];
 
       if (clientProfile) {
-        const isContact = clientProfile._source === 'company_contacts';
-        const table = isContact ? 'report_company_approvers' : 'report_client_approvers';
-        const idField = isContact ? 'contact_id' : 'client_id';
-        const { data: ap } = await (supabase as any)
-          .from(table)
-          .select('report_id, report:reports!inner(id, project_id)')
-          .eq(idField, clientProfile.id);
-        reportIds = (ap || [])
-          .filter((a: any) => a.report?.project_id === projectId)
-          .map((a: any) => a.report_id);
+        // Visibilidade automática por unidade: todo RDO assinado da obra.
+        // A RLS já bloqueia obras de outras unidades e meses ocultados.
+        const { data: projReports } = await supabase
+          .from('reports')
+          .select('id')
+          .eq('project_id', projectId!)
+          .in('status', ['signed', 'finalized']);
+        reportIds = (projReports || []).map((r: any) => r.id);
       } else if (isAdminView) {
         // Admin/colaborador no portal segue o mesmo escopo do cliente:
         // apenas RDOs assinados.
