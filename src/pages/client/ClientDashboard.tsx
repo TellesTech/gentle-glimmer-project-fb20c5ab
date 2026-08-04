@@ -32,6 +32,8 @@ import {
   ChevronRight,
   Building2,
   Calendar,
+  Download,
+  Loader2,
 } from 'lucide-react';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -39,6 +41,9 @@ import { format, parseISO, subDays, startOfDay, endOfDay, isWithinInterval, diff
 import { ptBR } from 'date-fns/locale';
 
 import { cn } from '@/lib/utils';
+import JSZip from 'jszip';
+import { getReportPdfBlob } from '@/lib/clientReportDownload';
+import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
 import { ResponsiveContainer, BarChart, Bar, XAxis as RechartsXAxis, YAxis as RechartsYAxis, Tooltip, CartesianGrid } from 'recharts';
 
 interface PendingReport {
@@ -480,6 +485,67 @@ export default function ClientDashboard() {
     return Array.from(ids);
   }, [monthFolders]);
 
+  // ===== Download de pasta de RDOs do mês (ZIP) =====
+  const [downloadingMonthId, setDownloadingMonthId] = useState<string | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState<{ done: number; total: number } | null>(null);
+
+  const handleDownloadMonth = async (
+    e: React.MouseEvent,
+    month: (typeof monthFolders)[number],
+  ) => {
+    e.stopPropagation();
+    if (downloadingMonthId) return;
+
+    const items = month.activities.flatMap((a) =>
+      a.reports.map((r) => ({ ...r, activityName: a.name })),
+    );
+    if (items.length === 0) {
+      toast({ title: 'Nenhum RDO neste mês', variant: 'destructive' });
+      return;
+    }
+
+    setDownloadingMonthId(month.id);
+    setDownloadProgress({ done: 0, total: items.length });
+
+    try {
+      const zip = new JSZip();
+      let ok = 0;
+      let failed = 0;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        try {
+          const { blob, filename } = await getReportPdfBlob(item.id);
+          const folder = (item.activityName || 'Atividade').replace(/[^\w\-À-ÿ ]+/g, '_').trim();
+          zip.file(`${folder}/${filename}`, blob);
+          ok += 1;
+        } catch (err) {
+          console.warn('[ClientDashboard] falha no RDO', item.id, err);
+          failed += 1;
+        }
+        setDownloadProgress({ done: i + 1, total: items.length });
+      }
+
+      if (ok === 0) {
+        toast({ title: 'Não foi possível gerar os PDFs', variant: 'destructive' });
+        return;
+      }
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      triggerDownloadFromBlob(blob, `RDOs_${month.monthName}_${month.year}.zip`);
+      toast({
+        title: `${ok} RDO(s) baixados`,
+        description: failed > 0 ? `${failed} não puderam ser gerados.` : undefined,
+      });
+    } catch (err) {
+      console.error('[ClientDashboard] erro no ZIP', err);
+      toast({ title: 'Erro ao gerar o arquivo ZIP', variant: 'destructive' });
+    } finally {
+      setDownloadingMonthId(null);
+      setDownloadProgress(null);
+    }
+  };
+
 
   const { data: coverPhotosMap } = useQuery({
     queryKey: ['client-activity-cover-photos', folderReportIds],
@@ -718,10 +784,30 @@ export default function ClientDashboard() {
                       <div className="absolute inset-0 flex items-center justify-center pt-4">
                         <Calendar className="h-6 w-6 text-yellow-900/30" />
                       </div>
+
+                      {/* Baixar todos os RDOs do mês */}
+                      <button
+                        type="button"
+                        title="Baixar RDOs do mês (ZIP)"
+                        onClick={(e) => handleDownloadMonth(e, month)}
+                        disabled={downloadingMonthId === month.id}
+                        className="absolute -top-2 -right-2 z-30 rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-primary hover:border-primary transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100 disabled:opacity-100"
+                      >
+                        {downloadingMonthId === month.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Download className="h-3.5 w-3.5" />
+                        )}
+                      </button>
                     </div>
                     <div className="text-center min-w-0 px-1">
                       <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">{month.monthName}</p>
                       <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-tight">{month.year}</p>
+                      {downloadingMonthId === month.id && downloadProgress && (
+                        <p className="text-[10px] text-primary font-semibold mt-0.5">
+                          {downloadProgress.done}/{downloadProgress.total}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}

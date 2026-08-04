@@ -7,7 +7,7 @@ import { ptBR } from 'date-fns/locale';
     Loader2, Sun, Sunset, Moon, Users, CheckCircle2, Circle,
     AlertTriangle, AlertCircle, Camera, Building2, PenLine, Check,
     MessageSquare, ClipboardList, FileText, XCircle, X,
-    MapPin, Clock, Globe, Timer, CalendarDays, Sparkles, RefreshCw
+    MapPin, Clock, Globe, Timer, CalendarDays, Sparkles, RefreshCw, Download
   } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +25,8 @@ import { useClientAuth } from '@/contexts/ClientAuthContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { PhotoGallery } from '@/components/reports/PhotoGallery';
 import { SignatureTimeline } from '@/components/client/SignatureTimeline';
+import { getReportPdfBlob } from '@/lib/clientReportDownload';
+import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
 import type { Shift, DeviationType, ImpactLevel } from '@/types';
 
 const SHIFT_CONFIG: Record<Shift, { label: string; icon: typeof Sun; color: string }> = {
@@ -77,6 +79,7 @@ export default function ClientReportView() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [localProfile, setLocalProfile] = useState<ClientProfile | null>(null);
   const [isReverifying, setIsReverifying] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   const handleReverifyAttendance = async () => {
     const report: any = (data as any)?.report || data;
@@ -394,6 +397,20 @@ export default function ClientReportView() {
   const rdoNumber = (report.rdo_number ?? 1).toString().padStart(3, '0');
   const rdoDateFormatted = format(parseISO(report.date), 'dd/MM/yyyy');
 
+  const handleDownloadPdf = async () => {
+    setIsDownloadingPdf(true);
+    try {
+      const { blob, filename } = await getReportPdfBlob(report.id);
+      triggerDownloadFromBlob(blob, filename);
+      toast.success('PDF gerado com sucesso');
+    } catch (err) {
+      console.error('[ClientReportView] erro ao baixar PDF', err);
+      toast.error('Não foi possível gerar o PDF deste RDO');
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
   // Check if current access has already signed (link flow) OR if authenticated user already signed (logged-in flow)
   const currentAccessSigned = accessInfo ? signatures?.some((s: any) => s.access_id === accessInfo.id) : false;
   const userEmail = (
@@ -446,7 +463,7 @@ export default function ClientReportView() {
         onBack={authProfile ? () => navigate('/client/dashboard') : () => window.history.back()}
       />
 
-      <main className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 pb-24">
+      <main className="max-w-6xl mx-auto p-4 md:px-8 md:py-6 space-y-6 pb-24">
         {/* Report Header */}
         <Card className="bg-gradient-to-br from-primary via-primary/95 to-primary/80 text-primary-foreground shadow-xl overflow-hidden">
           <CardContent className="p-6">
@@ -461,13 +478,27 @@ export default function ClientReportView() {
                 </div>
               </div>
               
-              <div className="text-right">
-                <Badge className="bg-white/20 text-white border-white/30">
-                  {report.status === 'completed' ? 'Concluído' : 'Rascunho'}
-                </Badge>
-                <p className="text-sm text-primary-foreground/80 mt-2">
-                  {format(parseISO(report.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                </p>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <Badge className="bg-white/20 text-white border-white/30">
+                    {report.status === 'completed' ? 'Concluído' : 'Rascunho'}
+                  </Badge>
+                  <p className="text-sm text-primary-foreground/80 mt-2">
+                    {format(parseISO(report.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  </p>
+                </div>
+                <Button
+                  onClick={handleDownloadPdf}
+                  disabled={isDownloadingPdf}
+                  className="bg-white/20 hover:bg-white/30 text-primary-foreground border border-white/30 shadow-sm"
+                >
+                  {isDownloadingPdf ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  Baixar PDF
+                </Button>
               </div>
             </div>
           </CardContent>
