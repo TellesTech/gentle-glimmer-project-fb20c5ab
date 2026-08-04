@@ -675,7 +675,7 @@ export default function ClientLogin() {
                     <CardDescription>Clique no seu nome abaixo e insira o PIN de 4 dígitos recebido por convite</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {contacts.filter(c => c.has_pin || c.has_auth).map((contact) => (
+                    {contacts.map((contact) => (
                       <Button
                         key={contact.id}
                         variant="outline"
