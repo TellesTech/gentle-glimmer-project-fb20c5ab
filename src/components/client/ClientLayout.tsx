@@ -312,6 +312,15 @@ Atenciosamente,
             <Button
               variant="ghost"
               size="icon"
+              onClick={() => navigate(`/client/profile${preservedSearch}#seguranca`)}
+              aria-label="Alterar senha"
+              title="Alterar senha"
+            >
+              <KeyRound className="h-[1.1rem] w-[1.1rem]" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={toggleTheme}
               aria-label="Alternar tema"
               title={currentTheme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
