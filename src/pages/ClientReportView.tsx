@@ -1024,16 +1024,36 @@ export default function ClientReportView() {
               />
             )}
           </>
-        ) : (
+        ) : fullySigned ? (
           <Card className="border-2 border-success bg-success/5">
             <CardContent className="p-6 text-center">
               <CheckCircle2 className="w-12 h-12 text-success mx-auto mb-3" />
               <h3 className="text-lg font-semibold text-success">Relatório Assinado</h3>
               <p className="text-muted-foreground text-sm mt-1">
-                {isSigned 
-                  ? 'Sua assinatura foi registrada com sucesso!'
-                  : 'Este link já foi usado para assinar o relatório.'}
+                Todas as {signatureSummary.total} assinaturas foram registradas.
               </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-2 border-warning bg-warning/5">
+            <CardContent className="p-6 text-center">
+              <Clock className="w-12 h-12 text-warning mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-warning">
+                Aguardando demais assinaturas
+              </h3>
+              <p className="text-muted-foreground text-sm mt-1">
+                {isSigned
+                  ? 'Sua assinatura foi registrada com sucesso.'
+                  : 'Este link já foi usado para assinar o relatório.'}
+                {signatureSummary.total > 0 && (
+                  <> {signatureSummary.signed} de {signatureSummary.total} assinaturas concluídas.</>
+                )}
+              </p>
+              {pendingSigners.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Pendente: {pendingSigners.map((s) => s.name).join(', ')}
+                </p>
+              )}
             </CardContent>
           </Card>
         )}
