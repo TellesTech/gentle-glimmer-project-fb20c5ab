@@ -407,39 +407,70 @@ export default function ClientDashboard() {
     return pendingList.filter(r => r.report?.project?.name === selectedActivity);
   }, [pendingList, selectedActivity]);
 
-  // Aggregate by Activity (project) — for the new "Atividades" cards grid
+  // Aggregate by Month/Year and then by Activity (project)
   type ActivityReport = { id: string; date: string | null; status: string; rdoNumber: number | null };
-  const activityCards = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; total: number; pending: number; signed: number; lastDate: string | null; reports: ActivityReport[] }>();
+  
+  const monthFolders = useMemo(() => {
+    const monthsMap = new Map<string, {
+      id: string;
+      year: number;
+      month: number;
+      monthName: string;
+      activities: Map<string, { id: string; name: string; total: number; pending: number; signed: number; lastDate: string | null; reports: ActivityReport[] }>;
+    }>();
+
     (reportsData || []).forEach(r => {
       const proj = r.report?.project;
-      if (!proj?.id) return;
-      const cur = map.get(proj.id) || { id: proj.id, name: proj.name, total: 0, pending: 0, signed: 0, lastDate: null, reports: [] };
+      const dateStr = r.report?.date;
+      if (!proj?.id || !dateStr) return;
+
+      const dateObj = parseISO(dateStr);
+      const year = getYear(dateObj);
+      const month = getMonth(dateObj);
+      const monthKey = `${year}-${month}`;
+
+      if (!monthsMap.has(monthKey)) {
+        monthsMap.set(monthKey, {
+          id: monthKey,
+          year,
+          month,
+          monthName: monthNames[month],
+          activities: new Map()
+        });
+      }
+
+      const monthEntry = monthsMap.get(monthKey)!;
+      const activityMap = monthEntry.activities;
+      
+      const cur = activityMap.get(proj.id) || { id: proj.id, name: proj.name, total: 0, pending: 0, signed: 0, lastDate: null, reports: [] };
       cur.total += 1;
       if (r.status === 'approved') cur.signed += 1;
       else cur.pending += 1;
-      const d = r.report?.date || null;
-      if (d && (!cur.lastDate || d > cur.lastDate)) cur.lastDate = d;
-      cur.reports.push({ id: r.report_id, date: d, status: r.status, rdoNumber: r.report?.rdo_number ?? null });
-      map.set(proj.id, cur);
+      
+      if (!cur.lastDate || dateStr > cur.lastDate) cur.lastDate = dateStr;
+      cur.reports.push({ id: r.report_id, date: dateStr, status: r.status, rdoNumber: r.report?.rdo_number ?? null });
+      activityMap.set(proj.id, cur);
     });
-    // Sort each activity's reports by date desc
-    map.forEach((v) => {
-      v.reports.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-    });
-    return Array.from(map.values()).sort((a, b) => {
-      // Pending first, then by lastDate desc
-      if ((b.pending > 0 ? 1 : 0) !== (a.pending > 0 ? 1 : 0)) return (b.pending > 0 ? 1 : 0) - (a.pending > 0 ? 1 : 0);
-      return (b.lastDate || '').localeCompare(a.lastDate || '');
-    });
+
+    // Convert maps to sorted arrays
+    return Array.from(monthsMap.values())
+      .map(m => ({
+        ...m,
+        activities: Array.from(m.activities.values()).sort((a, b) => (b.lastDate || '').localeCompare(a.lastDate || ''))
+      }))
+      .sort((a, b) => {
+        if (a.year !== b.year) return b.year - a.year;
+        return b.month - a.month;
+      });
   }, [reportsData]);
 
-  // Cover photo per RDO (1st photo) for the folder previews
+  // Folder previews (cover photos)
   const folderReportIds = useMemo(() => {
     const ids = new Set<string>();
-    activityCards.forEach((a) => a.reports.slice(0, 5).forEach((r) => ids.add(r.id)));
+    monthFolders.forEach(m => m.activities.forEach(a => a.reports.slice(0, 5).forEach(r => ids.add(r.id))));
     return Array.from(ids);
-  }, [activityCards]);
+  }, [monthFolders]);
+
 
   const { data: coverPhotosMap } = useQuery({
     queryKey: ['client-activity-cover-photos', folderReportIds],
