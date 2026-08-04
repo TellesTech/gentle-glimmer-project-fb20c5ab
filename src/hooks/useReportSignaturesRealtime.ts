@@ -338,10 +338,21 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
         a.name.localeCompare(b.name, 'pt-BR');
 
       // Rede de segurança: ninguém cadastrado como colaborador interno pode
-      // aparecer no bloco do cliente.
+      // aparecer no bloco do cliente, EXCETO se ele estiver explicitamente
+      // na lista de perfis de cliente (como Lucas Rosa, que agora é cliente).
       const finalClientEntries = clientEntries.filter((e) => {
+        const isExplicitClient = clientProfilesList.some((cp: any) => normalize(cp.name) === normalize(e.name)) ||
+                                 contacts.some((cc: any) => normalize(cc.name) === normalize(e.name));
+        
+        if (isExplicitClient) return true;
+
         const info = internalInfo(e.name);
-        if (!info) return true;
+        if (!info) {
+          // Exclusão específica solicitada
+          if (normalize(e.name) === 'alex manhaes') return false;
+          return true;
+        }
+
         if (!weesEntries.some((w) => normalize(w.name) === normalize(e.name))) {
           weesEntries.push({ ...e, side: 'wees', role: info.jobTitle || 'Equipe WEES', companyName: weesCompanyName });
         }

@@ -152,7 +152,11 @@ export function SendForSignatureDialog({
 
         // Auto-select ALL contacts for the unit
         if (cancelled) return;
-        const allContactIds = new Set<string>(rows.map((r) => r.id));
+        const allContactIds = new Set<string>(
+          rows
+            .filter(r => normalize(r.name) !== 'alex manhaes')
+            .map((r) => r.id)
+        );
         setSelectedIds(allContactIds);
       } catch (e) {
         console.error('Error loading client contacts:', e);
@@ -164,10 +168,18 @@ export function SendForSignatureDialog({
     return () => { cancelled = true; };
   }, [open, site?.id, company?.id, report?.id]);
 
+  const normalize = (s: string) =>
+    (s || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+
   const filteredContacts = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return contacts;
-    return contacts.filter((c) =>
+    const list = contacts.filter(c => normalize(c.name) !== 'alex manhaes');
+    if (!q) return list;
+    return list.filter((c) =>
       c.name.toLowerCase().includes(q) ||
       c.email.toLowerCase().includes(q) ||
       (c.role ?? '').toLowerCase().includes(q),
