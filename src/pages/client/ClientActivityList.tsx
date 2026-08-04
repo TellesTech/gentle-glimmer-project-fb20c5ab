@@ -187,9 +187,9 @@ export default function ClientActivityList() {
         </div>
 
         {isLoading ? (
-          <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(170px,1fr))]">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 sm:gap-10 py-4">
             {[...Array(6)].map((_, i) => (
-              <Skeleton key={i} className="aspect-[3/4] w-full rounded-xl" />
+              <Skeleton key={i} className="w-24 h-32 sm:w-32 sm:h-40 rounded-lg" />
             ))}
           </div>
         ) : reports.length === 0 ? (
@@ -199,17 +199,65 @@ export default function ClientActivityList() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(170px,1fr))]">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 sm:gap-10 py-4">
             {reports.map((r) => (
-              <FileCard
+              <div
                 key={r.id}
-                format="pdf"
+                className="flex flex-col items-center gap-3 group cursor-pointer"
                 onClick={() => navigate(`/client/reports/${r.id}?${searchParams.toString()}`)}
-                badge={getStatusBadge(r.approverStatus)}
-                title={`RDO Nº ${(r.rdo_number ?? 0).toString().padStart(3, '0')}`}
-                subtitle={format(parseISO(r.date), "dd/MM/yyyy", { locale: ptBR })}
-                footer={`${r.signedCount}/${r.totalApprovers || '—'} assinaturas`}
-              />
+              >
+                <div className="relative w-24 h-20 sm:w-32 sm:h-24 transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
+                  {/* Folder Rear Part */}
+                  <div className={cn(
+                    "absolute inset-x-0 bottom-0 top-3 rounded-lg shadow-sm",
+                    r.approverStatus === 'pending' ? "bg-red-200" : "bg-[#e5b52a]"
+                  )} />
+                  {/* Folder Tab */}
+                  <div className={cn(
+                    "absolute top-0 left-0 w-10 h-6 rounded-t-lg",
+                    r.approverStatus === 'pending' ? "bg-red-200" : "bg-[#e5b52a]"
+                  )} />
+                  {/* Folder Front Part */}
+                  <div className={cn(
+                    "absolute inset-x-0 bottom-0 top-5 rounded-lg shadow-md transition-transform group-hover:-rotate-1 origin-bottom-left",
+                    r.approverStatus === 'pending' ? "bg-red-500" : "bg-[#f4c430]"
+                  )} />
+                  
+                  {/* File Content Overlay */}
+                  <div className="absolute inset-x-2 bottom-1 top-4 bg-white/90 rounded-sm shadow-inner flex flex-col items-center justify-center p-1 overflow-hidden">
+                    <div className="text-[8px] sm:text-[10px] font-bold text-gray-800 leading-none mb-0.5">
+                      RDO
+                    </div>
+                    <div className="text-[10px] sm:text-[14px] font-black text-gray-900 leading-none">
+                      #{(r.rdo_number ?? 0).toString().padStart(3, '0')}
+                    </div>
+                  </div>
+
+                  {/* Status Indicator */}
+                  <div className="absolute -top-1 -right-1 z-30">
+                    {r.approverStatus === 'completed' ? (
+                      <div className="bg-emerald-500 rounded-full p-0.5 shadow-sm">
+                        <CheckCircle2 className="h-3 w-3 text-white" />
+                      </div>
+                    ) : (
+                      <div className={cn("rounded-full p-0.5 shadow-sm", r.approverStatus === 'pending' ? "bg-red-500" : "bg-amber-500")}>
+                        <Clock className="h-3 w-3 text-white" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="text-center min-w-0 px-1 w-full">
+                  <p className={cn(
+                    "font-bold text-sm truncate transition-colors",
+                    r.approverStatus === 'pending' ? "text-red-600 group-hover:text-red-700" : "text-foreground group-hover:text-primary"
+                  )}>
+                    RDO #{(r.rdo_number ?? 0).toString().padStart(3, '0')}
+                  </p>
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">
+                    {format(parseISO(r.date), "dd/MM/yyyy", { locale: ptBR })}
+                  </p>
+                </div>
+              </div>
             ))}
           </div>
         )}

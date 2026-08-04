@@ -667,40 +667,40 @@ export default function ClientDashboard() {
         )}
 
         {/* ===== TOP INDICATORS (FLAT LIST STYLE) ===== */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 flex items-center justify-between p-4 bg-card rounded-xl border border-border shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-muted text-muted-foreground">
-                <FileText className="h-5 w-5" />
+        <div className="flex flex-wrap gap-3">
+          <div className="flex-1 min-w-[140px] flex items-center justify-between p-3 bg-card rounded-xl border border-border shadow-sm">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-muted text-muted-foreground">
+                <FileText className="h-4 w-4" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground">Total de RDOs</p>
+              <p className="text-xs font-medium text-muted-foreground">RDOs</p>
             </div>
-            {reportsLoading ? <Skeleton className="h-6 w-10" /> : (
-              <p className="text-xl font-bold">{metrics.total}</p>
+            {reportsLoading ? <Skeleton className="h-5 w-8" /> : (
+              <p className="text-lg font-bold">{metrics.total}</p>
             )}
           </div>
 
-          <div className="flex-1 flex items-center justify-between p-4 bg-card rounded-xl border border-l-4 border-l-[hsl(var(--success))] shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-[hsl(var(--success))/10] text-[hsl(var(--success))]">
-                <CheckCircle className="h-5 w-5" />
+          <div className="flex-1 min-w-[140px] flex items-center justify-between p-3 bg-card rounded-xl border border-l-4 border-l-[hsl(var(--success))] shadow-sm">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-[hsl(var(--success))/10] text-[hsl(var(--success))]">
+                <CheckCircle className="h-4 w-4" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground">Assinados</p>
+              <p className="text-xs font-medium text-muted-foreground">Assinados</p>
             </div>
-            {reportsLoading ? <Skeleton className="h-6 w-10" /> : (
-              <p className="text-xl font-bold text-[hsl(var(--success))]">{metrics.signed}</p>
+            {reportsLoading ? <Skeleton className="h-5 w-8" /> : (
+              <p className="text-lg font-bold text-[hsl(var(--success))]">{metrics.signed}</p>
             )}
           </div>
 
-          <div className="flex-1 flex items-center justify-between p-4 bg-card rounded-xl border border-l-4 border-l-primary shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                <Clock className="h-5 w-5" />
+          <div className="flex-1 min-w-[140px] flex items-center justify-between p-3 bg-card rounded-xl border border-l-4 border-l-primary shadow-sm">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                <Clock className="h-4 w-4" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground">Pendentes</p>
+              <p className="text-xs font-medium text-muted-foreground">Pendentes</p>
             </div>
-            {reportsLoading ? <Skeleton className="h-6 w-10" /> : (
-              <p className="text-xl font-bold text-primary">{metrics.pending}</p>
+            {reportsLoading ? <Skeleton className="h-5 w-8" /> : (
+              <p className="text-lg font-bold text-primary">{metrics.pending}</p>
             )}
           </div>
         </div>
