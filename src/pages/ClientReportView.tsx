@@ -397,6 +397,20 @@ export default function ClientReportView() {
   const rdoNumber = (report.rdo_number ?? 1).toString().padStart(3, '0');
   const rdoDateFormatted = format(parseISO(report.date), 'dd/MM/yyyy');
 
+  const handleDownloadPdf = async () => {
+    setIsDownloadingPdf(true);
+    try {
+      const { blob, filename } = await getReportPdfBlob(report.id);
+      triggerDownloadFromBlob(blob, filename);
+      toast.success('PDF gerado com sucesso');
+    } catch (err) {
+      console.error('[ClientReportView] erro ao baixar PDF', err);
+      toast.error('Não foi possível gerar o PDF deste RDO');
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
   // Check if current access has already signed (link flow) OR if authenticated user already signed (logged-in flow)
   const currentAccessSigned = accessInfo ? signatures?.some((s: any) => s.access_id === accessInfo.id) : false;
   const userEmail = (
