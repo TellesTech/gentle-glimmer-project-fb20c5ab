@@ -167,8 +167,8 @@ export default function ClientProfile() {
   };
 
   const handlePasswordChange = async () => {
-    if (newPassword.length < 6) {
-      toast({ title: 'Senha muito curta', description: 'A senha deve ter pelo menos 6 caracteres', variant: 'destructive' });
+    if (newPassword.length < 8) {
+      toast({ title: 'Senha muito curta', description: 'A senha deve ter pelo menos 8 caracteres', variant: 'destructive' });
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -179,6 +179,12 @@ export default function ClientProfile() {
     try {
       const { error } = await (supabase as any).auth.updateUser({ password: newPassword });
       if (error) throw error;
+      if (clientProfile?._source === 'company_contacts') {
+        await supabase.from('company_contacts').update({ must_change_password: false }).eq('id', clientProfile.id);
+      } else if (clientProfile?._source === 'client_profiles') {
+        await supabase.from('client_profiles').update({ must_change_password: false }).eq('id', clientProfile.id);
+      }
+      await refreshProfile();
       setNewPassword('');
       setConfirmPassword('');
       toast({ title: 'Senha alterada', description: 'Sua senha foi atualizada com sucesso' });
