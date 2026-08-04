@@ -366,22 +366,22 @@ export default function ClientLogin() {
   // Login is per UNIT (site), not per company. Always require a site selection
   // when the company has any sites and the URL doesn't include one.
   const showSiteSelection = !siteId && !contactId && sites.length > 0;
-  const hasConfiguredContacts = contacts.some(c => c.has_pin || c.has_auth);
+  const pinContacts = contacts.filter(c => c.has_pin);
+  const hasPinContacts = pinContacts.length > 0;
 
-  // Default to email login only when a site is already selected (or there are no sites)
-  // and the selected scope has no PIN/auth contacts configured.
+  // Email/password is the default entry point. The PIN screen only shows up
+  // once at least one contact of this unit has already created a PIN.
   useEffect(() => {
     if (
       !loading &&
       !urlModeApplied &&
       !showSiteSelection &&
-      !hasConfiguredContacts &&
-      contacts.length === 0 &&
+      !hasPinContacts &&
       mode === 'select'
     ) {
-      setMode('magic');
+      setMode('email');
     }
-  }, [loading, urlModeApplied, showSiteSelection, hasConfiguredContacts, contacts.length, mode]);
+  }, [loading, urlModeApplied, showSiteSelection, hasPinContacts, mode]);
 
   if (loading) {
     return (
@@ -522,7 +522,7 @@ export default function ClientLogin() {
           <div className="flex gap-4 pt-4">
             <div className="flex flex-col">
               <span className="text-3xl font-bold text-primary-foreground">
-                {companyStats.totalReports}+
+                {companyStats.totalReports}
               </span>
               <span className="text-primary-foreground/70 text-sm">Relatórios</span>
             </div>
@@ -592,7 +592,7 @@ export default function ClientLogin() {
             )}
             <div className="flex items-center gap-4 text-xs">
               <div className="text-center">
-                <p className="text-lg font-bold text-primary">{companyStats.totalReports}+</p>
+                <p className="text-lg font-bold text-primary">{companyStats.totalReports}</p>
                 <p className="text-muted-foreground">Relatórios</p>
               </div>
               <div className="w-px h-8 bg-border" />
@@ -686,14 +686,14 @@ export default function ClientLogin() {
             </Card>
           ) : (
             <Card className="border-0 shadow-lg">
-              {mode === 'select' && (
+              {mode === 'select' && hasPinContacts && (
                 <>
                   <CardHeader className="space-y-1 pb-4">
                     <CardTitle className="text-2xl font-bold">Acesso Rápido</CardTitle>
                     <CardDescription>Clique no seu nome abaixo e insira o PIN de 4 dígitos recebido por convite</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {contacts.map((contact) => (
+                    {pinContacts.map((contact) => (
                       <Button
                         key={contact.id}
                         variant="outline"
@@ -708,7 +708,7 @@ export default function ClientLogin() {
                           <p className="font-medium">{getDisplayName(contact.name)}</p>
                           {contact.role && <p className="text-xs text-muted-foreground">{contact.role}</p>}
                         </div>
-                        {contact.has_pin ? <KeyRound className="h-4 w-4 ml-auto text-muted-foreground" /> : <Mail className="h-4 w-4 ml-auto text-muted-foreground" />}
+                        <KeyRound className="h-4 w-4 ml-auto text-muted-foreground" />
                       </Button>
                      ))}
 
@@ -718,11 +718,8 @@ export default function ClientLogin() {
                       <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
                       <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">ou</span></div>
                     </div>
-                    <Button className="w-full" onClick={() => setMode('magic')}>
-                      <Mail className="h-4 w-4 mr-2" /> Primeiro acesso? Entrar com e-mail
-                    </Button>
-                    <Button variant="ghost" className="w-full" onClick={() => setMode('email')}>
-                      Prefere usar email e senha? Clique aqui
+                    <Button className="w-full" onClick={() => setMode('email')}>
+                      <Mail className="h-4 w-4 mr-2" /> Entrar com e-mail e senha
                     </Button>
                   </CardFooter>
                 </>
@@ -843,9 +840,9 @@ export default function ClientLogin() {
               {mode === 'email' && (
                 <>
                   <CardHeader className="space-y-1 pb-4">
-                    {contacts.length > 0 && (
+                    {hasPinContacts && (
                       <Button variant="ghost" size="sm" className="w-fit -ml-2 mb-2" onClick={() => { setMode('select'); setEmail(''); setPassword(''); }}>
-                        <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+                        <ArrowLeft className="h-4 w-4 mr-1" /> Entrar com PIN
                       </Button>
                     )}
                     <CardTitle className="text-2xl font-bold">Entrar</CardTitle>
