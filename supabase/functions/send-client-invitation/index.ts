@@ -13,6 +13,7 @@ interface InvitationRequest {
   companyName: string;
   companyId?: string;
   pin?: string;
+  resetPassword?: boolean;
 }
 
 function generatePassword(companyName: string): string {
@@ -45,8 +46,9 @@ async function provisionAuthUser(
   contactName: string,
   contactEmail: string,
   companyName: string,
-  existingUserId: string | null
-): Promise<{ userId: string; password: string }> {
+  existingUserId: string | null,
+  resetPassword: boolean,
+): Promise<{ userId: string; password: string | null }> {
   const password = generatePassword(companyName);
 
   if (!existingUserId) {
@@ -76,7 +78,15 @@ async function provisionAuthUser(
     return { userId: authData.user.id, password };
   }
 
-  // User exists, try to reset password
+  // User already exists: keep the current password untouched unless the admin
+  // explicitly asked for a reset.
+  if (!resetPassword) {
+    const { data: existing } = await supabase.auth.admin.getUserById(existingUserId);
+    if (existing?.user) {
+      return { userId: existingUserId, password: null };
+    }
+  }
+
   const { error: updateError } = await supabase.auth.admin.updateUserById(existingUserId, { password });
 
   if (updateError) {
@@ -118,7 +128,7 @@ serve(async (req) => {
   }
 
   try {
-    const { contactId, contactName, contactEmail, companyName, companyId, pin: providedPin }: InvitationRequest = await req.json();
+    const { contactId, contactName, contactEmail, companyName, companyId, pin: providedPin, resetPassword }: InvitationRequest = await req.json();
 
     console.log(`[Invitation] Processing invitation for ${contactName} (${contactEmail})`);
 
@@ -159,7 +169,7 @@ serve(async (req) => {
 
     // 2. Provision auth user (email/password) in background
     const { password } = await provisionAuthUser(
-      supabase, contactId, contactName, contactEmail, companyName, contact.user_id
+      supabase, contactId, contactName, contactEmail, companyName, contact.user_id, resetPassword === true,
     );
 
     // 3. Build login URL — login is PER UNIT (site), not per company.

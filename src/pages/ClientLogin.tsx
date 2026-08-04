@@ -369,19 +369,18 @@ export default function ClientLogin() {
   const pinContacts = contacts.filter(c => c.has_pin);
   const hasPinContacts = pinContacts.length > 0;
 
-  // Email/password is the default entry point. The PIN screen only shows up
-  // once at least one contact of this unit has already created a PIN.
+  // Email/password is always the default entry point. PIN is a secondary path,
+  // reachable through a link below the form (or via ?mode=pin in the invite).
   useEffect(() => {
     if (
       !loading &&
       !urlModeApplied &&
       !showSiteSelection &&
-      !hasPinContacts &&
       mode === 'select'
     ) {
       setMode('email');
     }
-  }, [loading, urlModeApplied, showSiteSelection, hasPinContacts, mode]);
+  }, [loading, urlModeApplied, showSiteSelection, mode]);
 
   if (loading) {
     return (
@@ -689,6 +688,9 @@ export default function ClientLogin() {
               {mode === 'select' && hasPinContacts && (
                 <>
                   <CardHeader className="space-y-1 pb-4">
+                    <Button variant="ghost" size="sm" className="w-fit -ml-2 mb-2" onClick={() => setMode('email')}>
+                      <ArrowLeft className="h-4 w-4 mr-1" /> Entrar com e-mail e senha
+                    </Button>
                     <CardTitle className="text-2xl font-bold">Acesso Rápido</CardTitle>
                     <CardDescription>Clique no seu nome abaixo e insira o PIN de 4 dígitos recebido por convite</CardDescription>
                   </CardHeader>
@@ -840,11 +842,6 @@ export default function ClientLogin() {
               {mode === 'email' && (
                 <>
                   <CardHeader className="space-y-1 pb-4">
-                    {hasPinContacts && (
-                      <Button variant="ghost" size="sm" className="w-fit -ml-2 mb-2" onClick={() => { setMode('select'); setEmail(''); setPassword(''); }}>
-                        <ArrowLeft className="h-4 w-4 mr-1" /> Entrar com PIN
-                      </Button>
-                    )}
                     <CardTitle className="text-2xl font-bold">Entrar</CardTitle>
                     <CardDescription>Use seu email e senha para acessar</CardDescription>
                   </CardHeader>
@@ -864,6 +861,11 @@ export default function ClientLogin() {
                     <Button variant="ghost" className="w-full" onClick={() => { setMode('magic'); setMagicEmail(email); }}>
                       Não tem senha? Entrar com link por e-mail
                     </Button>
+                    {hasPinContacts && (
+                      <Button variant="ghost" className="w-full text-muted-foreground" onClick={() => setMode('select')}>
+                        <KeyRound className="h-4 w-4 mr-2" /> Entrar com PIN de 4 dígitos
+                      </Button>
+                    )}
                   </CardContent>
                 </>
               )}

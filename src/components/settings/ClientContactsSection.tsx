@@ -49,6 +49,7 @@ interface Site {
 }
 
 interface GeneratedCredentials {
+  contactId?: string;
   contactName: string;
   email: string;
   password: string;
@@ -228,6 +229,7 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
       setCredentialsDialog({
         open: true,
         credentials: {
+          contactId: contact.id,
           contactName: contact.name,
           email: data?.email || contact.email,
           password: data?.password || finalPassword,
@@ -487,16 +489,16 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
       if (data?.credentials) {
         const c = data.credentials;
         const baseUrl = c.loginUrl || buildLoginUrl(contact.id);
-        let password = c.password as string | undefined;
-        if (!password) {
-          const { data: pwData } = await supabase.functions.invoke('set-client-password', {
-            body: { contactId: contact.id, password: generateStrongPassword(contact.name) },
-          });
-          password = pwData?.password;
-        }
+        // Never overwrite an existing password: reuse what the backend returned
+        // (only for brand-new users) or the password the admin typed manually.
+        const manualPassword = editing[contact.id]?.password;
+        const password =
+          (c.password as string | undefined) ||
+          (manualPassword && manualPassword.length >= 8 ? manualPassword : '');
         setCredentialsDialog({
           open: true,
           credentials: {
+            contactId: contact.id,
             contactName: contact.name,
             email: c.email || contact.email,
             password: password || '',
@@ -567,6 +569,29 @@ Atenciosamente,
   const renderCredentialsBody = () => {
     const c = credentialsDialog.credentials;
     if (!c) return null;
+    const resetInvitePassword = async () => {
+      if (!c.contactId) return;
+      const newPassword = generateStrongPassword(c.contactName);
+      setSettingPassword(c.contactId);
+      try {
+        const { data, error } = await supabase.functions.invoke('set-client-password', {
+          body: { contactId: c.contactId, password: newPassword },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        setCredentialsDialog(prev => ({
+          open: true,
+          credentials: prev.credentials
+            ? { ...prev.credentials, password: data?.password || newPassword }
+            : prev.credentials,
+        }));
+        toast({ title: 'Senha redefinida', description: 'A senha anterior deixou de funcionar.' });
+      } catch (error: any) {
+        toast({ title: 'Erro ao redefinir senha', description: error.message, variant: 'destructive' });
+      } finally {
+        setSettingPassword(null);
+      }
+    };
     const rows: { label: string; value: string }[] = [
       { label: 'E-mail', value: c.email },
       { label: 'Senha', value: c.password },
@@ -589,6 +614,23 @@ Atenciosamente,
             </div>
           ))}
         </div>
+        {!c.password && (
+          <div className="rounded-lg border border-dashed p-3 space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Este contato já tem acesso e a senha atual foi mantida (ela não é exibida por segurança).
+              Se o cliente não souber a senha, gere uma nova agora.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={resetInvitePassword}
+              disabled={!c.contactId || settingPassword === c.contactId}
+            >
+              <KeyRound className="h-3.5 w-3.5 mr-2" /> Redefinir senha
+            </Button>
+          </div>
+        )}
         <Textarea readOnly value={getWhatsAppMessage()} className="min-h-[180px] font-mono text-sm resize-none" />
         <Button onClick={handleCopyMessage} className="w-full" variant={copied ? 'secondary' : 'default'}>
           {copied ? <><Check className="h-4 w-4 mr-2" />Copiado!</> : <><Copy className="h-4 w-4 mr-2" />Copiar Mensagem</>}
