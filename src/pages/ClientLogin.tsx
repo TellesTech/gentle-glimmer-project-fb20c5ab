@@ -135,6 +135,7 @@ export default function ClientLogin() {
       }
       const comp = (companyData as any[])[0];
       setCompany(comp);
+      setResolvedIds({ companyId, siteId: null });
 
       const { data: settingsData } = await supabase.rpc('get_company_portal_settings', { p_company_id: companyId });
       if (settingsData && (settingsData as any[]).length > 0) {
@@ -210,6 +211,7 @@ export default function ClientLogin() {
       const { data: statsData } = (resolvedSiteId && isUUID(resolvedSiteId))
         ? await supabase.rpc('get_site_login_stats', { p_site_id: resolvedSiteId })
         : await supabase.rpc('get_company_login_stats', { p_company_id: companyId });
+      setResolvedIds({ companyId, siteId: (resolvedSiteId && isUUID(resolvedSiteId)) ? resolvedSiteId : null });
       if (statsData) {
         const s = statsData as unknown as CompanyStats;
         setCompanyStats({
