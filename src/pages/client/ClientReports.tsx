@@ -319,10 +319,10 @@ export default function ClientReports() {
                     else if (selectedYear !== null) setSelectedYear(null);
                     else if (selectedActivity) setSelectedActivity(null);
                   }}
-                  className="gap-1 -ml-2"
+                  className="gap-1.5 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  Voltar
+                  <span>Voltar</span>
                 </Button>
               )}
             </div>
