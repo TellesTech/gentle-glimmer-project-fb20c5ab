@@ -25,6 +25,7 @@ import { useClientAuth } from '@/contexts/ClientAuthContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { PhotoGallery } from '@/components/reports/PhotoGallery';
 import { SignatureTimeline } from '@/components/client/SignatureTimeline';
+import { useReportSignaturesRealtime } from '@/hooks/useReportSignaturesRealtime';
 import { getReportPdfBlob } from '@/lib/clientReportDownload';
 import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
 import { getEdgeFunctionErrorMessage } from '@/lib/edgeFunctionError';
@@ -223,6 +224,13 @@ export default function ClientReportView() {
     enabled: !!isWeesUser,
     staleTime: 10 * 60 * 1000,
   });
+
+  // Status global das assinaturas do RDO (quem já assinou / quem falta)
+  const resolvedReportId = reportId || (data as any)?.report?.id;
+  const { data: signatureTimeline, summary: signatureSummary } =
+    useReportSignaturesRealtime(resolvedReportId);
+  const pendingSigners = (signatureTimeline?.entries || []).filter((e) => !e.signed);
+  const fullySigned = signatureSummary.total > 0 && signatureSummary.pending === 0;
 
   // Update local profile when data changes
   useEffect(() => {
@@ -1016,16 +1024,36 @@ export default function ClientReportView() {
               />
             )}
           </>
-        ) : (
+        ) : fullySigned ? (
           <Card className="border-2 border-success bg-success/5">
             <CardContent className="p-6 text-center">
               <CheckCircle2 className="w-12 h-12 text-success mx-auto mb-3" />
               <h3 className="text-lg font-semibold text-success">Relatório Assinado</h3>
               <p className="text-muted-foreground text-sm mt-1">
-                {isSigned 
-                  ? 'Sua assinatura foi registrada com sucesso!'
-                  : 'Este link já foi usado para assinar o relatório.'}
+                Todas as {signatureSummary.total} assinaturas foram registradas.
               </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-2 border-warning bg-warning/5">
+            <CardContent className="p-6 text-center">
+              <Clock className="w-12 h-12 text-warning mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-warning">
+                Aguardando demais assinaturas
+              </h3>
+              <p className="text-muted-foreground text-sm mt-1">
+                {isSigned
+                  ? 'Sua assinatura foi registrada com sucesso.'
+                  : 'Este link já foi usado para assinar o relatório.'}
+                {signatureSummary.total > 0 && (
+                  <> {signatureSummary.signed} de {signatureSummary.total} assinaturas concluídas.</>
+                )}
+              </p>
+              {pendingSigners.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Pendente: {pendingSigners.map((s) => s.name).join(', ')}
+                </p>
+              )}
             </CardContent>
           </Card>
         )}
