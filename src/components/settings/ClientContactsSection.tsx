@@ -1014,14 +1014,9 @@ Atenciosamente,
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Convite Gerado</DialogTitle>
-            <DialogDescription>Copie a mensagem abaixo e envie via WhatsApp</DialogDescription>
+            <DialogDescription>Credenciais e links de acesso do cliente</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <Textarea readOnly value={getWhatsAppMessage()} className="min-h-[200px] font-mono text-sm resize-none" />
-            <Button onClick={handleCopyMessage} className="w-full" variant={copied ? "secondary" : "default"}>
-              {copied ? <><Check className="h-4 w-4 mr-2" />Copiado!</> : <><Copy className="h-4 w-4 mr-2" />Copiar Mensagem</>}
-            </Button>
-          </div>
+          {renderCredentialsBody()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setCredentialsDialog({ open: false, credentials: null })}>Fechar</Button>
           </DialogFooter>
