@@ -455,16 +455,13 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
   };
 
   const handleGenerateInvite = async (contact: Contact) => {
-    // Check savedPins first, then inlinePin, then editing state
-    const pinToPass = savedPins[contact.id] || inlinePin[contact.id] || editing[contact.id]?.pin;
-    if (!pinToPass || !/^\d{4}$/.test(pinToPass)) {
-      toast({ title: 'PIN obrigatório', description: 'Digite o PIN de 4 dígitos do contato', variant: 'destructive' });
-      return;
-    }
+    // PIN is optional: use it when available (saved, inline or in the editing form)
+    const candidatePin = savedPins[contact.id] || inlinePin[contact.id] || editing[contact.id]?.pin || '';
+    const pinToPass = /^\d{4}$/.test(candidatePin) ? candidatePin : '';
     setGeneratingInvite(contact.id);
     try {
       // If PIN comes from inlinePin (not from savedPins), sync hash in DB first
-      const isFromInline = !savedPins[contact.id] && inlinePin[contact.id];
+      const isFromInline = !!pinToPass && !savedPins[contact.id] && !!inlinePin[contact.id];
       if (isFromInline) {
         const { error: pinError } = await supabase.functions.invoke('set-pin', {
           body: { pin: pinToPass, contactId: contact.id }
@@ -480,15 +477,32 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
           contactEmail: contact.email, 
           companyName, 
           companyId,
-          pin: pinToPass,
+          pin: pinToPass || undefined,
         }
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       if (data?.credentials) {
+        const c = data.credentials;
+        const baseUrl = c.loginUrl || buildLoginUrl(contact.id);
+        let password = c.password as string | undefined;
+        if (!password) {
+          const { data: pwData } = await supabase.functions.invoke('set-client-password', {
+            body: { contactId: contact.id, password: generateStrongPassword(contact.name) },
+          });
+          password = pwData?.password;
+        }
         setCredentialsDialog({
           open: true,
-          credentials: { contactName: contact.name, email: data.credentials.email, password: data.credentials.password, loginUrl: data.credentials.loginUrl, pin: data.credentials.pin || '' },
+          credentials: {
+            contactName: contact.name,
+            email: c.email || contact.email,
+            password: password || '',
+            loginUrl: baseUrl,
+            pin: c.pin || pinToPass || '',
+            emailLoginUrl: c.emailLoginUrl || `${baseUrl}?mode=email&email=${encodeURIComponent(c.email || contact.email)}`,
+            pinLoginUrl: (c.pin || pinToPass) ? (c.pinLoginUrl || `${baseUrl}?mode=pin`) : '',
+          },
         });
       }
       fetchData();
@@ -501,13 +515,19 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
 
   const getWhatsAppMessage = () => {
     if (!credentialsDialog.credentials) return '';
-    const { contactName, pin, loginUrl, email, password } = credentialsDialog.credentials;
-    const accessLines = [
-      pin ? `🔐 *Seu PIN de acesso:* ${pin}` : '',
-      password ? `📧 *E-mail:* ${email}` : '',
-      password ? `🔑 *Senha:* ${password}` : '',
-      `🔹 *Acesse aqui:* ${loginUrl}`,
-    ].filter(Boolean).join('\n');
+    const { contactName, pin, loginUrl, email, password, emailLoginUrl, pinLoginUrl } = credentialsDialog.credentials;
+    const emailBlock = password
+      ? `*Acesso por e-mail e senha*
+📧 E-mail: ${email}
+🔑 Senha: ${password}
+🔗 Link: ${emailLoginUrl || loginUrl}`
+      : '';
+    const pinBlock = pin
+      ? `*Acesso rápido por PIN*
+🔐 PIN: ${pin}
+🔗 Link: ${pinLoginUrl || loginUrl}`
+      : '';
+    const accessLines = [emailBlock, pinBlock].filter(Boolean).join('\n\n');
     return `Olá, *${contactName}*! 👋
 
 A *Equipe WEES* preparou seu acesso ao *Portal ${companyName}*.
@@ -516,7 +536,7 @@ Através dele, você poderá acompanhar os *Diários de Obra (RDOs)*, visualizar
 
 ${accessLines}
 
-Abra o link acima e entre com o PIN (ou com e-mail e senha, se informados acima).
+Basta abrir o link e entrar com os dados acima.
 
 Atenciosamente,
 *Equipe WEES* 🏗️`;
