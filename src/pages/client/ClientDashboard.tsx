@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
+import { useClientPreviewMode } from '@/hooks/useClientPreviewMode';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -113,6 +114,7 @@ export default function ClientDashboard() {
 
   const { clientProfile, user, isLoading: authLoading } = useClientAuth();
   const { role, profile: adminProfile } = useAuth();
+  const { isClientPreview } = useClientPreviewMode();
   const { settings: portalSettings } = useClientPortalSettings();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -298,7 +300,7 @@ export default function ClientDashboard() {
   const reportsLoading = isAdminView ? adminReportsLoading : clientReportsLoading;
 
   // ===== Pastas de mês ocultas (somente super admin gerencia) =====
-  const isSuperAdmin = role === 'super_admin';
+  const isSuperAdmin = role === 'super_admin' && !isClientPreview;
   const hiddenScopeCompanyId = adminCompanyId || clientProfile?.company_id || null;
 
   const { data: hiddenMonths } = useQuery({

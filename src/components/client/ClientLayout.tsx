@@ -19,6 +19,8 @@ import {
   Loader2,
   KeyRound,
   ChevronLeft,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { WhatsAppIcon } from '@/components/shared/WhatsAppIcon';
@@ -27,6 +29,7 @@ import { useClientAuth } from '@/contexts/ClientAuthContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useClientPortalSettings } from '@/hooks/useClientPortalSettings';
+import { useClientPreviewMode } from '@/hooks/useClientPreviewMode';
 
 interface ClientLayoutProps {
   children: ReactNode;
@@ -43,6 +46,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
   const currentTheme = resolvedTheme ?? 'light';
   const toggleTheme = () => setTheme(currentTheme === 'dark' ? 'light' : 'dark');
   const { toast } = useToast();
+  const { canPreviewAsClient, isClientPreview, toggleClientPreview } = useClientPreviewMode();
 
   // Resolve company / site context for branding
   const urlCompanyId = searchParams.get('company_id');
@@ -178,18 +182,13 @@ Atenciosamente,
     }
   };
 
-  // Botão "Área WEES"/"Convite" e "Membros da Unidade" só para usuários internos WEES.
-  // Qualquer sessão aberta como cliente/contato é tratada como cliente.
-  const isClientSession =
-    !!clientProfile ||
-    !!clientUser ||
-    (role as string) === 'client' ||
-    role === 'collaborator' ||
-    !!searchParams.get('portal_user');
-  const isInternalUser =
-    !isClientSession &&
-    !!adminUser &&
-    (role === 'super_admin' || role === 'admin');
+  // Usuário interno WEES autenticado (super admin/admin) tem prioridade sobre
+  // qualquer vínculo de cliente. A visão de cliente só é aplicada quando ele
+  // ativa a simulação (?view=client / ?portal_user=...) ou quando não há
+  // sessão interna.
+  const isWeesUser = !!adminUser && (role === 'super_admin' || role === 'admin');
+  const isSimulatingClient = isClientPreview || !!searchParams.get('portal_user');
+  const isInternalUser = isWeesUser && !isSimulatingClient;
 
   const navItems = [
     { href: `/client/dashboard${preservedSearch}`, label: settings.dashboard_title || 'Dashboard', icon: LayoutDashboard },
@@ -258,6 +257,16 @@ Atenciosamente,
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={toggleClientPreview}
+                  className="gap-2"
+                  title="Ver o portal exatamente como o cliente vê"
+                >
+                  <Eye className="h-4 w-4" />
+                  <span className="hidden sm:inline">Ver como cliente</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={openInvite}
                   className="gap-2 text-[#25D366] border-[#25D366]/40 hover:bg-[#25D366]/10 hover:text-[#25D366]"
                   title="Copiar texto de convite para WhatsApp"
@@ -276,6 +285,18 @@ Atenciosamente,
                   <span className="hidden sm:inline">Área WEES</span>
                 </Button>
               </>
+            )}
+            {isWeesUser && isClientPreview && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={toggleClientPreview}
+                className="gap-2"
+                title="Sair do modo de visualização do cliente"
+              >
+                <EyeOff className="h-4 w-4" />
+                <span className="hidden sm:inline">Voltar à visão WEES</span>
+              </Button>
             )}
             {clientProfile?.signature_data && (
               <div className="hidden lg:flex items-center gap-2 text-sm text-muted-foreground">
