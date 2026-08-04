@@ -256,7 +256,7 @@ export default function ClientDashboard() {
         (rca || []).forEach((r: any) => approverByReport.set(r.report_id, r));
       }
 
-      // 2) Todos os RDOs assinados das unidades do usuário (visibilidade
+      // 2) Todos os RDOs enviados/assinados das unidades do usuário (visibilidade
       //    automática; RLS já exclui meses ocultados pela WEES).
       const { data: siteRows } = await (supabase as any).rpc('portal_user_site_ids', {
         _user_id: user?.id,
@@ -274,7 +274,7 @@ export default function ClientDashboard() {
         .from('reports')
         .select(`id, date, shift, status, rdo_number, project:projects (id, name, company:companies (id, name))`)
         .in('project_id', projectIds)
-        .in('status', ['signed', 'finalized'])
+        .in('status', ['sent', 'signed', 'finalized'])
         .order('date', { ascending: false });
       if (error) throw error;
 
