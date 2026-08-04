@@ -7,7 +7,7 @@ import { ptBR } from 'date-fns/locale';
     Loader2, Sun, Sunset, Moon, Users, CheckCircle2, Circle,
     AlertTriangle, AlertCircle, Camera, Building2, PenLine, Check,
     MessageSquare, ClipboardList, FileText, XCircle, X,
-    MapPin, Clock, Globe, Timer, CalendarDays, Sparkles, RefreshCw
+    MapPin, Clock, Globe, Timer, CalendarDays, Sparkles, RefreshCw, Download
   } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +25,8 @@ import { useClientAuth } from '@/contexts/ClientAuthContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { PhotoGallery } from '@/components/reports/PhotoGallery';
 import { SignatureTimeline } from '@/components/client/SignatureTimeline';
+import { getReportPdfBlob } from '@/lib/clientReportDownload';
+import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
 import type { Shift, DeviationType, ImpactLevel } from '@/types';
 
 const SHIFT_CONFIG: Record<Shift, { label: string; icon: typeof Sun; color: string }> = {
@@ -77,6 +79,7 @@ export default function ClientReportView() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [localProfile, setLocalProfile] = useState<ClientProfile | null>(null);
   const [isReverifying, setIsReverifying] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   const handleReverifyAttendance = async () => {
     const report: any = (data as any)?.report || data;
