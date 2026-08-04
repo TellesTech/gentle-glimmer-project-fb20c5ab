@@ -41,7 +41,7 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
       // 1) Resolve report -> project -> site -> company
       const { data: report } = await supabase
         .from('reports')
-        .select('id, project:projects(id, site:sites(id, company:companies(id, name)))')
+        .select('id, created_by, project:projects(id, site:sites(id, company:companies(id, name)))')
         .eq('id', reportId)
         .maybeSingle();
 
@@ -87,18 +87,12 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
           .from('report_company_approvers')
           .select('id, contact_id, status, approved_at, contact:company_contacts(id, name, email, role, avatar_url)')
           .eq('report_id', reportId),
-        // WEES responsibles for this site
-        siteId
-          ? Promise.all([
-              supabase.from('portal_admin_access').select('user_id').eq('site_id', siteId),
-              supabase.from('site_responsibles').select('user_id').eq('site_id', siteId),
-            ]).then(([{ data: paa }, { data: sr }]) => {
-              const set = new Set<string>();
-              (paa || []).forEach((r: any) => r.user_id && set.add(r.user_id));
-              (sr || []).forEach((r: any) => r.user_id && set.add(r.user_id));
-              return Array.from(set);
-            })
-          : Promise.resolve([] as string[]),
+        // Lado WEES: apenas o responsável pelo RDO (autor). As listas de
+        // site_responsibles/portal_admin_access contêm dezenas de colaboradores
+        // e poluíam o painel com nomes que não assinam o documento.
+        Promise.resolve(
+          ((report as any)?.created_by ? [(report as any).created_by as string] : []) as string[],
+        ),
         // Client contacts for this company
         companyId
           ? supabase
@@ -134,6 +128,25 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
       const weesEmailSet = new Set<string>(
         weesProfiles.map((p) => (p.email || '').toLowerCase()).filter(Boolean),
       );
+
+      // Assinaturas ad-hoc com e-mail de um colaborador interno continuam sendo
+      // classificadas como WEES mesmo sem estarem na lista de responsáveis.
+      const sigEmails = Array.from(
+        new Set(
+          (signatures || [])
+            .map((s: any) => (s.signer_email || '').toLowerCase())
+            .filter(Boolean),
+        ),
+      );
+      if (sigEmails.length) {
+        const { data: internalProfs } = await supabase
+          .from('profiles')
+          .select('email')
+          .in('email', sigEmails);
+        (internalProfs || []).forEach((p: any) => {
+          if (p.email) weesEmailSet.add(p.email.toLowerCase());
+        });
+      }
 
       // Quick lookup of recorded signatures
       const sigByEmail = new Map<string, any>();
