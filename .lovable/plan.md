@@ -19,7 +19,7 @@ Ou seja: em Suzano, Portocel e Juiz de Fora o cliente entra no portal e não vê
 A visibilidade passa a ser **automática por unidade (site)**:
 
 - Todo RDO assinado (assinado/finalizado) de uma unidade aparece para os contatos/clientes vinculados àquela unidade, sem depender de convite.
-- Meses ocultados pelo super admin continuam invisíveis para o cliente (regra atual mantida).
+- **A ocultação manda:** o que o colaborador/super admin da WEES ocultar (pasta de mês em `portal_hidden_months`) continua invisível para o cliente — some da lista, das pastas, das métricas e do download em lote. Tudo o que não foi ocultado aparece automaticamente.
 - Rascunhos e RDOs não assinados continuam fora do portal.
 - O botão **Aprovar/Assinar** continua restrito: só aparece para quem foi realmente designado como aprovador daquele RDO. Os demais têm acesso de leitura e download.
 - Métricas, pastas de mês, lista de atividades e download em lote passam a refletir essa lista automática.
