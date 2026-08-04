@@ -117,22 +117,21 @@ export function PortalResponsiblesCard({ companyId, siteIds }: Props) {
           <CollapsibleTrigger asChild>
             <CardHeader className="py-2.5 px-4 cursor-pointer hover:bg-muted/50 transition-colors select-none">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Users className="h-4 w-4 text-primary" />
-                  {(() => {
-                    const factory = data?.client.find((p) => p.companyName)?.companyName;
-                    const label = factory ? `Equipe (${factory})` : 'Equipe Cliente';
-                    return (
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        <span className="shrink-0">{label}</span>
-                        {data && data.client.length > 0 && !clientOpen && (
-                          <span className="text-xs font-normal text-muted-foreground truncate max-w-[150px]">
-                            {data.client.find(p => p.hasSignature)?.name || data.client[0].name}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })()}
+                <CardTitle className="text-base flex items-center gap-2 overflow-hidden">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Users className="h-4 w-4 text-primary" />
+                    <span>
+                      {(() => {
+                        const factory = data?.client.find((p) => p.companyName)?.companyName;
+                        return factory ? `Equipe (${factory})` : 'Equipe Cliente';
+                      })()}
+                    </span>
+                  </div>
+                  {data && data.client.length > 0 && !clientOpen && (
+                    <span className="text-xs font-normal text-muted-foreground truncate border-l border-muted-foreground/30 pl-2 ml-1">
+                      {data.client.find(p => p.hasSignature)?.name || data.client[0].name}
+                    </span>
+                  )}
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   {!isLoading && (
