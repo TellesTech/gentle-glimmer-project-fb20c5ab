@@ -863,6 +863,11 @@ export default function ClientLogin() {
                     <Button variant="ghost" className="w-full" onClick={() => { setMode('magic'); setMagicEmail(email); }}>
                       Não tem senha? Entrar com link por e-mail
                     </Button>
+                    {hasPinContacts && (
+                      <Button variant="ghost" className="w-full text-muted-foreground" onClick={() => setMode('select')}>
+                        <KeyRound className="h-4 w-4 mr-2" /> Entrar com PIN de 4 dígitos
+                      </Button>
+                    )}
                   </CardContent>
                 </>
               )}
