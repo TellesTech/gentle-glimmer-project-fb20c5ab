@@ -1,33 +1,31 @@
-# Calendário de RDOs em "Meus RDOs"
+# Calendário da atividade com todos os RDOs de Meus RDOs
 
-## Objetivo
-Além das visões atuais (Armário/Pastas, Lista e Assinados), incluir uma visão **Calendário** em "Meus RDOs", mostrando os RDOs distribuídos nos dias do mês.
+## Causa confirmada
+Em "Meus RDOs" as pastas de atividade agrupam os RDOs pela **OM** (número/título da OM). Uma mesma OM pode ter RDOs criados em atividades diferentes no banco — a pasta reúne todos eles.
 
-## O que será feito
+Já o calendário da atividade busca RDOs de **uma única atividade** (`project_id` da primeira atividade de origem da pasta). Resultado: os RDOs da mesma OM que foram gravados em outra atividade não aparecem no calendário.
 
-1. **Novo botão de visão "Calendário"**
-   - Na página "Meus RDOs", junto das opções existentes, um botão alterna para a visão de calendário.
-   - A escolha permanece enquanto o usuário navega na página.
+Além disso, o calendário só tem cor/indicador para rascunho, enviado e concluído — RDOs **assinados/finalizados** ficam sem destaque.
 
-2. **Grade mensal**
-   - Mês atual por padrão, com setas para avançar/voltar e botão "Hoje".
-   - Cada dia mostra os RDOs daquela data: número do RDO, atividade e turno.
-   - Dias com muitos RDOs mostram os primeiros e um "+N".
+## Correção
 
-3. **Indicadores visuais de status** (mesmo padrão do calendário de atividade)
-   - Ponto/cor por status: rascunho, concluído, enviado para assinatura, assinado.
-   - Dias sem RDO ficam neutros; o dia de hoje é destacado.
+1. **O calendário passa a carregar todos os RDOs da pasta (OM), não só de uma atividade**
+   - Ao abrir o calendário a partir de uma pasta de atividade, todas as atividades de origem daquela pasta são levadas junto.
+   - O calendário busca os RDOs de todas essas atividades, ficando idêntico ao conteúdo mostrado em "Meus RDOs".
+   - Abrir o calendário por outros caminhos continua funcionando normalmente (apenas a atividade em questão).
 
-4. **Interação**
-   - Clicar em um RDO abre o detalhe do RDO.
-   - Clicar em um dia vazio abre a criação de novo RDO já com a data preenchida.
+2. **Todos os status aparecem**
+   - Rascunho, concluído, enviado para assinatura, assinado e finalizado — todos ficam visíveis no dia correspondente.
+   - Inclui indicador/cor própria para assinado e finalizado, hoje ausente.
 
-5. **Respeita filtros e permissões**
-   - O calendário usa os mesmos RDOs já carregados na página, portanto respeita filtro de atividade, busca, arquivados e a restrição de unidades do administrador.
+3. **Contagens e métricas do dia**
+   - Os contadores de RDOs por dia e o painel do dia selecionado passam a considerar o mesmo conjunto ampliado.
+
+4. **Verificação**
+   - Abrir uma pasta em "Meus RDOs", contar os RDOs do mês, abrir o calendário da mesma pasta e conferir que o total do mês bate.
 
 ## Detalhes técnicos
-- Novo componente `src/components/reports/ReportsCalendar.tsx`, recebendo `reports` (já buscados em `Reports.tsx`) via props — sem consulta nova ao banco.
-- Grade construída com `startOfMonth`/`endOfMonth`/`eachDayOfInterval` do date-fns, alinhando a semana com dias vazios no início, seguindo o padrão de `ProjectCalendar.tsx`.
-- `Reports.tsx`: estender `viewMode` para `'list' | 'cabinet' | 'signed' | 'calendar'` e renderizar o novo componente nessa opção.
-- Cores apenas por tokens semânticos do design system (sem cores fixas).
+- `src/components/reports/DocumentCabinet.tsx`: ao navegar para `/projects/:projectId`, incluir as demais atividades da pasta como parâmetro na URL (ex.: `?projects=id1,id2`).
+- `src/pages/ProjectCalendar.tsx`: ler esse parâmetro e trocar `.eq('project_id', projectId)` por `.in('project_id', [projectId, ...extras])` na consulta `project-reports`, incluindo o parâmetro na `queryKey`.
+- Estender os mapas de cor/pontos de status (linhas de `statusColor` e dos indicadores por dia) com `signed` e `finalized`, usando tokens semânticos do design system.
 - Sem alteração de banco de dados.
