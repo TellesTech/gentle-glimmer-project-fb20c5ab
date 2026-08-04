@@ -711,26 +711,29 @@ export default function ClientDashboard() {
         {monthFolders.length > 0 && (
           <div className="space-y-6">
             {!selectedMonthId ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 sm:gap-10 py-4">
                 {monthFolders.map((month) => (
                   <div
                     key={month.id}
-                    className="flex flex-col items-center gap-2 group cursor-pointer"
+                    className="flex flex-col items-center gap-3 group cursor-pointer"
                     onClick={() => setSelectedMonthId(month.id)}
                   >
-                    <div className="relative w-24 h-20 sm:w-32 sm:h-24">
-                      {/* Folder Body */}
-                      <div className="absolute inset-x-0 bottom-0 top-3 rounded-lg bg-yellow-400 shadow-md group-hover:bg-yellow-300 transition-colors" />
+                    <div className="relative w-24 h-20 sm:w-32 sm:h-24 transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
+                      {/* Folder Rear Part */}
+                      <div className="absolute inset-x-0 bottom-0 top-3 rounded-lg bg-[#e5b52a] shadow-sm" />
                       {/* Folder Tab */}
-                      <div className="absolute top-0 left-2 w-10 h-4 rounded-t-md bg-yellow-500 group-hover:bg-yellow-400 transition-colors" />
-                      {/* Folder Icon Overlay (optional for style) */}
-                      <div className="absolute inset-0 flex items-center justify-center pt-2">
-                        <Calendar className="h-8 w-8 text-yellow-800/40" />
+                      <div className="absolute top-0 left-0 w-10 h-6 rounded-t-lg bg-[#e5b52a]" />
+                      {/* Folder Front Part (slightly slanted/offset for 3D effect) */}
+                      <div className="absolute inset-x-0 bottom-0 top-5 rounded-lg bg-[#f4c430] shadow-md transition-transform group-hover:-rotate-1 origin-bottom-left" />
+                      
+                      {/* Icon overlay for visual cues */}
+                      <div className="absolute inset-0 flex items-center justify-center pt-4">
+                        <Calendar className="h-6 w-6 text-yellow-900/30" />
                       </div>
                     </div>
                     <div className="text-center min-w-0 px-1">
-                      <p className="font-semibold text-sm truncate">{month.monthName} {month.year}</p>
-                      <p className="text-[10px] text-muted-foreground">{month.activities.length} atividades</p>
+                      <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">{month.monthName}</p>
+                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-tight">{month.year}</p>
                     </div>
                   </div>
                 ))}
