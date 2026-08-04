@@ -970,6 +970,51 @@ export type Database = {
           },
         ]
       }
+      portal_hidden_months: {
+        Row: {
+          company_id: string
+          created_at: string
+          hidden_by: string | null
+          id: string
+          month: number
+          site_id: string
+          year: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          hidden_by?: string | null
+          id?: string
+          month: number
+          site_id: string
+          year: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          hidden_by?: string | null
+          id?: string
+          month?: number
+          site_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_hidden_months_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_hidden_months_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
