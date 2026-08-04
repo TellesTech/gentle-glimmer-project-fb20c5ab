@@ -64,10 +64,10 @@ export function PortalResponsiblesCard({ companyId, siteIds }: Props) {
   if (!companyId) return null;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
       {/* WEES Team */}
       <Collapsible open={weesOpen} onOpenChange={setWeesOpen}>
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden border-border/50 shadow-none bg-muted/20">
           <CollapsibleTrigger asChild>
             <CardHeader className="pb-3 cursor-pointer hover:bg-muted/30 transition-colors select-none">
               <div className="flex items-center justify-between">
