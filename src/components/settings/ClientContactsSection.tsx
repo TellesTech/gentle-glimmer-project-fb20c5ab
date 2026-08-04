@@ -63,6 +63,7 @@ interface EditingState {
     phone: string;
     role: string;
     pin: string;
+    password: string;
     avatar_url: string;
     can_approve: boolean;
     is_active: boolean;
@@ -116,7 +117,9 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
   }, [savedPins, pinsStorageKey]);
   const [inlinePin, setInlinePin] = useState<Record<string, string>>({});
   const [isCreating, setIsCreating] = useState(false);
-  const [newContact, setNewContact] = useState({ name: '', email: '', phone: '', role: '', pin: '', avatar_url: '', can_approve: true, is_active: true, siteIds: [] as string[] });
+  const [newContact, setNewContact] = useState({ name: '', email: '', phone: '', role: '', pin: '', password: '', avatar_url: '', can_approve: true, is_active: true, siteIds: [] as string[] });
+  const [showPassword, setShowPassword] = useState<Record<string, boolean>>({});
+  const [settingPassword, setSettingPassword] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; contact: Contact | null }>({ open: false, contact: null });
   const [credentialsDialog, setCredentialsDialog] = useState<{ open: boolean; credentials: GeneratedCredentials | null }>({ open: false, credentials: null });
   const [copied, setCopied] = useState(false);
@@ -206,6 +209,7 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
         phone: contact.phone || '',
         role: contact.role || '',
         pin: savedPins[contact.id] || '',
+        password: '',
         avatar_url: contact.avatar_url || '',
         can_approve: contact.can_approve,
         is_active: contact.is_active,
