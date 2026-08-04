@@ -702,8 +702,11 @@ export default function ClientLogin() {
                       <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
                       <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">ou</span></div>
                     </div>
+                    <Button className="w-full" onClick={() => setMode('magic')}>
+                      <Mail className="h-4 w-4 mr-2" /> Primeiro acesso? Entrar com e-mail
+                    </Button>
                     <Button variant="ghost" className="w-full" onClick={() => setMode('email')}>
-                      <Mail className="h-4 w-4 mr-2" /> Prefere usar email e senha? Clique aqui
+                      Prefere usar email e senha? Clique aqui
                     </Button>
                   </CardFooter>
                 </>
@@ -752,6 +755,75 @@ export default function ClientLogin() {
                 </>
               )}
 
+              {mode === 'magic' && (
+                <>
+                  <CardHeader className="space-y-1 pb-4">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-fit -ml-2 mb-2"
+                      onClick={() => { setMode(contacts.length > 0 ? 'select' : 'email'); setMagicSent(false); setMagicCode(''); }}
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+                    </Button>
+                    <CardTitle className="text-2xl font-bold">Entrar com e-mail</CardTitle>
+                    <CardDescription>
+                      {magicSent
+                        ? 'Enviamos um link de acesso para o seu e-mail. Abra o link ou digite o código recebido.'
+                        : 'Informe o e-mail cadastrado e enviaremos um link de acesso, sem senha.'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="magic-email">E-mail</Label>
+                      <Input
+                        id="magic-email"
+                        type="email"
+                        value={magicEmail}
+                        onChange={e => setMagicEmail(e.target.value)}
+                        placeholder="seu@email.com"
+                        disabled={magicSent}
+                        onKeyDown={e => { if (e.key === 'Enter') handleSendMagicLink(); }}
+                      />
+                    </div>
+
+                    {!magicSent ? (
+                      <Button className="w-full" onClick={handleSendMagicLink} disabled={!magicEmail || submitting}>
+                        {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
+                        Enviar acesso
+                      </Button>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex flex-col items-center gap-3">
+                          <p className="text-sm text-muted-foreground text-center">
+                            Recebeu um código de 6 dígitos? Digite abaixo.
+                          </p>
+                          <InputOTP maxLength={6} value={magicCode} onChange={setMagicCode} onComplete={handleVerifyMagicCode}>
+                            <InputOTPGroup className="gap-2">
+                              {[0, 1, 2, 3, 4, 5].map(i => (
+                                <InputOTPSlot key={i} index={i} className="h-12 w-10 text-lg" />
+                              ))}
+                            </InputOTPGroup>
+                          </InputOTP>
+                        </div>
+                        <Button className="w-full" onClick={handleVerifyMagicCode} disabled={magicCode.length !== 6 || submitting}>
+                          {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ArrowRight className="h-4 w-4 mr-2" />}
+                          Entrar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="w-full"
+                          onClick={handleSendMagicLink}
+                          disabled={resendIn > 0 || submitting}
+                        >
+                          {resendIn > 0 ? `Reenviar em ${resendIn}s` : 'Reenviar e-mail de acesso'}
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </>
+              )}
+
               {mode === 'email' && (
                 <>
                   <CardHeader className="space-y-1 pb-4">
@@ -772,9 +844,12 @@ export default function ClientLogin() {
                       <Label htmlFor="password">Senha</Label>
                       <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
                     </div>
-                    <Button className="w-full" onClick={handleEmailLogin} disabled={!email || !password || submitting}>
+                    <Button className="w-full" onClick={handlePasswordLogin} disabled={!email || !password || submitting}>
                       {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
                       Entrar
+                    </Button>
+                    <Button variant="ghost" className="w-full" onClick={() => { setMode('magic'); setMagicEmail(email); }}>
+                      Não tem senha? Entrar com link por e-mail
                     </Button>
                   </CardContent>
                 </>
