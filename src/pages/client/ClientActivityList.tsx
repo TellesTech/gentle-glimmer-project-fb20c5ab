@@ -3,9 +3,10 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, ChevronRight, CheckCircle2, Clock, Wrench } from 'lucide-react';
+import { ChevronRight, CheckCircle2, Clock, Wrench } from 'lucide-react';
 
 import { ClientLayout } from '@/components/client/ClientLayout';
+import { PageBackHeader } from '@/components/client/PageBackHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -156,28 +157,11 @@ export default function ClientActivityList() {
     <ClientLayout>
       <div className="space-y-5">
         <div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(`/client/dashboard?${searchParams.toString()}`)}
-            className="gap-1.5 -ml-2 mb-2 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Voltar</span>
-          </Button>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <button onClick={() => navigate(`/client/dashboard?${searchParams.toString()}`)} className="hover:text-foreground">
-              Atividades
-            </button>
-            <ChevronRight className="h-3 w-3" />
-            <span className="text-foreground font-medium truncate">{project?.name || '...'}</span>
-          </div>
-          <div className="flex items-center gap-3 mt-2">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <Wrench className="h-5 w-5 text-primary" />
-            </div>
-            <h1 className="text-xl sm:text-2xl font-bold truncate">{project?.name || 'Atividade'}</h1>
-          </div>
+          <PageBackHeader
+            onBack={() => navigate(`/client/dashboard?${searchParams.toString()}`)}
+            icon={<Wrench className="h-5 w-5" />}
+            title={project?.name || 'Atividade'}
+          />
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

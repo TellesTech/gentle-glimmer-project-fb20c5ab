@@ -208,12 +208,13 @@ Atenciosamente,
           <div className="flex items-center gap-2 sm:gap-4">
             <Button
               variant="ghost"
-              size="icon"
+              size="sm"
               onClick={() => navigate(-1)}
               aria-label="Voltar"
               title="Voltar para a página anterior"
+              className="h-9 w-9 p-0 rounded-full hover:bg-muted shrink-0"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ChevronLeft className="h-5 w-5" />
             </Button>
             <Link to={`/client/dashboard${preservedSearch}`} className="flex items-center" aria-label={brandingName || 'Portal'}>
               {brandingLogo ? (

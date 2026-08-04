@@ -13,6 +13,7 @@ import { ClientLayout } from '@/components/client/ClientLayout';
 import { useClientPortalSettings } from '@/hooks/useClientPortalSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { PortalResponsiblesCard } from '@/components/client/PortalResponsiblesCard';
+import { PageBackHeader } from '@/components/client/PageBackHeader';
 import { AnimatedFolder, type Project as FolderProject } from '@/components/ui/3d-folder';
 import {
   FileText,
@@ -814,24 +815,12 @@ export default function ClientDashboard() {
               </div>
             ) : (
               <div className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-300">
-                <div className="flex items-center gap-3 mb-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedMonthId(null)}
-                    className="h-9 w-9 p-0 rounded-full hover:bg-muted"
-                  >
-                    <ChevronRight className="h-5 w-5 rotate-180" />
-                  </Button>
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 rounded-lg bg-yellow-100 text-yellow-700">
-                      <Calendar className="h-5 w-5" />
-                    </div>
-                    <h2 className="text-xl font-bold">
-                      {monthFolders.find(m => m.id === selectedMonthId)?.monthName} {monthFolders.find(m => m.id === selectedMonthId)?.year}
-                    </h2>
-                  </div>
-                </div>
+                <PageBackHeader
+                  onBack={() => setSelectedMonthId(null)}
+                  icon={<Calendar className="h-5 w-5" />}
+                  iconClassName="bg-yellow-100 text-yellow-700"
+                  title={`${monthFolders.find(m => m.id === selectedMonthId)?.monthName ?? ''} ${monthFolders.find(m => m.id === selectedMonthId)?.year ?? ''}`}
+                />
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 sm:gap-10 py-4">
                   {monthFolders.find(m => m.id === selectedMonthId)?.activities.map((a) => {
