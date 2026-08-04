@@ -54,6 +54,8 @@ interface GeneratedCredentials {
   password: string;
   loginUrl: string;
   pin: string;
+  emailLoginUrl?: string;
+  pinLoginUrl?: string;
 }
 
 interface EditingState {
