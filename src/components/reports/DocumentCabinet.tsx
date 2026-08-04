@@ -1552,8 +1552,8 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                         SEM Nº DE OM
                       </span>
                     )}
-                    <p className="text-sm font-semibold text-foreground truncate" title={projectFolder.name}>
-                      preciso do texto completo da pasta
+                    <p className="text-sm font-semibold text-foreground break-words leading-snug" title={projectFolder.name}>
+                      {projectFolder.name}
                     </p>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-foreground group-hover:translate-x-0.5 transition-transform" />
