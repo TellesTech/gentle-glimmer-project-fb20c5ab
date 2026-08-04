@@ -1776,65 +1776,123 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     );
   }
 
-  // Level 1: Main view - company folders
+  // Level 1: Main view - show year selection then company folders
+  const currentYear = new Date().getFullYear();
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    years.add(currentYear);
+    reports.forEach(r => years.add(getYear(parseISO(r.date))));
+    allProjects.forEach((p: any) => {
+      if (p.created_at) years.add(getYear(parseISO(p.created_at)));
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  }, [reports, allProjects, currentYear]);
+
+  const selectedMainYear = openYear || currentYear;
+
+  const filteredCompanyFolders = useMemo(() => {
+    return companyFolders.map(cf => {
+      // Filter sites to only those that have something in this year
+      const filteredSites = cf.sites.filter(s => s.years.some(y => y.year === selectedMainYear));
+      return { ...cf, sites: filteredSites };
+    }).filter(cf => cf.sites.length > 0 || cf.reports.length === 0);
+  }, [companyFolders, selectedMainYear]);
+
   return (
     <>
-      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-6">
-        {companyFolders.map((company) => (
-          <FolderCard
-            key={company.id}
-            onClick={() => setOpenCompanyId(company.id)}
-            badge={
-              <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-neutral-700 text-neutral-300 border-0">
-                Fábrica
-              </Badge>
-            }
-            icon={
-              <div className="w-20 h-[4.2rem] rounded-lg overflow-hidden flex items-center justify-center p-1" style={{ backgroundColor: '#ffffff' }}>
-                {(company.logo_url || company.photo_url) ? (
-                  <img
-                    src={company.logo_url || company.photo_url!}
-                    alt={company.name}
-                    className="max-h-full max-w-full object-contain"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between bg-card p-4 rounded-xl border shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Calendar className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Ano de Referência</h3>
+              <p className="text-lg font-bold">{selectedMainYear}</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Label htmlFor="year-select" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mr-2">
+              Selecionar Ano:
+            </Label>
+            <Select
+              value={String(selectedMainYear)}
+              onValueChange={(val) => setOpenYear(Number(val))}
+            >
+              <SelectTrigger id="year-select" className="w-[120px] bg-background">
+                <SelectValue placeholder="Ano" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableYears.map(y => (
+                  <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-6">
+          {filteredCompanyFolders.map((company) => (
+            <FolderCard
+              key={company.id}
+              onClick={() => {
+                setOpenCompanyId(company.id);
+                setOpenYear(selectedMainYear);
+              }}
+              badge={
+                <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-neutral-700 text-neutral-300 border-0">
+                  Fábrica
+                </Badge>
+              }
+              icon={
+                <div className="w-20 h-[4.2rem] rounded-lg overflow-hidden flex items-center justify-center p-1" style={{ backgroundColor: '#ffffff' }}>
+                  {(company.logo_url || company.photo_url) ? (
+                    <img
+                      src={company.logo_url || company.photo_url!}
+                      alt={company.name}
+                      className="max-h-full max-w-full object-contain"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  ) : (
+                    <Building2 className="h-10 w-10 text-muted-foreground" />
+                  )}
+                </div>
+              }
+              title={company.name}
+              stats={
+                company.totalCount === 0
+                  ? [{ icon: <FileText className="h-3 w-3" />, label: 'Nenhum relatório ainda' }]
+                  : [
+                      { icon: <MapPin className="h-3 w-3" />, label: `${company.sites.length} unidade(s)` },
+                      { icon: <FileText className="h-3 w-3" />, label: `${company.totalCount} relatório(s)` },
+                    ]
+              }
+              topRightActions={
+                <>
+                  <CardActions
+                    id={company.id}
+                    type="company"
+                    name={company.name}
+                    onEdit={() => navigate(`/super-admin?tab=companies&edit=${company.id}`)}
                   />
-                ) : (
-                  <Building2 className="h-10 w-10 text-muted-foreground" />
-                )}
-              </div>
-            }
-            title={company.name}
-            stats={
-              company.totalCount === 0
-                ? [{ icon: <FileText className="h-3 w-3" />, label: 'Nenhum relatório ainda' }]
-                : [
-                    { icon: <MapPin className="h-3 w-3" />, label: `${company.sites.length} unidade(s)` },
-                    { icon: <FileText className="h-3 w-3" />, label: `${company.totalCount} relatório(s)` },
-                  ]
-            }
-            topRightActions={
-              <>
-                <CardActions
-                  id={company.id}
-                  type="company"
-                  name={company.name}
-                  onEdit={() => navigate(`/super-admin?tab=companies&edit=${company.id}`)}
-                />
-                <DownloadButton
-                  reportIds={company.reports.map((r) => r.id)}
-                  folderName={company.name}
-                  folderId={`company-${company.id}`}
-                  size="sm"
-                />
-              </>
-            }
-          />
-        ))}
+                  <DownloadButton
+                    reportIds={company.reports.map((r) => r.id)}
+                    folderName={company.name}
+                    folderId={`company-${company.id}`}
+                    size="sm"
+                  />
+                </>
+              }
+            />
+          ))}
+        </div>
       </div>
 
       {dialogs}
     </>
   );
 }
+
 
 export default DocumentCabinet;
