@@ -1,5 +1,5 @@
 import { useSystemSettings } from '@/hooks/useSystemSettings';
-import { ArrowLeft, Building2 } from 'lucide-react';
+import { ChevronRight, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ClientHeaderProps {
@@ -16,8 +16,14 @@ export function ClientHeader({ clientName, clientCompany, onBack }: ClientHeader
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3">
           {onBack && (
-            <Button variant="ghost" size="icon" onClick={onBack} className="text-primary-foreground hover:bg-primary-foreground/10 -ml-2">
-              <ArrowLeft className="h-5 w-5" />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onBack}
+              aria-label="Voltar"
+              className="h-9 w-9 p-0 rounded-full text-primary-foreground hover:bg-primary-foreground/10 -ml-2 shrink-0"
+            >
+              <ChevronRight className="h-5 w-5 rotate-180" />
             </Button>
           )}
           <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
