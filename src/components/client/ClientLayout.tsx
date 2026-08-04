@@ -183,7 +183,7 @@ Atenciosamente,
   const isClientSession =
     !!clientProfile ||
     !!clientUser ||
-    role === 'client' ||
+    (role as string) === 'client' ||
     role === 'collaborator' ||
     !!searchParams.get('portal_user');
   const isInternalUser =
