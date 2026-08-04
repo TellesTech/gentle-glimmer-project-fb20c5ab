@@ -1552,7 +1552,14 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                       type="reportGroup"
                       name={projectFolder.name}
                       reportIds={projectFolder.reports.map((r) => r.id)}
-                      onEdit={() => navigate(`/projects/${projectFolder.sourceProjects[0]?.id || ''}`)}
+                      onEdit={() => {
+                        const ids = projectFolder.sourceProjects.map((sp) => sp.id).filter(Boolean);
+                        const primary = ids[0] || '';
+                        const extras = ids.slice(1);
+                        navigate(
+                          `/projects/${primary}${extras.length ? `?projects=${extras.join(',')}` : ''}`,
+                        );
+                      }}
                     />
                   </div>
                 )}

@@ -215,9 +215,21 @@ export default function ProjectCalendar() {
     }
   };
 
+  // Atividades extras da mesma pasta/OM (vindas de "Meus RDOs" via ?projects=id1,id2)
+  const extraProjectIds = useMemo(() => {
+    const raw = searchParams.get('projects');
+    if (!raw) return [] as string[];
+    return raw.split(',').map(s => s.trim()).filter(Boolean);
+  }, [searchParams]);
+
+  const calendarProjectIds = useMemo(
+    () => Array.from(new Set([projectId, ...extraProjectIds].filter(Boolean))) as string[],
+    [projectId, extraProjectIds],
+  );
+
   // Fetch reports with complete data including new fields
   const { data: reports = [], isLoading: isLoadingReports } = useQuery({
-    queryKey: ['project-reports', projectId],
+    queryKey: ['project-reports', projectId, extraProjectIds.join(',')],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('reports')
@@ -234,7 +246,7 @@ export default function ProjectCalendar() {
           photos:report_photos(id),
           creator:profiles!reports_created_by_fkey(name, avatar_url)
         `)
-        .eq('project_id', projectId!)
+        .in('project_id', calendarProjectIds)
         .order('date', { ascending: false });
       
       if (error) throw error;
@@ -665,6 +677,8 @@ export default function ProjectCalendar() {
     if (dayReports.some(r => (r as any).no_activity === true)) return 'bg-red-100 border-red-300/50';
     if (dayReports.some(r => r.status === 'draft')) return 'bg-muted border-muted-foreground/30';
     if (dayReports.some(r => r.status === 'sent')) return 'bg-blue-100 border-blue-300/50';
+    if (dayReports.some(r => r.status === 'signed' || r.status === 'finalized'))
+      return 'bg-primary/15 border-primary/40';
     return 'bg-success/20 border-success/50';
   };
 
@@ -986,6 +1000,7 @@ export default function ProjectCalendar() {
                               "w-1.5 h-1.5 rounded-full border-[0.5px] border-black/10",
                               r.status === 'draft' ? "bg-muted-foreground" :
                               r.status === 'sent' ? "bg-blue-500" :
+                              (r.status === 'signed' || r.status === 'finalized') ? "bg-primary" :
                               "bg-success"
                             )} 
                           />
