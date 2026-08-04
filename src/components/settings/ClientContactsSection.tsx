@@ -201,6 +201,7 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
   }, [siteId, isCreating]);
 
   const startEditing = (contact: Contact) => {
+    setShowPassword(prev => ({ ...prev, [contact.id]: false }));
     setEditing(prev => ({
       ...prev,
       [contact.id]: {
