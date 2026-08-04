@@ -93,7 +93,13 @@ function buildRdoCardImage(rdoNumber: number | null | undefined, dateLabel: stri
 
 // Native portal-only flow
 
+const monthNames = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
 export default function ClientDashboard() {
+
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [chartPeriod, setChartPeriod] = useState<'7d' | '30d'>('7d');
   const [selectedActivity, setSelectedActivity] = useState<string>('all');
