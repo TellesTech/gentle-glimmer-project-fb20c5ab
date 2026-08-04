@@ -1847,8 +1847,15 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
             <FolderCard
               key={company.id}
               onClick={() => {
-                setOpenCompanyId(company.id);
-                setOpenYear(selectedMainYear);
+                // Uma única atualização de URL: duas chamadas encadeadas fazem a
+                // segunda ler os params antigos e descartar o "company".
+                setSearchParams(prev => {
+                  const next = new URLSearchParams(prev);
+                  next.set('company', company.id);
+                  next.set('year', String(selectedMainYear));
+                  next.delete('site'); next.delete('month'); next.delete('project');
+                  return next;
+                }, { replace: true });
               }}
               badge={
                 <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-neutral-700 text-neutral-300 border-0">
