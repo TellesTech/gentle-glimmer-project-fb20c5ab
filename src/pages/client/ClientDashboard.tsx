@@ -353,7 +353,7 @@ export default function ClientDashboard() {
 
   // Computed metrics — based purely on approver.status (native portal flow)
   const metrics = useMemo(() => {
-    const all = reportsData || [];
+    const all = visibleReports;
     const total = all.length;
 
     const approved = all.filter(r => r.status === 'approved');
@@ -407,20 +407,20 @@ export default function ClientDashboard() {
       totalProjects: projectSet.size,
       score,
     };
-  }, [reportsData]);
+  }, [visibleReports]);
 
   // Score status
 
   // Chart data
   const chartData = useMemo(() => {
-    if (!reportsData?.length) return [];
+    if (!visibleReports.length) return [];
     const now = new Date();
     const days = chartPeriod === '7d' ? 7 : 30;
     return Array.from({ length: days }, (_, i) => {
       const date = subDays(now, days - 1 - i);
       const start = startOfDay(date);
       const end = endOfDay(date);
-      const inRange = reportsData.filter(r => {
+      const inRange = visibleReports.filter(r => {
         const d = r.report?.date ? parseISO(r.report.date) : null;
         return d && isWithinInterval(d, { start, end });
       });
@@ -430,18 +430,18 @@ export default function ClientDashboard() {
         Pendentes: inRange.filter(r => r.status !== 'approved').length,
       };
     });
-  }, [reportsData, chartPeriod]);
+  }, [visibleReports, chartPeriod]);
 
   // Pending list (sorted by oldest first)
   const pendingList = useMemo(() => {
-    return (reportsData || [])
+    return visibleReports
       .filter(r => r.status !== 'approved')
       .sort((a, b) => {
         const da = a.report?.date || '';
         const db = b.report?.date || '';
         return da.localeCompare(db);
       });
-  }, [reportsData]);
+  }, [visibleReports]);
 
   // Unique activities for filter
   const uniqueActivities = useMemo(() => {
