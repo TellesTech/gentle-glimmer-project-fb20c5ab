@@ -314,9 +314,12 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
         const email = (s.signer_email || '').toLowerCase();
         const nameKey = normalize(s.signer_name || '');
         const isInternalByEmail = !!email && weesEmailSet.has(email);
-        const isInternalByName = !email && !!nameKey && internalSignerNames.has(nameKey);
+        const isInternalByName =
+          !!nameKey && (internalSignerNames.has(nameKey) || internalDirectory.has(nameKey));
         if (isInternalByEmail || isInternalByName) return;
         if (email && seenClientEmails.has(email)) return;
+        // evita duplicar quando o mesmo nome já foi listado como contato/cliente
+        if (clientEntries.some((e) => normalize(e.name) === nameKey)) return;
         clientEntries.push({
           key: `sig-${s.id}`,
           name: s.signer_name || 'Assinante',
