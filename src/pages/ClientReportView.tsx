@@ -463,7 +463,7 @@ export default function ClientReportView() {
         onBack={authProfile ? () => navigate('/client/dashboard') : () => window.history.back()}
       />
 
-      <main className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 pb-24">
+      <main className="max-w-6xl mx-auto p-4 md:px-8 md:py-6 space-y-6 pb-24">
         {/* Report Header */}
         <Card className="bg-gradient-to-br from-primary via-primary/95 to-primary/80 text-primary-foreground shadow-xl overflow-hidden">
           <CardContent className="p-6">
@@ -478,13 +478,27 @@ export default function ClientReportView() {
                 </div>
               </div>
               
-              <div className="text-right">
-                <Badge className="bg-white/20 text-white border-white/30">
-                  {report.status === 'completed' ? 'Concluído' : 'Rascunho'}
-                </Badge>
-                <p className="text-sm text-primary-foreground/80 mt-2">
-                  {format(parseISO(report.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                </p>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <Badge className="bg-white/20 text-white border-white/30">
+                    {report.status === 'completed' ? 'Concluído' : 'Rascunho'}
+                  </Badge>
+                  <p className="text-sm text-primary-foreground/80 mt-2">
+                    {format(parseISO(report.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  </p>
+                </div>
+                <Button
+                  onClick={handleDownloadPdf}
+                  disabled={isDownloadingPdf}
+                  className="bg-white/20 hover:bg-white/30 text-primary-foreground border border-white/30 shadow-sm"
+                >
+                  {isDownloadingPdf ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  Baixar PDF
+                </Button>
               </div>
             </div>
           </CardContent>
