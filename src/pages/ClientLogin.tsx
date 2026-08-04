@@ -688,6 +688,9 @@ export default function ClientLogin() {
               {mode === 'select' && hasPinContacts && (
                 <>
                   <CardHeader className="space-y-1 pb-4">
+                    <Button variant="ghost" size="sm" className="w-fit -ml-2 mb-2" onClick={() => setMode('email')}>
+                      <ArrowLeft className="h-4 w-4 mr-1" /> Entrar com e-mail e senha
+                    </Button>
                     <CardTitle className="text-2xl font-bold">Acesso Rápido</CardTitle>
                     <CardDescription>Clique no seu nome abaixo e insira o PIN de 4 dígitos recebido por convite</CardDescription>
                   </CardHeader>
