@@ -156,14 +156,6 @@ export default function ClientActivityList() {
   return (
     <ClientLayout>
       <div className="space-y-5">
-        <div>
-          <PageBackHeader
-            onBack={() => navigate(`/client/dashboard?${searchParams.toString()}`)}
-            icon={<Wrench className="h-5 w-5" />}
-            title={project?.name || 'Atividade'}
-          />
-        </div>
-
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total</p><p className="text-2xl font-bold">{stats.total}</p></CardContent></Card>
           <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Assinados</p><p className="text-2xl font-bold text-[hsl(var(--success))]">{stats.completed}</p></CardContent></Card>
@@ -171,8 +163,15 @@ export default function ClientActivityList() {
           <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Pendentes</p><p className="text-2xl font-bold text-primary">{stats.pending}</p></CardContent></Card>
         </div>
 
+        <PageBackHeader
+          onBack={() => navigate(`/client/dashboard?${searchParams.toString()}`)}
+          icon={<Wrench className="h-5 w-5" />}
+          title={project?.name || 'Atividade'}
+          className="mb-0"
+        />
+
         {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 sm:gap-10 py-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 sm:gap-10 pt-1 pb-4">
             {[...Array(6)].map((_, i) => (
               <Skeleton key={i} className="w-24 h-32 sm:w-32 sm:h-40 rounded-lg" />
             ))}
@@ -184,7 +183,7 @@ export default function ClientActivityList() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 sm:gap-10 py-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 sm:gap-10 pt-1 pb-4">
             {reports.map((r) => (
               <div
                 key={r.id}
