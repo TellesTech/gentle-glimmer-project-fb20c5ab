@@ -36,6 +36,7 @@ import {
   Download,
   Loader2,
 } from 'lucide-react';
+import { EyeOff } from 'lucide-react';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, parseISO, subDays, startOfDay, endOfDay, isWithinInterval, differenceInDays, getYear, getMonth } from 'date-fns';
