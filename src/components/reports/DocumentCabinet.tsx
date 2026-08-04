@@ -2,16 +2,56 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format, parseISO, subDays, startOfDay, endOfDay, isWithinInterval, differenceInDays, getYear, getMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
 import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+  Folder, FileText, ChevronLeft, ChevronRight,
+  Building2, MapPin, Calendar, Download, Loader2, HardHat, FolderKanban,
+  MoreVertical, Pencil, Trash2
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import FolderCard from '@/components/reports/FolderCard';
+import { StatusBadge, ConfirmDialog } from '@/components/shared';
+import { WhatsAppIcon } from '@/components/shared/WhatsAppIcon';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAdminSiteAccess } from '@/hooks/useAdminSiteAccess';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
+import {
+  exportReportsBatch,
+  uploadBatchExportToCloud,
+  type BatchExportProgress,
+} from '@/lib/generateBatchReportsPdf';
+import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
+import { BatchDownloadOptionsDialog } from './BatchDownloadOptionsDialog';
 import type { ReportStatus } from '@/types';
 import type { PdfOptions } from '@/lib/generateReportPdf';
+
 
 
 interface Report {
