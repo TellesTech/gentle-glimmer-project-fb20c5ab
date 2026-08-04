@@ -625,6 +625,38 @@ Atenciosamente,
                   placeholder={contact.pin_hash ? '••••' : 'Definir PIN'}
                 />
               </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Senha de acesso</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type={showPassword[contact.id] ? 'text' : 'password'}
+                    value={ed.password}
+                    onChange={e => updateField(contact.id, 'password', e.target.value)}
+                    className="h-9 text-sm"
+                    placeholder="Nova senha (mín. 8) — opcional"
+                    autoComplete="new-password"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    onClick={() => setShowPassword(p => ({ ...p, [contact.id]: !p[contact.id] }))}
+                    aria-label={showPassword[contact.id] ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 shrink-0"
+                    onClick={() => updateField(contact.id, 'password', generateStrongPassword(ed.name))}
+                  >
+                    Gerar
+                  </Button>
+                </div>
+              </div>
               {sites.length > 0 && (
                 <div>
                   <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
