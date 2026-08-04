@@ -754,7 +754,7 @@ export default function ClientDashboard() {
                     return (
                       <div
                         key={a.id}
-                        className="flex flex-col items-center gap-3 group cursor-pointer"
+                        className="flex flex-col items-center gap-3 group cursor-pointer self-start"
                         onClick={() => navigate(`/client/activity/${a.id}?${searchParams.toString()}`)}
                       >
                         <div className="relative w-24 h-20 sm:w-32 sm:h-24 transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
@@ -784,11 +784,14 @@ export default function ClientDashboard() {
                           </div>
                         </div>
                         <div className="text-center min-w-0 px-1 w-full">
-                          <p className={cn(
-                            "font-bold text-sm truncate transition-colors",
-                            status === 'pending' ? "text-red-600 group-hover:text-red-700" : "text-foreground group-hover:text-primary"
-                          )}>
-                            preciso do texto completo da pasta
+                          <p
+                            title={a.name}
+                            className={cn(
+                              "font-bold text-sm break-words leading-snug transition-colors",
+                              status === 'pending' ? "text-red-600 group-hover:text-red-700" : "text-foreground group-hover:text-primary"
+                            )}
+                          >
+                            {a.name}
                           </p>
                           <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">
                             {a.total} RDO(s)
