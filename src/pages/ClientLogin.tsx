@@ -64,7 +64,7 @@ interface SiteWithCollaborator {
 
 type SiteInfo = SiteWithCollaborator;
 
-type LoginMode = 'select' | 'pin' | 'email';
+type LoginMode = 'select' | 'pin' | 'email' | 'magic';
 
 export default function ClientLogin() {
   const { slug, siteId, contactId } = useParams<{ slug: string; siteId?: string; contactId?: string }>();
@@ -86,8 +86,19 @@ export default function ClientLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [magicEmail, setMagicEmail] = useState('');
+  const [magicSent, setMagicSent] = useState(false);
+  const [magicCode, setMagicCode] = useState('');
+  const [resendIn, setResendIn] = useState(0);
+  const [resolvedIds, setResolvedIds] = useState<{ companyId: string | null; siteId: string | null }>({ companyId: null, siteId: null });
   // Direct link contact data
   const [directContact, setDirectContact] = useState<ContactInfo | null>(null);
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setTimeout(() => setResendIn((v) => v - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendIn]);
 
   useEffect(() => {
     if (slug) loadCompanyData(slug);
@@ -124,6 +135,7 @@ export default function ClientLogin() {
       }
       const comp = (companyData as any[])[0];
       setCompany(comp);
+      setResolvedIds({ companyId, siteId: null });
 
       const { data: settingsData } = await supabase.rpc('get_company_portal_settings', { p_company_id: companyId });
       if (settingsData && (settingsData as any[]).length > 0) {
@@ -199,6 +211,7 @@ export default function ClientLogin() {
       const { data: statsData } = (resolvedSiteId && isUUID(resolvedSiteId))
         ? await supabase.rpc('get_site_login_stats', { p_site_id: resolvedSiteId })
         : await supabase.rpc('get_company_login_stats', { p_company_id: companyId });
+      setResolvedIds({ companyId, siteId: (resolvedSiteId && isUUID(resolvedSiteId)) ? resolvedSiteId : null });
       if (statsData) {
         const s = statsData as unknown as CompanyStats;
         setCompanyStats({
@@ -216,17 +229,15 @@ export default function ClientLogin() {
   };
 
   const handleContactSelect = (contact: ContactInfo) => {
-    if (!contact.has_auth && !contact.has_pin) {
-      toast({ title: 'Convite pendente', description: 'Este contato ainda não recebeu o convite de acesso. Solicite ao administrador.', variant: 'destructive' });
-      return;
-    }
     setSelectedContact(contact);
     if (contact.has_pin) {
       setMode('pin');
       setPin('');
     } else {
-      setMode('email');
-      setEmail(contact.email);
+      setMode('magic');
+      setMagicEmail(contact.email);
+      setMagicSent(false);
+      setMagicCode('');
     }
   };
 
@@ -253,7 +264,60 @@ export default function ClientLogin() {
     }
   };
 
-  const handleEmailLogin = async () => {
+  const buildRedirectTo = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('first_access', '1');
+    return url.toString();
+  };
+
+  const handleSendMagicLink = async () => {
+    const target = magicEmail.trim();
+    if (!target) return;
+    setSubmitting(true);
+    try {
+      const { data, error } = await (supabase as any).functions.invoke('client-magic-link', {
+        body: {
+          email: target,
+          companyId: resolvedIds.companyId,
+          siteId: resolvedIds.siteId,
+          redirectTo: buildRedirectTo(),
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setMagicSent(true);
+      setResendIn(60);
+      toast({
+        title: 'Verifique seu e-mail',
+        description: data?.message || 'Se este e-mail estiver cadastrado, enviamos o acesso para a caixa de entrada.',
+      });
+    } catch (err: any) {
+      toast({ title: 'Não foi possível enviar', description: err.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleVerifyMagicCode = async () => {
+    if (magicCode.length !== 6) return;
+    setSubmitting(true);
+    try {
+      const { error } = await (supabase as any).auth.verifyOtp({
+        email: magicEmail.trim(),
+        token: magicCode,
+        type: 'email',
+      });
+      if (error) throw error;
+      navigate('/client/dashboard?first_access=1');
+    } catch (err: any) {
+      toast({ title: 'Código inválido', description: err.message, variant: 'destructive' });
+      setMagicCode('');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handlePasswordLogin = async () => {
     if (!email || !password) return;
     setSubmitting(true);
     try {
@@ -297,7 +361,7 @@ export default function ClientLogin() {
       contacts.length === 0 &&
       mode === 'select'
     ) {
-      setMode('email');
+      setMode('magic');
     }
   }, [loading, showSiteSelection, hasConfiguredContacts, contacts.length, mode]);
 
@@ -611,7 +675,7 @@ export default function ClientLogin() {
                     <CardDescription>Clique no seu nome abaixo e insira o PIN de 4 dígitos recebido por convite</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {contacts.filter(c => c.has_pin || c.has_auth).map((contact) => (
+                    {contacts.map((contact) => (
                       <Button
                         key={contact.id}
                         variant="outline"
@@ -636,8 +700,11 @@ export default function ClientLogin() {
                       <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
                       <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">ou</span></div>
                     </div>
+                    <Button className="w-full" onClick={() => setMode('magic')}>
+                      <Mail className="h-4 w-4 mr-2" /> Primeiro acesso? Entrar com e-mail
+                    </Button>
                     <Button variant="ghost" className="w-full" onClick={() => setMode('email')}>
-                      <Mail className="h-4 w-4 mr-2" /> Prefere usar email e senha? Clique aqui
+                      Prefere usar email e senha? Clique aqui
                     </Button>
                   </CardFooter>
                 </>
@@ -686,6 +753,75 @@ export default function ClientLogin() {
                 </>
               )}
 
+              {mode === 'magic' && (
+                <>
+                  <CardHeader className="space-y-1 pb-4">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-fit -ml-2 mb-2"
+                      onClick={() => { setMode(contacts.length > 0 ? 'select' : 'email'); setMagicSent(false); setMagicCode(''); }}
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+                    </Button>
+                    <CardTitle className="text-2xl font-bold">Entrar com e-mail</CardTitle>
+                    <CardDescription>
+                      {magicSent
+                        ? 'Enviamos um link de acesso para o seu e-mail. Abra o link ou digite o código recebido.'
+                        : 'Informe o e-mail cadastrado e enviaremos um link de acesso, sem senha.'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="magic-email">E-mail</Label>
+                      <Input
+                        id="magic-email"
+                        type="email"
+                        value={magicEmail}
+                        onChange={e => setMagicEmail(e.target.value)}
+                        placeholder="seu@email.com"
+                        disabled={magicSent}
+                        onKeyDown={e => { if (e.key === 'Enter') handleSendMagicLink(); }}
+                      />
+                    </div>
+
+                    {!magicSent ? (
+                      <Button className="w-full" onClick={handleSendMagicLink} disabled={!magicEmail || submitting}>
+                        {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
+                        Enviar acesso
+                      </Button>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex flex-col items-center gap-3">
+                          <p className="text-sm text-muted-foreground text-center">
+                            Recebeu um código de 6 dígitos? Digite abaixo.
+                          </p>
+                          <InputOTP maxLength={6} value={magicCode} onChange={setMagicCode} onComplete={handleVerifyMagicCode}>
+                            <InputOTPGroup className="gap-2">
+                              {[0, 1, 2, 3, 4, 5].map(i => (
+                                <InputOTPSlot key={i} index={i} className="h-12 w-10 text-lg" />
+                              ))}
+                            </InputOTPGroup>
+                          </InputOTP>
+                        </div>
+                        <Button className="w-full" onClick={handleVerifyMagicCode} disabled={magicCode.length !== 6 || submitting}>
+                          {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ArrowRight className="h-4 w-4 mr-2" />}
+                          Entrar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="w-full"
+                          onClick={handleSendMagicLink}
+                          disabled={resendIn > 0 || submitting}
+                        >
+                          {resendIn > 0 ? `Reenviar em ${resendIn}s` : 'Reenviar e-mail de acesso'}
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </>
+              )}
+
               {mode === 'email' && (
                 <>
                   <CardHeader className="space-y-1 pb-4">
@@ -706,9 +842,12 @@ export default function ClientLogin() {
                       <Label htmlFor="password">Senha</Label>
                       <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
                     </div>
-                    <Button className="w-full" onClick={handleEmailLogin} disabled={!email || !password || submitting}>
+                    <Button className="w-full" onClick={handlePasswordLogin} disabled={!email || !password || submitting}>
                       {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
                       Entrar
+                    </Button>
+                    <Button variant="ghost" className="w-full" onClick={() => { setMode('magic'); setMagicEmail(email); }}>
+                      Não tem senha? Entrar com link por e-mail
                     </Button>
                   </CardContent>
                 </>
