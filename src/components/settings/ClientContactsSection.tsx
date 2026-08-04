@@ -808,55 +808,19 @@ Atenciosamente,
               <div className="flex flex-col gap-2 w-full">
                 {(() => {
                   const hasPinInMemory = !!(savedPins[contact.id] && /^\d{4}$/.test(savedPins[contact.id]));
-                  const needsInlinePin = !hasPinInMemory && !!contact.pin_hash;
-                  const noPinAtAll = !hasPinInMemory && !contact.pin_hash;
+                  const showPinInput = !hasPinInMemory;
 
-                  if (noPinAtAll) {
-                    return (
-                      <div className="flex flex-col gap-1.5 w-full">
-                        <Button
-                          variant="default"
-                          className="w-full bg-black text-white hover:bg-black/90 gap-2"
-                          onClick={() => { startEditing(contact); toast({ title: 'Defina um PIN', description: 'Configure um PIN de 4 dígitos para gerar o convite' }); }}
-                        >
-                          <KeyRound className="h-4 w-4 shrink-0" />
-                          Configurar PIN
-                        </Button>
-                        <p className="text-[11px] text-muted-foreground text-center leading-tight px-1">
-                          Defina um PIN de 4 dígitos para liberar o convite
-                        </p>
-                      </div>
-                    );
-                  }
-
-                  if (needsInlinePin) {
-                    return (
-                      <div className="flex flex-col gap-1.5 w-full">
+                  return (
+                    <div className="flex flex-col gap-1.5 w-full">
+                      {showPinInput && (
                         <Input
                           type="text" inputMode="numeric" maxLength={4}
                           value={inlinePin[contact.id] || ''}
                           onChange={e => setInlinePin(prev => ({ ...prev, [contact.id]: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
                           className="h-9 text-sm w-full text-center tracking-widest"
-                          placeholder="Digite o PIN de 4 dígitos"
+                          placeholder="PIN de 4 dígitos (opcional)"
                         />
-                        <Button
-                          variant="default"
-                          className="w-full bg-black text-white hover:bg-black/90 gap-2"
-                          disabled={isGenerating || !inlinePin[contact.id] || inlinePin[contact.id]?.length !== 4}
-                          onClick={() => handleGenerateInvite(contact)}
-                        >
-                          {isGenerating ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Link2 className="h-4 w-4 shrink-0" />}
-                          Gerar texto de convite
-                        </Button>
-                        <p className="text-[11px] text-muted-foreground text-center leading-tight px-1">
-                          Copiar o texto gerado e colar no WhatsApp do cliente
-                        </p>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div className="flex flex-col gap-1.5 w-full">
+                      )}
                       <Button
                         variant="default"
                         className="w-full bg-black text-white hover:bg-black/90 gap-2"
@@ -867,7 +831,7 @@ Atenciosamente,
                         Gerar texto de convite
                       </Button>
                       <p className="text-[11px] text-muted-foreground text-center leading-tight px-1">
-                        Copiar o texto gerado e colar no WhatsApp do cliente
+                        Gera e-mail + senha e o link de acesso. O PIN é opcional.
                       </p>
                     </div>
                   );
