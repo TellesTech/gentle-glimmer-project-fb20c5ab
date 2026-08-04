@@ -369,6 +369,7 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
     }
     setSaving('new');
     try {
+      const passwordToUse = newContact.password || generateStrongPassword(newContact.name);
       // Provisionar contato + auth user via edge function (cria user_id em auth.users)
       const { data, error } = await supabase.functions.invoke('register-client-contact', {
         body: {
@@ -377,7 +378,7 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
           name: newContact.name,
           email: newContact.email,
           pin: newContact.pin,
-          password: newContact.password || undefined,
+          password: passwordToUse,
         },
       });
       if (error) throw error;
@@ -408,7 +409,7 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
         setSavedPins(prev => ({ ...prev, [contactId]: newContact.pin }));
       }
 
-      const createdPassword = data?.password || newContact.password;
+      const createdPassword = data?.password || passwordToUse;
       toast({ title: 'Contato adicionado', description: `PIN configurado: ${newContact.pin}` });
       if (createdPassword) {
         setCredentialsDialog({
