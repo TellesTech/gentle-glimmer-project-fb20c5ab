@@ -207,32 +207,32 @@ export default function ClientActivityList() {
                 className="flex flex-col items-center gap-3 group cursor-pointer"
                 onClick={() => navigate(`/client/reports/${r.id}?${searchParams.toString()}`)}
               >
-                <div className="relative w-24 h-20 sm:w-32 sm:h-24 transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
-                  {/* Folder Rear Part */}
-                  <div className={cn(
-                    "absolute inset-x-0 bottom-0 top-3 rounded-lg shadow-sm",
-                    r.approverStatus === 'pending' ? "bg-red-200" : "bg-[#e5b52a]"
-                  )} />
-                  {/* Folder Tab */}
-                  <div className={cn(
-                    "absolute top-0 left-0 w-10 h-6 rounded-t-lg",
-                    r.approverStatus === 'pending' ? "bg-red-200" : "bg-[#e5b52a]"
-                  )} />
-                  {/* Folder Front Part */}
-                  <div className={cn(
-                    "absolute inset-x-0 bottom-0 top-5 rounded-lg shadow-md transition-transform group-hover:-rotate-1 origin-bottom-left",
-                    r.approverStatus === 'pending' ? "bg-red-500" : "bg-[#f4c430]"
-                  )} />
-                  
-                  {/* File Content Overlay */}
-                  <div className="absolute inset-x-2 bottom-1 top-4 bg-white/90 rounded-sm shadow-inner flex flex-col items-center justify-center p-1 overflow-hidden">
-                    <div className="text-[8px] sm:text-[10px] font-bold text-gray-800 leading-none mb-0.5">
-                      RDO
+                <div className="relative w-20 h-[6.5rem] sm:w-24 sm:h-32 transition-transform duration-200 group-hover:-translate-y-1 group-hover:scale-105 group-active:scale-95">
+                  {/* Paper sheet */}
+                  <div className="absolute inset-0 bg-white border border-border rounded-sm shadow-md overflow-hidden">
+                    {/* Status stripe */}
+                    <div className={cn(
+                      "h-1.5 w-full",
+                      r.approverStatus === 'completed' ? "bg-emerald-500" : r.approverStatus === 'pending' ? "bg-red-500" : "bg-amber-500"
+                    )} />
+                    <div className="flex flex-col items-center justify-center pt-3">
+                      <div className="text-[8px] sm:text-[9px] font-bold text-gray-500 tracking-widest leading-none">
+                        RDO
+                      </div>
+                      <div className="text-[13px] sm:text-[16px] font-black text-gray-900 leading-none mt-1">
+                        #{(r.rdo_number ?? 0).toString().padStart(3, '0')}
+                      </div>
                     </div>
-                    <div className="text-[10px] sm:text-[14px] font-black text-gray-900 leading-none">
-                      #{(r.rdo_number ?? 0).toString().padStart(3, '0')}
+                    {/* Text lines */}
+                    <div className="mt-3 px-3 space-y-1">
+                      <div className="h-[2px] w-full bg-gray-200 rounded-full" />
+                      <div className="h-[2px] w-5/6 bg-gray-200 rounded-full" />
+                      <div className="h-[2px] w-full bg-gray-200 rounded-full" />
+                      <div className="h-[2px] w-2/3 bg-gray-200 rounded-full" />
                     </div>
                   </div>
+                  {/* Folded corner */}
+                  <div className="absolute top-0 right-0 w-4 h-4 bg-muted border-l border-b border-border rounded-bl-sm shadow-sm" />
 
                   {/* Status Indicator */}
                   <div className="absolute -top-1 -right-1 z-30">
