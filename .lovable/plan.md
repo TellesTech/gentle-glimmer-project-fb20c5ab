@@ -1,23 +1,19 @@
-# Plan: Signature Logic Refinement and Data Cleanup
+# Corrigir nome das pastas de atividade
 
-Refining the signature classification and pre-population logic to strictly separate WEES and Client members, following the rule that only members registered on the "Client Page" (Unit Members) should appear as client signers.
+O texto que você digitou no chat foi gravado literalmente dentro do código, substituindo o nome real da atividade. Além disso, o nome verdadeiro estava sendo cortado com reticências.
 
-## Database Cleanup (Completed)
-- [x] **Lucas Rosa**: Removed from internal `profiles` (WEES side) to ensure he is classified solely as a Client (`client_profiles`).
-- [x] **Walace Rocha**: Removed from `company_contacts` and `client_profiles` to ensure he is classified solely as WEES internal staff.
-- [x] **Alex Manhães**: Removed from any contact/profile lists.
+## O que será feito
 
-## Frontend Adjustments
+1. Restaurar o nome real da atividade nas pastas:
+   - Portal do cliente (grade de pastas do mês)
+   - Painel administrativo (lista de pastas de atividade)
+2. Exibir o nome completo, sem corte:
+   - Remover o corte em uma linha (`truncate`)
+   - Permitir quebra em várias linhas (até 3 linhas), com quebra de palavras longas
+   - Manter tooltip com o nome completo ao passar o mouse
+   - Ajustar o espaçamento da grade para acomodar títulos mais altos sem desalinhar as pastas
 
-### 1. Refine `useReportSignaturesRealtime.ts`
-- **Prioritize Client Classification**: Ensure that if someone is explicitly listed as a client contact for the report's company, they are NOT moved to the WEES side, even if a name-match exists in the internal directory (safety against common names).
-- **Strict Ad-hoc Signatures**: Limit ad-hoc client signatures in the timeline to only those who are registered as active contacts for the company, unless they have already signed (historical record).
-- **Exclude Alex Manhães**: Explicitly exclude "Alex Manhães" from the timeline pre-population to satisfy the specific removal request.
+## Detalhes técnicos
 
-### 2. Update `SendForSignatureDialog.tsx`
-- Ensure the selection list is strictly tied to active contacts for the specific site/company.
-
-## Verification
-- [ ] Verify that Lucas Rosa appears under the "Suzano" (Client) section.
-- [ ] Verify that Walace Rocha appears under the "WEES" section with his correct role.
-- [ ] Verify that Alex Manhães no longer appears as a pending or pre-populated signer.
+- `src/pages/client/ClientDashboard.tsx`: voltar o texto para `{a.name}`, trocar `truncate` por `line-clamp-3 break-words leading-snug`, adicionar `title={a.name}` e alinhar os itens da grade pelo topo (`items-start` no container do card).
+- `src/components/reports/DocumentCabinet.tsx`: voltar o texto para `{projectFolder.name}`, trocar `truncate` por `line-clamp-3 break-words leading-snug` mantendo o `title` existente.
