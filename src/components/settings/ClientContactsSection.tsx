@@ -858,6 +858,41 @@ Atenciosamente,
               placeholder="Definir PIN"
             />
           </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Senha de acesso (e-mail + senha)</Label>
+            <div className="flex gap-2">
+              <Input
+                type={showPassword['new'] ? 'text' : 'password'}
+                value={newContact.password}
+                onChange={e => setNewContact(p => ({ ...p, password: e.target.value }))}
+                className="h-9 text-sm"
+                placeholder="Mín. 8 caracteres (opcional)"
+                autoComplete="new-password"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 shrink-0"
+                onClick={() => setShowPassword(p => ({ ...p, new: !p['new'] }))}
+                aria-label={showPassword['new'] ? 'Ocultar senha' : 'Mostrar senha'}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 shrink-0"
+                onClick={() => setNewContact(p => ({ ...p, password: generateStrongPassword(p.name) }))}
+              >
+                Gerar
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Se deixar em branco, uma senha é gerada automaticamente e exibida ao salvar.
+            </p>
+          </div>
           {!siteId && sites.length > 0 && (
             <div>
               <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
