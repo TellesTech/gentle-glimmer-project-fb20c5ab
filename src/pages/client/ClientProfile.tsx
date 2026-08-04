@@ -411,14 +411,16 @@ export default function ClientProfile() {
         </Card>
 
         {/* Security - Password Change */}
-        <Card>
+        <Card id="seguranca" className={clientProfile?.must_change_password ? 'border-amber-500/60 order-first' : ''}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
               Segurança
             </CardTitle>
             <CardDescription>
-              Altere sua senha de acesso por email
+              {clientProfile?.must_change_password
+                ? 'Você está usando uma senha temporária. Defina sua própria senha de acesso.'
+                : 'Altere sua senha de acesso por e-mail'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -431,7 +433,7 @@ export default function ClientProfile() {
                     type={showPassword ? 'text' : 'password'}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder="Mínimo 8 caracteres"
                   />
                   <Button
                     type="button"
