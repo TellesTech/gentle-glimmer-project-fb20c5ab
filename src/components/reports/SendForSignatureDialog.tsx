@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { format, parseISO } from 'date-fns';
 import {
   Send, Loader2, Check, Building2, AlertCircle, Factory, Mail, MessageCircle,
-  Search, UserCheck, FileSignature, X,
+  Search, UserCheck, FileSignature, X, PenTool
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -55,18 +55,6 @@ interface WeesSigner {
   signatureData: string | null;
 }
 
-const blobToBase64 = (blob: Blob): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      // strip the data URL prefix
-      resolve(result.split(',')[1] ?? '');
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-
 export function SendForSignatureDialog({
   open,
   onOpenChange,
@@ -84,6 +72,7 @@ export function SendForSignatureDialog({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [signerType, setSignerType] = useState<'wees' | 'client'>('client');
 
   // Load logged-in WEES profile (signature data)
   useEffect(() => {
@@ -185,23 +174,6 @@ export function SendForSignatureDialog({
     );
   }, [contacts, search]);
 
-  const toggleContact = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleAll = () => {
-    if (selectedIds.size === filteredContacts.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredContacts.map((c) => c.id)));
-    }
-  };
-
   const buildPdfData = () => {
     const reportForPdf: Report = {
       id: report.id,
@@ -299,22 +271,47 @@ export function SendForSignatureDialog({
 
   const handleSubmit = async () => {
     if (!user?.id) return;
-    if (!weesSigner) {
-      toast.error('Perfil não carregado. Recarregue a página e tente novamente.');
-      return;
-    }
-    if (!weesSigner.signatureData) {
-      toast.error('Cadastre sua assinatura no Perfil antes de enviar.');
-      return;
-    }
-    if (selectedIds.size === 0) {
-      toast.error('Selecione ao menos 1 signatário do cliente.');
-      return;
+    
+    if (signerType === 'wees') {
+      if (!weesSigner) {
+        toast.error('Perfil não carregado. Recarregue a página e tente novamente.');
+        return;
+      }
+      if (!weesSigner.signatureData) {
+        toast.error('Cadastre sua assinatura no Perfil antes de assinar.');
+        return;
+      }
+    } else {
+      if (selectedIds.size === 0) {
+        toast.error('Selecione ao menos 1 signatário do cliente.');
+        return;
+      }
     }
 
     setIsSending(true);
     try {
-      // 1) Insert WEES signature in report_signatures (if not already there for this user)
+      if (signerType === 'wees') {
+        // Just register the WEES signature and we're done
+        const { error: sigErr } = await supabase
+          .from('report_signatures')
+          .insert({
+            report_id: report.id,
+            signature_data: weesSigner!.signatureData,
+            signer_name: weesSigner!.name,
+            signer_role: weesSigner!.role || 'Equipe WEES',
+            signer_email: weesSigner!.email,
+            signer_user_id: user.id,
+            legal_basis: 'MP 2.200-2/2001',
+          });
+        if (sigErr) throw sigErr;
+
+        await queryClient.invalidateQueries({ queryKey: ['report', report.id] });
+        toast.success('Assinatura WEES registrada com sucesso!');
+        onOpenChange(false);
+        return;
+      }
+
+      // 1) Insert WEES signature if sending to client and not already signed
       const { data: existingSig } = await supabase
         .from('report_signatures')
         .select('id')
@@ -327,10 +324,10 @@ export function SendForSignatureDialog({
           .from('report_signatures')
           .insert({
             report_id: report.id,
-            signature_data: weesSigner.signatureData,
-            signer_name: weesSigner.name,
-            signer_role: weesSigner.role || 'Equipe WEES',
-            signer_email: weesSigner.email,
+            signature_data: weesSigner!.signatureData,
+            signer_name: weesSigner!.name,
+            signer_role: weesSigner!.role || 'Equipe WEES',
+            signer_email: weesSigner!.email,
             signer_user_id: user.id,
             legal_basis: 'MP 2.200-2/2001',
           });
@@ -356,9 +353,9 @@ export function SendForSignatureDialog({
       const weesSignatureForPdf = {
         id: 'wees-internal',
         reportId: report.id,
-        signerName: weesSigner.name,
-        signerRole: weesSigner.role || 'Equipe WEES',
-        signatureData: weesSigner.signatureData ?? '',
+        signerName: weesSigner!.name,
+        signerRole: weesSigner!.role || 'Equipe WEES',
+        signatureData: weesSigner!.signatureData ?? '',
         signedAt: new Date().toISOString(),
       };
 
@@ -372,7 +369,7 @@ export function SendForSignatureDialog({
         ipAddress: s.ip_address ?? undefined,
       }));
 
-      const hasWees = baseSignatures.some((s: any) => s.signerName === weesSigner.name);
+      const hasWees = baseSignatures.some((s: any) => s.signerName === weesSigner!.name);
       const allSignatures = hasWees ? baseSignatures : [...baseSignatures, weesSignatureForPdf];
 
       const blob = await generateReportPdfAsBlob(
@@ -452,16 +449,13 @@ export function SendForSignatureDialog({
     }
   };
 
-  const allSelected =
-    filteredContacts.length > 0 && selectedIds.size === filteredContacts.length;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Send className="w-5 h-5 text-primary" />
-            Enviar para Assinatura
+            Assinatura Eletrônica
             {report?.rdo_number && (
               <span className="ml-auto text-sm font-normal text-muted-foreground">
                 RDO Nº {report.rdo_number.toString().padStart(3, '0')}
@@ -469,171 +463,190 @@ export function SendForSignatureDialog({
             )}
           </DialogTitle>
           <DialogDescription>
-            O PDF será gerado <strong>já com a assinatura da equipe WEES</strong> e enviado
-            para o portal do cliente. Os signatários selecionados verão o RDO e poderão assinar
-            diretamente no portal.
+            Escolha quem deve assinar este documento.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          {/* WEES signer card */}
-          {weesSigner ? (
-            <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-2">
-                <Building2 className="w-4 h-4" />
-                Assinatura WEES (você)
-              </Label>
-              <Card className="border-primary/30 bg-primary/5">
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                      <Building2 className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{weesSigner.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {weesSigner.role ?? weesSigner.email}
-                      </p>
-                    </div>
-                    {weesSigner.signatureData ? (
-                      <Check className="h-4 w-4 text-primary shrink-0" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
-                    )}
-                  </div>
-                  {!weesSigner.signatureData && (
-                    <div className="mt-2 p-2 rounded bg-destructive/10 border border-destructive/20 flex items-start gap-2">
-                      <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0 mt-0.5" />
-                      <p className="text-xs text-destructive">
-                        Você ainda não cadastrou sua assinatura. Configure em Configurações → Perfil
-                        antes de enviar.
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+        <div className="space-y-6 py-2">
+          {/* Signer Selection */}
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold">Selecione o Signatário:</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                type="button"
+                variant={signerType === 'wees' ? 'default' : 'outline'}
+                className={cn(
+                  "h-auto py-4 flex flex-col gap-2 border-2",
+                  signerType === 'wees' ? "border-primary bg-primary/10 text-primary hover:bg-primary/20" : "border-muted"
+                )}
+                onClick={() => setSignerType('wees')}
+              >
+                <Building2 className="w-6 h-6" />
+                <div className="text-center">
+                  <p className="font-bold text-xs uppercase tracking-wider">Responsável Wees</p>
+                  <p className="text-[10px] opacity-70 font-normal">Assinatura interna</p>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                variant={signerType === 'client' ? 'default' : 'outline'}
+                className={cn(
+                  "h-auto py-4 flex flex-col gap-2 border-2",
+                  signerType === 'client' ? "border-primary bg-primary/10 text-primary hover:bg-primary/20" : "border-muted"
+                )}
+                onClick={() => setSignerType('client')}
+              >
+                <UserCheck className="w-6 h-6" />
+                <div className="text-center">
+                  <p className="font-bold text-xs uppercase tracking-wider">Cliente</p>
+                  <p className="text-[10px] opacity-70 font-normal">Enviar para o portal</p>
+                </div>
+              </Button>
             </div>
-          ) : (
-            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium text-destructive">Perfil não encontrado</p>
-                <p className="text-muted-foreground text-xs">
-                  Não foi possível carregar seus dados. Verifique seu perfil.
-                </p>
+          </div>
+
+          {signerType === 'wees' && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12 border-2 border-primary/20">
+                    <AvatarImage src={user?.user_metadata?.avatar_url} />
+                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                      {weesSigner?.name ? weesSigner.name.substring(0, 2).toUpperCase() : 'W'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm truncate">{weesSigner?.name || 'Carregando...'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{weesSigner?.role || weesSigner?.email}</p>
+                  </div>
+                </div>
+
+                {!weesSigner?.signatureData ? (
+                  <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5 text-destructive shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-destructive">Assinatura não cadastrada</p>
+                      <p className="text-[10px] text-destructive/80">Você precisa cadastrar sua firma no perfil antes de assinar.</p>
+                    </div>
+                    <Button variant="link" size="sm" className="text-destructive font-bold p-0 h-auto underline" onClick={() => window.location.href = '/settings'}>
+                      Ir para Perfil
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-lg p-2 border border-primary/10">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1 px-1">Prévia da Assinatura</p>
+                    <img src={weesSigner.signatureData} className="max-h-16 mx-auto object-contain" alt="Assinatura" />
+                  </div>
+                )}
               </div>
+              
+              <Button 
+                className="w-full h-12 text-sm font-bold shadow-lg shadow-primary/20" 
+                onClick={handleSubmit} 
+                disabled={isSending || !weesSigner?.signatureData}
+              >
+                {isSending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <PenTool className="w-4 h-4 mr-2" />}
+                Confirmar Assinatura WEES
+              </Button>
             </div>
           )}
 
-          {/* Client signers summary list */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium flex items-center gap-2">
-                <Factory className="w-4 h-4" />
-                Destinatários da unidade {site?.name}
-              </Label>
-              {contacts.length > 0 && (
-                <Badge variant="secondary" className="font-normal">
-                  {contacts.length} {contacts.length === 1 ? 'contato' : 'contatos'}
-                </Badge>
-              )}
-            </div>
+          {signerType === 'client' && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Factory className="w-4 h-4" />
+                    Destinatários da unidade {site?.name}
+                  </Label>
+                  {contacts.length > 0 && (
+                    <Badge variant="secondary" className="font-normal">
+                      {contacts.length} {contacts.length === 1 ? 'contato' : 'contatos'}
+                    </Badge>
+                  )}
+                </div>
 
-            {contactsLoading ? (
-              <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Carregando contatos…
-              </div>
-            ) : contacts.length === 0 ? (
-              <div className="p-4 rounded-lg border border-destructive/20 bg-destructive/5 text-center text-sm text-destructive">
-                <p className="font-medium">Nenhum contato cadastrado para esta unidade.</p>
-                <p className="text-xs opacity-80 mt-1">
-                  Cadastre contatos em Configurações → Portal do Cliente → Contatos antes de enviar.
-                </p>
-              </div>
-            ) : (
-              <Card className="border-dashed">
-                <CardContent className="p-0">
-                  <div className="divide-y">
-                    {contacts.slice(0, 5).map((c) => (
-                      <div
-                        key={c.id}
-                        className="flex items-center gap-3 p-2.5"
-                      >
-                        <Avatar className="h-8 w-8 shrink-0">
-                          {c.avatar_url && <AvatarImage src={c.avatar_url} alt={c.name} />}
-                          <AvatarFallback className="text-xs bg-muted">
-                            {c.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{c.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {c.role || (c.preferred_channel === 'whatsapp' ? c.phone : c.email)}
-                          </p>
-                        </div>
-                        <Check className="h-4 w-4 text-green-600 shrink-0" />
-                      </div>
-                    ))}
-                    {contacts.length > 5 && (
-                      <div className="p-2 text-center text-xs text-muted-foreground bg-muted/30">
-                        + {contacts.length - 5} outros contatos da unidade
-                      </div>
-                    )}
+                {contactsLoading ? (
+                  <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Carregando contatos…
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                ) : contacts.length === 0 ? (
+                  <div className="p-4 rounded-lg border border-destructive/20 bg-destructive/5 text-center text-sm text-destructive">
+                    <p className="font-medium">Nenhum contato cadastrado para esta unidade.</p>
+                    <p className="text-xs opacity-80 mt-1">
+                      Cadastre contatos em Configurações → Portal do Cliente antes de enviar.
+                    </p>
+                  </div>
+                ) : (
+                  <Card className="border-dashed">
+                    <CardContent className="p-0">
+                      <div className="divide-y">
+                        {contacts.slice(0, 5).map((c) => (
+                          <div
+                            key={c.id}
+                            className="flex items-center gap-3 p-2.5"
+                          >
+                            <Avatar className="h-8 w-8 shrink-0">
+                              {c.avatar_url && <AvatarImage src={c.avatar_url} alt={c.name} />}
+                              <AvatarFallback className="text-xs bg-muted">
+                                {c.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{c.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {c.role || (c.preferred_channel === 'whatsapp' ? c.phone : c.email)}
+                              </p>
+                            </div>
+                            <Check className="h-4 w-4 text-green-600 shrink-0" />
+                          </div>
+                        ))}
+                        {contacts.length > 5 && (
+                          <div className="p-2 text-center text-xs text-muted-foreground bg-muted/30">
+                            + {contacts.length - 5} outros contatos da unidade
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
-            {contacts.length > 0 && (
-              <div className="flex items-start gap-2 p-2 rounded-lg bg-blue-50/50 border border-blue-100/50">
-                <UserCheck className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                <p className="text-[11px] text-blue-700 leading-relaxed">
-                  Este RDO será enviado automaticamente para todos os contatos ativos desta unidade no portal do cliente.
-                </p>
+                {contacts.length > 0 && (
+                  <div className="flex items-start gap-2 p-2 rounded-lg bg-blue-50/50 border border-blue-100/50">
+                    <UserCheck className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-blue-700 leading-relaxed">
+                      Este RDO será enviado automaticamente para todos os contatos ativos desta unidade no portal do cliente.
+                    </p>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+
+              <Button 
+                className="w-full h-12 text-sm font-bold shadow-lg shadow-primary/20" 
+                onClick={handleSubmit} 
+                disabled={isSending || contacts.length === 0 || !weesSigner?.signatureData}
+              >
+                {isSending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+                {weesSigner?.signatureData ? 'Assinar e Enviar para o Cliente' : 'Cadastre sua firma para enviar'}
+              </Button>
+            </div>
+          )}
         </div>
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className="sm:justify-start">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             onClick={() => onOpenChange(false)}
             disabled={isSending}
+            className="w-full sm:w-auto"
           >
-            <X className="h-4 w-4 mr-1" /> Cancelar
-          </Button>
-          <Button
-            type="button"
-            className="flex-1"
-            onClick={handleSubmit}
-            disabled={
-              isSending ||
-              !weesSigner?.signatureData ||
-              contacts.length === 0
-            }
-          >
-            {isSending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Enviando…
-              </>
-            ) : (
-              <>
-                <Send className="h-4 w-4 mr-2" />
-                Enviar para o portal do cliente
-              </>
-            )}
+            Fechar
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-}
-
-// Small util to keep TS happy when a non-null signature is required
-function weesSignerOrPlaceholder(data: string | null): string {
-  return data ?? '';
 }
