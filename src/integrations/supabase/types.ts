@@ -3446,6 +3446,14 @@ export type Database = {
           name: string
         }[]
       }
+      get_internal_signer_directory: {
+        Args: never
+        Returns: {
+          display_name: string
+          job_title: string
+          name_key: string
+        }[]
+      }
       get_login_stats: { Args: never; Returns: Json }
       get_project_predictions: {
         Args: never

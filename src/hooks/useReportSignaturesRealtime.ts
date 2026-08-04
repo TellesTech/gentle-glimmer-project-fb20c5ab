@@ -50,9 +50,10 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
       const clientCompanyName = (report as any)?.project?.site?.company?.name || null;
 
       // WEES brand name + lista de assinantes ad-hoc considerados internos (sem email)
-      const [{ data: branding }, { data: settings }] = await Promise.all([
+      const [{ data: branding }, { data: settings }, { data: directory }] = await Promise.all([
         (supabase as any).rpc('get_public_branding'),
         (supabase as any).from('system_settings').select('internal_signer_names').limit(1).maybeSingle(),
+        (supabase as any).rpc('get_internal_signer_directory'),
       ]);
       const weesCompanyName = (branding?.[0] as any)?.system_name || 'WEES';
       const normalize = (s: string) =>
@@ -64,6 +65,16 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
       const internalSignerNames = new Set<string>(
         ((settings?.internal_signer_names as string[]) || []).map(normalize),
       );
+
+      // Diretório oficial de colaboradores internos (profiles), acessível também
+      // no portal do cliente via função SECURITY DEFINER. É a fonte de verdade
+      // para separar quem é da WEES de quem é do cliente.
+      const internalDirectory = new Map<string, { name: string; jobTitle: string | null }>();
+      ((directory as any[]) || []).forEach((d) => {
+        const key = normalize(d.display_name || d.name_key || '');
+        if (key) internalDirectory.set(key, { name: d.display_name, jobTitle: d.job_title || null });
+      });
+      const internalInfo = (name: string) => internalDirectory.get(normalize(name || ''));
 
       // 2) Recorded signatures + approvers + responsibles in parallel
       const [
@@ -180,7 +191,9 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
         const email = (s.signer_email || '').toLowerCase();
         const nameKey = normalize(s.signer_name || '');
         const isInternalByEmail = !!email && weesEmailSet.has(email);
-        const isInternalByName = !email && !!nameKey && internalSignerNames.has(nameKey);
+        const dirEntry = internalDirectory.get(nameKey);
+        const isInternalByName =
+          !!nameKey && (internalSignerNames.has(nameKey) || !!dirEntry);
         const isInternal = isInternalByEmail || isInternalByName;
         const alreadyListed = weesEntries.some(
           (e) =>
@@ -190,8 +203,10 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
         if (isInternal && !alreadyListed) {
           weesEntries.push({
             key: `sig-${s.id}`,
-            name: s.signer_name || 'Assinante',
-            role: s.signer_role && s.signer_role !== 'Cliente' ? s.signer_role : 'Equipe WEES',
+            name: dirEntry?.name || s.signer_name || 'Assinante',
+            role:
+              dirEntry?.jobTitle ||
+              (s.signer_role && s.signer_role !== 'Cliente' ? s.signer_role : 'Equipe WEES'),
             email: s.signer_email,
             avatarUrl: null,
             companyName: weesCompanyName,
@@ -299,9 +314,12 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
         const email = (s.signer_email || '').toLowerCase();
         const nameKey = normalize(s.signer_name || '');
         const isInternalByEmail = !!email && weesEmailSet.has(email);
-        const isInternalByName = !email && !!nameKey && internalSignerNames.has(nameKey);
+        const isInternalByName =
+          !!nameKey && (internalSignerNames.has(nameKey) || internalDirectory.has(nameKey));
         if (isInternalByEmail || isInternalByName) return;
         if (email && seenClientEmails.has(email)) return;
+        // evita duplicar quando o mesmo nome já foi listado como contato/cliente
+        if (clientEntries.some((e) => normalize(e.name) === nameKey)) return;
         clientEntries.push({
           key: `sig-${s.id}`,
           name: s.signer_name || 'Assinante',
@@ -319,7 +337,18 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
       const sortByName = (a: SignatureEntry, b: SignatureEntry) =>
         a.name.localeCompare(b.name, 'pt-BR');
 
-      const entries = [...weesEntries.sort(sortByName), ...clientEntries.sort(sortByName)];
+      // Rede de segurança: ninguém cadastrado como colaborador interno pode
+      // aparecer no bloco do cliente.
+      const finalClientEntries = clientEntries.filter((e) => {
+        const info = internalInfo(e.name);
+        if (!info) return true;
+        if (!weesEntries.some((w) => normalize(w.name) === normalize(e.name))) {
+          weesEntries.push({ ...e, side: 'wees', role: info.jobTitle || 'Equipe WEES', companyName: weesCompanyName });
+        }
+        return false;
+      });
+
+      const entries = [...weesEntries.sort(sortByName), ...finalClientEntries.sort(sortByName)];
 
       return { entries };
     },
