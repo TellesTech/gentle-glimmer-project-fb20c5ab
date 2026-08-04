@@ -842,11 +842,6 @@ export default function ClientLogin() {
               {mode === 'email' && (
                 <>
                   <CardHeader className="space-y-1 pb-4">
-                    {hasPinContacts && (
-                      <Button variant="ghost" size="sm" className="w-fit -ml-2 mb-2" onClick={() => { setMode('select'); setEmail(''); setPassword(''); }}>
-                        <ArrowLeft className="h-4 w-4 mr-1" /> Entrar com PIN
-                      </Button>
-                    )}
                     <CardTitle className="text-2xl font-bold">Entrar</CardTitle>
                     <CardDescription>Use seu email e senha para acessar</CardDescription>
                   </CardHeader>
