@@ -385,6 +385,19 @@ Atenciosamente,
 
       {/* Main Content */}
       <main className="container px-4 py-6 pb-24 md:pb-6">
+        {clientProfile?.must_change_password && !location.pathname.startsWith('/client/profile') && (
+          <div className="mb-4 flex flex-col gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-2 text-sm">
+              <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              <span>
+                Você está usando uma <strong>senha temporária</strong>. Defina sua própria senha de acesso.
+              </span>
+            </div>
+            <Button size="sm" onClick={() => navigate(`/client/profile${preservedSearch}#seguranca`)}>
+              Definir minha senha
+            </Button>
+          </div>
+        )}
         {children}
       </main>
 
