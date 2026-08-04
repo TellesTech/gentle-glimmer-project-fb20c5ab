@@ -337,7 +337,18 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
       const sortByName = (a: SignatureEntry, b: SignatureEntry) =>
         a.name.localeCompare(b.name, 'pt-BR');
 
-      const entries = [...weesEntries.sort(sortByName), ...clientEntries.sort(sortByName)];
+      // Rede de segurança: ninguém cadastrado como colaborador interno pode
+      // aparecer no bloco do cliente.
+      const finalClientEntries = clientEntries.filter((e) => {
+        const info = internalInfo(e.name);
+        if (!info) return true;
+        if (!weesEntries.some((w) => normalize(w.name) === normalize(e.name))) {
+          weesEntries.push({ ...e, side: 'wees', role: info.jobTitle || 'Equipe WEES', companyName: weesCompanyName });
+        }
+        return false;
+      });
+
+      const entries = [...weesEntries.sort(sortByName), ...finalClientEntries.sort(sortByName)];
 
       return { entries };
     },
