@@ -64,7 +64,7 @@ interface SiteWithCollaborator {
 
 type SiteInfo = SiteWithCollaborator;
 
-type LoginMode = 'select' | 'pin' | 'email';
+type LoginMode = 'select' | 'pin' | 'email' | 'magic';
 
 export default function ClientLogin() {
   const { slug, siteId, contactId } = useParams<{ slug: string; siteId?: string; contactId?: string }>();
@@ -86,8 +86,19 @@ export default function ClientLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [magicEmail, setMagicEmail] = useState('');
+  const [magicSent, setMagicSent] = useState(false);
+  const [magicCode, setMagicCode] = useState('');
+  const [resendIn, setResendIn] = useState(0);
+  const [resolvedIds, setResolvedIds] = useState<{ companyId: string | null; siteId: string | null }>({ companyId: null, siteId: null });
   // Direct link contact data
   const [directContact, setDirectContact] = useState<ContactInfo | null>(null);
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setTimeout(() => setResendIn((v) => v - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendIn]);
 
   useEffect(() => {
     if (slug) loadCompanyData(slug);
