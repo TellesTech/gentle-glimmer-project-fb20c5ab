@@ -1104,7 +1104,8 @@ async function buildReportPdfDoc(
       setColor(COLORS.text);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text(prepareText(sig.signerName), infoX, infoY);
+      const cleanSignerName = (sig.signerName || '').replace(/\s*-\s*Wees$/i, '').trim();
+      doc.text(prepareText(cleanSignerName), infoX, infoY);
       
       infoY += 5;
       
