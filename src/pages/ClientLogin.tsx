@@ -267,6 +267,61 @@ export default function ClientLogin() {
   };
 
   const handleEmailLogin = async () => {
+
+  const buildRedirectTo = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('first_access', '1');
+    return url.toString();
+  };
+
+  const handleSendMagicLink = async () => {
+    const target = magicEmail.trim();
+    if (!target) return;
+    setSubmitting(true);
+    try {
+      const { data, error } = await (supabase as any).functions.invoke('client-magic-link', {
+        body: {
+          email: target,
+          companyId: resolvedIds.companyId,
+          siteId: resolvedIds.siteId,
+          redirectTo: buildRedirectTo(),
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setMagicSent(true);
+      setResendIn(60);
+      toast({
+        title: 'Verifique seu e-mail',
+        description: data?.message || 'Se este e-mail estiver cadastrado, enviamos o acesso para a caixa de entrada.',
+      });
+    } catch (err: any) {
+      toast({ title: 'Não foi possível enviar', description: err.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleVerifyMagicCode = async () => {
+    if (magicCode.length !== 6) return;
+    setSubmitting(true);
+    try {
+      const { error } = await (supabase as any).auth.verifyOtp({
+        email: magicEmail.trim(),
+        token: magicCode,
+        type: 'email',
+      });
+      if (error) throw error;
+      navigate('/client/dashboard?first_access=1');
+    } catch (err: any) {
+      toast({ title: 'Código inválido', description: err.message, variant: 'destructive' });
+      setMagicCode('');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handlePasswordLogin = async () => {
     if (!email || !password) return;
     setSubmitting(true);
     try {
