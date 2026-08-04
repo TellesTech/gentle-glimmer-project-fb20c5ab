@@ -65,8 +65,8 @@ async function provisionAuthUser(
         const { data: existingUsers } = await supabase.auth.admin.listUsers();
         const existing = existingUsers?.users?.find((u: any) => u.email === contactEmail);
         if (existing) {
-          await supabase.auth.admin.updateUserById(existing.id, { password });
-          await supabase.from("company_contacts").update({ user_id: existing.id }).eq("id", contactId);
+          await supabase.auth.admin.updateUserById(existing.id, { password, email_confirm: true });
+          await supabase.from("company_contacts").update({ user_id: existing.id, must_change_password: true }).eq("id", contactId);
           return { userId: existing.id, password };
         }
         throw new Error(`User exists but could not be found`);
@@ -74,7 +74,7 @@ async function provisionAuthUser(
       throw new Error(`Failed to create user: ${authError.message}`);
     }
 
-    await supabase.from("company_contacts").update({ user_id: authData.user.id }).eq("id", contactId);
+    await supabase.from("company_contacts").update({ user_id: authData.user.id, must_change_password: true }).eq("id", contactId);
     return { userId: authData.user.id, password };
   }
 
@@ -87,7 +87,7 @@ async function provisionAuthUser(
     }
   }
 
-  const { error: updateError } = await supabase.auth.admin.updateUserById(existingUserId, { password });
+  const { error: updateError } = await supabase.auth.admin.updateUserById(existingUserId, { password, email_confirm: true });
 
   if (updateError) {
     if (updateError.message.includes("User not found")) {
@@ -104,8 +104,8 @@ async function provisionAuthUser(
           const { data: existingUsers } = await supabase.auth.admin.listUsers();
           const existing = existingUsers?.users?.find((u: any) => u.email === contactEmail);
           if (existing) {
-            await supabase.auth.admin.updateUserById(existing.id, { password });
-            await supabase.from("company_contacts").update({ user_id: existing.id }).eq("id", contactId);
+            await supabase.auth.admin.updateUserById(existing.id, { password, email_confirm: true });
+            await supabase.from("company_contacts").update({ user_id: existing.id, must_change_password: true }).eq("id", contactId);
             return { userId: existing.id, password };
           }
           throw new Error(`User registered but not found`);
@@ -113,12 +113,13 @@ async function provisionAuthUser(
         throw new Error(`Failed to recreate user: ${createErr.message}`);
       }
 
-      await supabase.from("company_contacts").update({ user_id: newAuth.user.id }).eq("id", contactId);
+      await supabase.from("company_contacts").update({ user_id: newAuth.user.id, must_change_password: true }).eq("id", contactId);
       return { userId: newAuth.user.id, password };
     }
     throw new Error(`Failed to reset password: ${updateError.message}`);
   }
 
+  await supabase.from("company_contacts").update({ must_change_password: true }).eq("id", contactId);
   return { userId: existingUserId, password };
 }
 
