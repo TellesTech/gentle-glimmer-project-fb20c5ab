@@ -482,6 +482,7 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
           companyName, 
           companyId,
           pin: pinToPass || undefined,
+          resetPassword: true,
         }
       });
       if (error) throw error;
