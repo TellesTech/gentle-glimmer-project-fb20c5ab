@@ -11,6 +11,7 @@ import { ptBR } from 'date-fns/locale';
    PenTool, Globe, Send, Sparkles, Edit3, RefreshCw, Check, Bot
  } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SignatureImage } from '@/components/signatures/SignatureImage';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -1414,10 +1415,10 @@ export default function ReportDetail() {
                 >
                   {/* Signature image */}
                   <div className="bg-white rounded-lg p-3 mb-4 border border-border/50">
-                    <img 
-                      src={sig.signature_data} 
+                    <SignatureImage
+                      value={sig.signature_data}
                       alt={`Assinatura de ${sig.signer_name}`}
-                      className="max-h-24 mx-auto object-contain"
+                      className="max-h-24"
                     />
                   </div>
                   

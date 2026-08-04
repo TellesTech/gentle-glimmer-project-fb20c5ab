@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { SignatureImage } from '@/components/signatures/SignatureImage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -107,10 +108,10 @@ export function QuickApprovalCard({
           <div className="space-y-2">
             <p className="text-sm font-medium text-muted-foreground">Sua Assinatura Salva:</p>
             <div className="p-3 bg-white rounded-lg border flex items-center justify-center">
-              <img 
-                src={profile.signature_data} 
+              <SignatureImage
+                value={profile.signature_data}
                 alt="Assinatura" 
-                className="max-h-20 object-contain"
+                className="max-h-20"
               />
             </div>
           </div>

@@ -5,6 +5,8 @@ import { CheckCircle2, Clock, Building2, Users } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useReportSignaturesRealtime, type SignatureEntry } from '@/hooks/useReportSignaturesRealtime';
+import { SignatureImage } from '@/components/signatures/SignatureImage';
+import { getSignatureKind } from '@/lib/signatureImage';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -60,12 +62,12 @@ function Row({ entry }: { entry: SignatureEntry }) {
         )}
       </div>
       </div>
-      {entry.signed && entry.signatureData?.startsWith('data:image') && (
+      {entry.signed && getSignatureKind(entry.signatureData) !== 'none' && (
         <div className="mt-3 bg-background rounded-md border border-border/50 p-2">
-          <img
-            src={entry.signatureData}
+          <SignatureImage
+            value={entry.signatureData}
             alt={`Assinatura de ${entry.name}`}
-            className="max-h-16 mx-auto object-contain"
+            className="max-h-16"
           />
         </div>
       )}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { SignatureImage } from '@/components/signatures/SignatureImage';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PenLine, Check, Loader2, Building2, Sparkles } from 'lucide-react';
@@ -98,10 +99,10 @@ export function OneClickSignatureCard({
                 Sua firma cadastrada será aplicada ao relatório
               </p>
               <div className="w-full p-3 bg-white rounded-lg border-2 border-primary/30 flex items-center justify-center min-h-[88px]">
-                <img
-                  src={identity.savedSignature!}
+                <SignatureImage
+                  value={identity.savedSignature}
                   alt="Sua assinatura cadastrada"
-                  className="max-h-20 object-contain"
+                  className="max-h-20"
                 />
               </div>
             </div>
