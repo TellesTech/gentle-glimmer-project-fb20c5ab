@@ -129,6 +129,25 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
         weesProfiles.map((p) => (p.email || '').toLowerCase()).filter(Boolean),
       );
 
+      // Assinaturas ad-hoc com e-mail de um colaborador interno continuam sendo
+      // classificadas como WEES mesmo sem estarem na lista de responsáveis.
+      const sigEmails = Array.from(
+        new Set(
+          (signatures || [])
+            .map((s: any) => (s.signer_email || '').toLowerCase())
+            .filter(Boolean),
+        ),
+      );
+      if (sigEmails.length) {
+        const { data: internalProfs } = await supabase
+          .from('profiles')
+          .select('email')
+          .in('email', sigEmails);
+        (internalProfs || []).forEach((p: any) => {
+          if (p.email) weesEmailSet.add(p.email.toLowerCase());
+        });
+      }
+
       // Quick lookup of recorded signatures
       const sigByEmail = new Map<string, any>();
       const sigByUserId = new Map<string, any>();
