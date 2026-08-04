@@ -814,15 +814,16 @@ export default function ClientDashboard() {
                 ))}
               </div>
             ) : (
-              <div className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-300">
+              <div className="space-y-1 animate-in fade-in slide-in-from-left-4 duration-300">
                 <PageBackHeader
                   onBack={() => setSelectedMonthId(null)}
                   icon={<Calendar className="h-5 w-5" />}
                   iconClassName="bg-yellow-100 text-yellow-700"
                   title={`${monthFolders.find(m => m.id === selectedMonthId)?.monthName ?? ''} ${monthFolders.find(m => m.id === selectedMonthId)?.year ?? ''}`}
+                  className="mb-0"
                 />
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 sm:gap-10 py-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 sm:gap-10 pt-1 pb-4">
                   {monthFolders.find(m => m.id === selectedMonthId)?.activities.map((a) => {
                     const status = a.pending === 0 ? 'completed' : a.signed > 0 ? 'partial' : 'pending';
                     
