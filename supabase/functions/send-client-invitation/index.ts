@@ -13,6 +13,7 @@ interface InvitationRequest {
   companyName: string;
   companyId?: string;
   pin?: string;
+  resetPassword?: boolean;
 }
 
 function generatePassword(companyName: string): string {
@@ -45,8 +46,9 @@ async function provisionAuthUser(
   contactName: string,
   contactEmail: string,
   companyName: string,
-  existingUserId: string | null
-): Promise<{ userId: string; password: string }> {
+  existingUserId: string | null,
+  resetPassword: boolean,
+): Promise<{ userId: string; password: string | null }> {
   const password = generatePassword(companyName);
 
   if (!existingUserId) {
@@ -76,7 +78,15 @@ async function provisionAuthUser(
     return { userId: authData.user.id, password };
   }
 
-  // User exists, try to reset password
+  // User already exists: keep the current password untouched unless the admin
+  // explicitly asked for a reset.
+  if (!resetPassword) {
+    const { data: existing } = await supabase.auth.admin.getUserById(existingUserId);
+    if (existing?.user) {
+      return { userId: existingUserId, password: null };
+    }
+  }
+
   const { error: updateError } = await supabase.auth.admin.updateUserById(existingUserId, { password });
 
   if (updateError) {
