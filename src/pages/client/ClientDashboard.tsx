@@ -99,7 +99,7 @@ const monthNames = [
 ];
 
 export default function ClientDashboard() {
-
+  const [selectedMonthId, setSelectedMonthId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [chartPeriod, setChartPeriod] = useState<'7d' | '30d'>('7d');
   const [selectedActivity, setSelectedActivity] = useState<string>('all');
@@ -701,21 +701,56 @@ export default function ClientDashboard() {
 
         {/* Histórico chart removed */}
 
-        {/* ===== PASTAS DE MESES E ATIVIDADES ===== */}
+        {/* ===== NAVEGAÇÃO POR PASTAS (ESTILO WINDOWS) ===== */}
         {monthFolders.length > 0 && (
-          <div className="space-y-8">
-            {monthFolders.map((month) => (
-              <Card key={month.id} className="overflow-hidden border-t-4 border-t-primary/20 shadow-sm">
+          <div className="space-y-6">
+            {!selectedMonthId ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
+                {monthFolders.map((month) => (
+                  <div
+                    key={month.id}
+                    className="flex flex-col items-center gap-2 group cursor-pointer"
+                    onClick={() => setSelectedMonthId(month.id)}
+                  >
+                    <div className="relative w-24 h-20 sm:w-32 sm:h-24">
+                      {/* Folder Body */}
+                      <div className="absolute inset-x-0 bottom-0 top-3 rounded-lg bg-yellow-400 shadow-md group-hover:bg-yellow-300 transition-colors" />
+                      {/* Folder Tab */}
+                      <div className="absolute top-0 left-2 w-10 h-4 rounded-t-md bg-yellow-500 group-hover:bg-yellow-400 transition-colors" />
+                      {/* Folder Icon Overlay (optional for style) */}
+                      <div className="absolute inset-0 flex items-center justify-center pt-2">
+                        <Calendar className="h-8 w-8 text-yellow-800/40" />
+                      </div>
+                    </div>
+                    <div className="text-center min-w-0 px-1">
+                      <p className="font-semibold text-sm truncate">{month.monthName} {month.year}</p>
+                      <p className="text-[10px] text-muted-foreground">{month.activities.length} atividades</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Card className="overflow-hidden border-t-4 border-t-primary/20 shadow-sm animate-in fade-in slide-in-from-left-4 duration-300">
                 <CardHeader className="pb-3 bg-muted/30">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-3">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedMonthId(null)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <ChevronRight className="h-4 w-4 rotate-180" />
+                      </Button>
                       <div className="p-2 rounded-lg bg-primary/10">
                         <Calendar className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <CardTitle className="text-lg">{month.monthName} {month.year}</CardTitle>
+                        <CardTitle className="text-lg">
+                          {monthFolders.find(m => m.id === selectedMonthId)?.monthName} {monthFolders.find(m => m.id === selectedMonthId)?.year}
+                        </CardTitle>
                         <CardDescription>
-                          {month.activities.length} atividade(s) · {month.activities.reduce((sum, a) => sum + a.total, 0)} RDO(s)
+                          {monthFolders.find(m => m.id === selectedMonthId)?.activities.length} atividade(s) · {monthFolders.find(m => m.id === selectedMonthId)?.activities.reduce((sum, a) => sum + a.total, 0)} RDO(s)
                         </CardDescription>
                       </div>
                     </div>
@@ -723,7 +758,7 @@ export default function ClientDashboard() {
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="divide-y divide-border">
-                    {month.activities.map((a) => {
+                    {monthFolders.find(m => m.id === selectedMonthId)?.activities.map((a) => {
                       const status = a.pending === 0 ? 'completed' : a.signed > 0 ? 'partial' : 'pending';
                       const subtitle = a.lastDate
                         ? `${a.total} RDO(s) · Último: ${format(parseISO(a.lastDate), 'dd/MM/yyyy', { locale: ptBR })}`
@@ -736,11 +771,17 @@ export default function ClientDashboard() {
                           onClick={() => navigate(`/client/activity/${a.id}?${searchParams.toString()}`)}
                         >
                           <div className="flex items-center gap-4 min-w-0">
-                            <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shadow-sm">
+                            <div className={cn(
+                              "p-3 rounded-xl transition-colors shadow-sm",
+                              status === 'pending' ? "bg-red-50 text-red-600 group-hover:bg-red-600 group-hover:text-white" : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
+                            )}>
                               <Activity className="h-6 w-6" />
                             </div>
                             <div className="min-w-0">
-                              <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors truncate max-w-[200px] sm:max-w-md">
+                              <h3 className={cn(
+                                "font-semibold transition-colors truncate max-w-[200px] sm:max-w-md",
+                                status === 'pending' ? "text-red-600 group-hover:text-red-700" : "text-foreground group-hover:text-primary"
+                              )}>
                                 {a.name}
                               </h3>
                               <p className="text-sm text-muted-foreground truncate">
@@ -756,13 +797,8 @@ export default function ClientDashboard() {
                                   <CheckCircle className="h-3 w-3" /> Tudo assinado
                                 </Badge>
                               )}
-                              {status === 'partial' && (
-                                <Badge variant="secondary" className="gap-1 border-primary/20">
-                                  <Clock className="h-3 w-3" /> {a.pending} pendente(s)
-                                </Badge>
-                              )}
-                              {status === 'pending' && (
-                                <Badge variant="outline" className="gap-1 bg-yellow-500 border-transparent text-white">
+                              {status !== 'completed' && (
+                                <Badge variant={status === 'pending' ? "destructive" : "secondary"} className="gap-1">
                                   <Clock className="h-3 w-3" /> {a.pending} pendente(s)
                                 </Badge>
                               )}
@@ -775,7 +811,7 @@ export default function ClientDashboard() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            )}
           </div>
         )}
 
