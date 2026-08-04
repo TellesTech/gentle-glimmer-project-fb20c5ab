@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { SignatureImage } from '@/components/signatures/SignatureImage';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PenLine, Check, Loader2, Building2, Sparkles } from 'lucide-react';
