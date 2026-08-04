@@ -87,17 +87,18 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
           .from('report_company_approvers')
           .select('id, contact_id, status, approved_at, contact:company_contacts(id, name, email, role, avatar_url)')
           .eq('report_id', reportId),
-        // WEES responsibles for this site
+        // WEES responsibles for this site (apenas responsáveis formais da obra;
+        // portal_admin_access lista dezenas de usuários e poluía o painel)
         siteId
-          ? Promise.all([
-              supabase.from('portal_admin_access').select('user_id').eq('site_id', siteId),
-              supabase.from('site_responsibles').select('user_id').eq('site_id', siteId),
-            ]).then(([{ data: paa }, { data: sr }]) => {
-              const set = new Set<string>();
-              (paa || []).forEach((r: any) => r.user_id && set.add(r.user_id));
-              (sr || []).forEach((r: any) => r.user_id && set.add(r.user_id));
-              return Array.from(set);
-            })
+          ? supabase
+              .from('site_responsibles')
+              .select('user_id')
+              .eq('site_id', siteId)
+              .then(({ data: sr }) => {
+                const set = new Set<string>();
+                (sr || []).forEach((r: any) => r.user_id && set.add(r.user_id));
+                return Array.from(set);
+              })
           : Promise.resolve([] as string[]),
         // Client contacts for this company
         companyId
