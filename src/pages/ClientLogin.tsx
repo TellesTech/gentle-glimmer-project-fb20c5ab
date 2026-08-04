@@ -687,14 +687,14 @@ export default function ClientLogin() {
             </Card>
           ) : (
             <Card className="border-0 shadow-lg">
-              {mode === 'select' && (
+              {mode === 'select' && hasPinContacts && (
                 <>
                   <CardHeader className="space-y-1 pb-4">
                     <CardTitle className="text-2xl font-bold">Acesso Rápido</CardTitle>
                     <CardDescription>Clique no seu nome abaixo e insira o PIN de 4 dígitos recebido por convite</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {contacts.map((contact) => (
+                    {pinContacts.map((contact) => (
                       <Button
                         key={contact.id}
                         variant="outline"
@@ -709,7 +709,7 @@ export default function ClientLogin() {
                           <p className="font-medium">{getDisplayName(contact.name)}</p>
                           {contact.role && <p className="text-xs text-muted-foreground">{contact.role}</p>}
                         </div>
-                        {contact.has_pin ? <KeyRound className="h-4 w-4 ml-auto text-muted-foreground" /> : <Mail className="h-4 w-4 ml-auto text-muted-foreground" />}
+                        <KeyRound className="h-4 w-4 ml-auto text-muted-foreground" />
                       </Button>
                      ))}
 
@@ -719,11 +719,8 @@ export default function ClientLogin() {
                       <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
                       <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">ou</span></div>
                     </div>
-                    <Button className="w-full" onClick={() => setMode('magic')}>
-                      <Mail className="h-4 w-4 mr-2" /> Primeiro acesso? Entrar com e-mail
-                    </Button>
-                    <Button variant="ghost" className="w-full" onClick={() => setMode('email')}>
-                      Prefere usar email e senha? Clique aqui
+                    <Button className="w-full" onClick={() => setMode('email')}>
+                      <Mail className="h-4 w-4 mr-2" /> Entrar com e-mail e senha
                     </Button>
                   </CardFooter>
                 </>
