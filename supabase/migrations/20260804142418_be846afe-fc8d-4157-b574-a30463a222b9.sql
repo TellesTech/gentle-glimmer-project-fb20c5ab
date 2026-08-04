@@ -1,0 +1,1 @@
+ALTER TABLE public.report_signatures ADD COLUMN IF NOT EXISTS document_hash text;
