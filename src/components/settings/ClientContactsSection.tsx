@@ -49,6 +49,7 @@ interface Site {
 }
 
 interface GeneratedCredentials {
+  contactId?: string;
   contactName: string;
   email: string;
   password: string;
