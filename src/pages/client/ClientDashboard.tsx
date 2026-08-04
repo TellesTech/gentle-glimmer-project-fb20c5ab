@@ -207,12 +207,12 @@ export default function ClientDashboard() {
         .from('reports')
         .select(`id, date, shift, status, rdo_number, project:projects (id, name, company:companies (id, name))`)
         .in('project_id', pIds)
-        .in('status', ['signed', 'finalized'])
+        .in('status', ['sent', 'signed', 'finalized'])
         .order('date', { ascending: false });
 
       if (error) throw error;
 
-      // REGRA OBRIGATÓRIA: portal do cliente exibe SOMENTE RDOs assinados (status ∈ {signed, finalized}).
+      // Portal do cliente exibe RDOs enviados para assinatura e assinados (sent/signed/finalized).
       return (data || []).map((r: any) => {
         const isApproved = r.status === 'signed' || r.status === 'finalized';
         const mappedStatus = isApproved ? 'approved' : 'pending';
