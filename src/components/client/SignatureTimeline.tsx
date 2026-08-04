@@ -23,10 +23,11 @@ function Row({ entry }: { entry: SignatureEntry }) {
   return (
     <div
       className={cn(
-        'flex items-center gap-3 p-3 rounded-lg border transition-colors',
+        'p-3 rounded-lg border transition-colors',
         entry.signed ? 'bg-[hsl(var(--success))]/5 border-[hsl(var(--success))]/20' : 'bg-muted/30 border-border',
       )}
     >
+      <div className="flex items-center gap-3">
       <Avatar className="h-10 w-10 shrink-0">
         {entry.avatarUrl ? <AvatarImage src={entry.avatarUrl} alt={entry.name} /> : null}
         <AvatarFallback className={cn(
@@ -38,16 +39,7 @@ function Row({ entry }: { entry: SignatureEntry }) {
       </Avatar>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium leading-tight truncate">{entry.name}</p>
-        <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
-          <span className="truncate">{entry.role || '—'}</span>
-          {entry.companyName ? (
-            <>
-              <span className="opacity-50">·</span>
-              <Building2 className="h-3 w-3 shrink-0 opacity-70" />
-              <span className="truncate font-medium">{entry.companyName}</span>
-            </>
-          ) : null}
-        </p>
+        <p className="text-xs text-muted-foreground truncate">{entry.role || '—'}</p>
       </div>
       <div className="text-right shrink-0">
         {entry.signed ? (
@@ -67,6 +59,16 @@ function Row({ entry }: { entry: SignatureEntry }) {
           </Badge>
         )}
       </div>
+      </div>
+      {entry.signed && entry.signatureData?.startsWith('data:image') && (
+        <div className="mt-3 bg-background rounded-md border border-border/50 p-2">
+          <img
+            src={entry.signatureData}
+            alt={`Assinatura de ${entry.name}`}
+            className="max-h-16 mx-auto object-contain"
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -91,31 +93,23 @@ export function SignatureTimeline({ reportId }: Props) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Summary */}
       <div className="flex items-center gap-3 text-sm">
-        <Badge variant="secondary" className="gap-1">
-          {summary.signed}/{summary.total} assinadas
-        </Badge>
-        {summary.pending > 0 && (
-          <span className="text-muted-foreground text-xs">
-            {summary.pending} aguardando
-          </span>
-        )}
+        <Badge variant="secondary">{summary.signed}/{summary.total} assinadas</Badge>
         <span className="ml-auto text-[10px] text-muted-foreground flex items-center gap-1">
           <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--success))] animate-pulse" />
-          Atualizando em tempo real
+          Tempo real
         </span>
       </div>
 
       {/* WEES */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-primary shrink-0" />
-          <h3 className="text-sm font-semibold truncate">{weesCompanyName}</h3>
-          <Badge variant="outline" className="text-[10px] shrink-0">
-            {wees.filter((e) => e.signed).length}/{wees.length || 0}
-          </Badge>
+          <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground truncate">
+            {weesCompanyName}
+          </h3>
         </div>
         {wees.length > 0 ? (
           <div className="space-y-2">
@@ -129,11 +123,10 @@ export function SignatureTimeline({ reportId }: Props) {
       {/* Client */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-primary shrink-0" />
-          <h3 className="text-sm font-semibold truncate">{clientCompanyName}</h3>
-          <Badge variant="outline" className="text-[10px] shrink-0">
-            {client.filter((e) => e.signed).length}/{client.length || 0}
-          </Badge>
+          <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground truncate">
+            {clientCompanyName}
+          </h3>
         </div>
         {client.length > 0 ? (
           <div className="space-y-2">
