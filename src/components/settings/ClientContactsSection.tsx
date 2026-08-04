@@ -482,6 +482,7 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
           companyName, 
           companyId,
           pin: pinToPass || undefined,
+          resetPassword: true,
         }
       });
       if (error) throw error;
@@ -523,9 +524,11 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
     const emailBlock = password
       ? `*Acesso por e-mail e senha*
 📧 E-mail: ${email}
-🔑 Senha: ${password}
+🔑 Senha temporária: ${password}
 🔗 Link: ${emailLoginUrl || loginUrl}`
-      : '';
+      : `*Acesso por e-mail e senha*
+📧 E-mail: ${email}
+🔗 Link: ${emailLoginUrl || loginUrl}`;
     const pinBlock = pin
       ? `*Acesso rápido por PIN*
 🔐 PIN: ${pin}
@@ -540,7 +543,7 @@ Através dele, você poderá acompanhar os *Diários de Obra (RDOs)*, visualizar
 
 ${accessLines}
 
-Basta abrir o link e entrar com os dados acima.
+Basta abrir o link e entrar com os dados acima. A senha é temporária e pode ser alterada depois no seu perfil.
 
 Atenciosamente,
 *Equipe WEES* 🏗️`;
@@ -594,7 +597,7 @@ Atenciosamente,
     };
     const rows: { label: string; value: string }[] = [
       { label: 'E-mail', value: c.email },
-      { label: 'Senha', value: c.password },
+      { label: 'Senha temporária', value: c.password },
       { label: 'Link (e-mail e senha)', value: c.emailLoginUrl || c.loginUrl },
       ...(c.pin ? [{ label: 'PIN', value: c.pin }] : []),
       ...(c.pin ? [{ label: 'Link (PIN)', value: c.pinLoginUrl || c.loginUrl }] : []),
@@ -614,11 +617,14 @@ Atenciosamente,
             </div>
           ))}
         </div>
-        {!c.password && (
+        {c.password ? (
+          <p className="text-xs text-muted-foreground">
+            Senha temporária gerada agora — a senha anterior deixou de funcionar.
+          </p>
+        ) : (
           <div className="rounded-lg border border-dashed p-3 space-y-2">
             <p className="text-xs text-muted-foreground">
-              Este contato já tem acesso e a senha atual foi mantida (ela não é exibida por segurança).
-              Se o cliente não souber a senha, gere uma nova agora.
+              Não foi possível gerar a senha temporária automaticamente. Gere uma nova agora.
             </p>
             <Button
               variant="outline"
