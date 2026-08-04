@@ -288,6 +288,16 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
       if (data.pin && data.pin.length === 4) {
         setSavedPins(prev => ({ ...prev, [contactId]: data.pin }));
       }
+
+      // Optional: manual password for this client's login
+      if (data.password && data.password.length >= 8) {
+        const { data: pwData, error: pwError } = await supabase.functions.invoke('set-client-password', {
+          body: { contactId, password: data.password },
+        });
+        if (pwError) throw pwError;
+        if (pwData?.error) throw new Error(pwData.error);
+        toast({ title: 'Senha definida', description: `Senha de acesso atualizada para ${data.email}` });
+      }
       toast({ title: 'Contato atualizado', description: data.pin && data.pin.length === 4 ? `PIN configurado: ${data.pin}` : undefined });
       cancelEditing(contactId);
       fetchData();
@@ -311,6 +321,10 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
       toast({ title: 'PIN obrigatório', description: 'Defina um PIN de 4 dígitos para o cliente', variant: 'destructive' });
       return;
     }
+    if (newContact.password && newContact.password.length < 8) {
+      toast({ title: 'Senha muito curta', description: 'A senha deve ter pelo menos 8 caracteres', variant: 'destructive' });
+      return;
+    }
     setSaving('new');
     try {
       // Provisionar contato + auth user via edge function (cria user_id em auth.users)
@@ -321,6 +335,7 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
           name: newContact.name,
           email: newContact.email,
           pin: newContact.pin,
+          password: newContact.password || undefined,
         },
       });
       if (error) throw error;
@@ -351,9 +366,22 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
         setSavedPins(prev => ({ ...prev, [contactId]: newContact.pin }));
       }
 
+      const createdPassword = data?.password || newContact.password;
       toast({ title: 'Contato adicionado', description: `PIN configurado: ${newContact.pin}` });
+      if (createdPassword) {
+        setCredentialsDialog({
+          open: true,
+          credentials: {
+            contactName: newContact.name,
+            email: newContact.email,
+            password: createdPassword,
+            loginUrl: buildLoginUrl(),
+            pin: newContact.pin,
+          },
+        });
+      }
       setIsCreating(false);
-      setNewContact({ name: '', email: '', phone: '', role: '', pin: '', avatar_url: '', can_approve: true, is_active: true, siteIds: [] });
+      setNewContact({ name: '', email: '', phone: '', role: '', pin: '', password: '', avatar_url: '', can_approve: true, is_active: true, siteIds: [] });
       fetchData();
     } catch (error: any) {
       const msg = error?.message?.includes('duplicate') || error?.message?.includes('already')
