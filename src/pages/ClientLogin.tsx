@@ -366,7 +366,6 @@ export default function ClientLogin() {
   // Login is per UNIT (site), not per company. Always require a site selection
   // when the company has any sites and the URL doesn't include one.
   const showSiteSelection = !siteId && !contactId && sites.length > 0;
-  const hasConfiguredContacts = contacts.some(c => c.has_pin || c.has_auth);
   const pinContacts = contacts.filter(c => c.has_pin);
   const hasPinContacts = pinContacts.length > 0;
 
