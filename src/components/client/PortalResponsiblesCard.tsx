@@ -71,11 +71,13 @@ export function PortalResponsiblesCard({ companyId, siteIds }: Props) {
           <CollapsibleTrigger asChild>
             <CardHeader className="py-2.5 px-4 cursor-pointer hover:bg-muted/50 transition-colors select-none">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-primary" />
-                  Equipe WEES
+                <CardTitle className="text-base flex items-center gap-2 overflow-hidden">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Building2 className="h-4 w-4 text-primary" />
+                    <span>Equipe WEES</span>
+                  </div>
                   {data && data.wees.length > 0 && !weesOpen && (
-                    <span className="text-xs font-normal text-muted-foreground ml-2 truncate max-w-[150px]">
+                    <span className="text-xs font-normal text-muted-foreground truncate border-l border-muted-foreground/30 pl-2 ml-1">
                       {data.wees.find(p => p.hasSignature)?.name || data.wees[0].name}
                     </span>
                   )}
