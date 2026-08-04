@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 
 import { ClientLayout } from '@/components/client/ClientLayout';
+import { PageBackHeader } from '@/components/client/PageBackHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -309,24 +310,19 @@ export default function ClientReports() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              {(selectedActivity || selectedYear !== null || selectedMonth !== null) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    if (selectedMonth !== null) setSelectedMonth(null);
-                    else if (selectedYear !== null) setSelectedYear(null);
-                    else if (selectedActivity) setSelectedActivity(null);
-                  }}
-                  className="gap-1.5 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  <span>Voltar</span>
-                </Button>
-              )}
-            </div>
-            <h1 className="text-2xl font-semibold tracking-tight">Meus Relatórios</h1>
+            {(selectedActivity || selectedYear !== null || selectedMonth !== null) ? (
+              <PageBackHeader
+                onBack={() => {
+                  if (selectedMonth !== null) setSelectedMonth(null);
+                  else if (selectedYear !== null) setSelectedYear(null);
+                  else if (selectedActivity) setSelectedActivity(null);
+                }}
+                icon={<FileText className="h-5 w-5" />}
+                title="Meus Relatórios"
+              />
+            ) : (
+              <h1 className="text-2xl font-semibold tracking-tight">Meus Relatórios</h1>
+            )}
             {renderBreadcrumbs()}
           </div>
 
