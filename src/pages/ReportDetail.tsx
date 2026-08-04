@@ -11,6 +11,7 @@ import { ptBR } from 'date-fns/locale';
    PenTool, Globe, Send, Sparkles, Edit3, RefreshCw, Check, Bot
  } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SignatureImage } from '@/components/signatures/SignatureImage';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
