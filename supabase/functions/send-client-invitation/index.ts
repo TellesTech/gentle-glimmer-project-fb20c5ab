@@ -142,17 +142,20 @@ serve(async (req) => {
 
     if (contactError) throw new Error(`Failed to fetch contact: ${contactError.message}`);
 
-    // 1. PIN logic: require explicit 4-digit PIN from admin
-    if (!providedPin || !/^\d{4}$/.test(providedPin)) {
-      return new Response(
-        JSON.stringify({ error: "PIN de 4 dígitos é obrigatório para gerar o convite" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+    // 1. PIN logic: optional. When provided it must be 4 digits and is (re)saved.
+    let plainPin = '';
+    if (providedPin) {
+      if (!/^\d{4}$/.test(providedPin)) {
+        return new Response(
+          JSON.stringify({ error: "O PIN deve ter 4 dígitos" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      plainPin = providedPin;
+      const pinHash = await hashPin(plainPin);
+      await supabase.from("company_contacts").update({ pin_hash: pinHash }).eq("id", contactId);
+      console.log(`[Invitation] PIN set for ${contactEmail}`);
     }
-    const plainPin = providedPin;
-    const pinHash = await hashPin(plainPin);
-    await supabase.from("company_contacts").update({ pin_hash: pinHash }).eq("id", contactId);
-    console.log(`[Invitation] PIN set for ${contactEmail}`);
 
     // 2. Provision auth user (email/password) in background
     const { password } = await provisionAuthUser(
@@ -191,6 +194,9 @@ serve(async (req) => {
       ? `${origin}/${companySlug}/${siteSlug}`
       : `${origin}/login`;
 
+    const emailLoginUrl = `${loginUrl}?mode=email&email=${encodeURIComponent(contactEmail)}`;
+    const pinLoginUrl = plainPin ? `${loginUrl}?mode=pin` : '';
+
     // 4. Update invitation tracking
     const { data: countData } = await supabase
       .from("company_contacts").select("invitation_count").eq("id", contactId).single();
@@ -209,6 +215,8 @@ serve(async (req) => {
           email: contactEmail,
           password,
           loginUrl,
+          emailLoginUrl,
+          pinLoginUrl,
           pin: plainPin,
         }
       }),
