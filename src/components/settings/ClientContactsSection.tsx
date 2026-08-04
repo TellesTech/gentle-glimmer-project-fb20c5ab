@@ -229,6 +229,7 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
       setCredentialsDialog({
         open: true,
         credentials: {
+          contactId: contact.id,
           contactName: contact.name,
           email: data?.email || contact.email,
           password: data?.password || finalPassword,
