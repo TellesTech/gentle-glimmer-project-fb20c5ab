@@ -178,9 +178,16 @@ Atenciosamente,
     }
   };
 
-  // Botão "Área WEES" só aparece para usuários internos da equipe (super_admin/admin)
+  // Botão "Área WEES"/"Convite" e "Membros da Unidade" só para usuários internos WEES.
+  // Qualquer sessão aberta como cliente/contato é tratada como cliente.
+  const isClientSession =
+    !!clientProfile ||
+    !!clientUser ||
+    (role as string) === 'client' ||
+    role === 'collaborator' ||
+    !!searchParams.get('portal_user');
   const isInternalUser =
-    !clientProfile &&
+    !isClientSession &&
     !!adminUser &&
     (role === 'super_admin' || role === 'admin');
 

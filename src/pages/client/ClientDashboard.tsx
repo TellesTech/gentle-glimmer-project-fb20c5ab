@@ -297,6 +297,41 @@ export default function ClientDashboard() {
   const reportsData = isAdminView ? adminReportsData : clientReportsData;
   const reportsLoading = isAdminView ? adminReportsLoading : clientReportsLoading;
 
+  // ===== Pastas de mês ocultas (somente super admin gerencia) =====
+  const isSuperAdmin = role === 'super_admin';
+  const hiddenScopeCompanyId = adminCompanyId || clientProfile?.company_id || null;
+
+  const { data: hiddenMonths } = useQuery({
+    queryKey: ['portal-hidden-months', hiddenScopeCompanyId, adminSiteId],
+    queryFn: async () => {
+      let q = supabase.from('portal_hidden_months').select('id, company_id, site_id, year, month');
+      if (adminSiteId) q = q.eq('site_id', adminSiteId);
+      else if (hiddenScopeCompanyId) q = q.eq('company_id', hiddenScopeCompanyId);
+      const { data } = await q;
+      return (data || []) as { id: string; company_id: string; site_id: string; year: number; month: number }[];
+    },
+    enabled: !!hiddenScopeCompanyId || !!adminSiteId,
+  });
+
+  const hiddenMonthKeys = useMemo(
+    () => new Set((hiddenMonths || []).map(h => `${h.year}-${h.month}`)),
+    [hiddenMonths],
+  );
+
+  const canToggleHiddenMonth = isSuperAdmin && !!adminSiteId && !!adminCompanyId;
+
+  // Relatórios visíveis: o cliente não conta os meses ocultos nas métricas.
+  // O super admin continua vendo os números totais (ele enxerga as pastas ocultas).
+  const visibleReports = useMemo(() => {
+    const all = reportsData || [];
+    if (isSuperAdmin || hiddenMonthKeys.size === 0) return all;
+    return all.filter(r => {
+      if (!r.report?.date) return true;
+      const d = parseISO(r.report.date);
+      return !hiddenMonthKeys.has(`${d.getFullYear()}-${d.getMonth() + 1}`);
+    });
+  }, [reportsData, hiddenMonthKeys, isSuperAdmin]);
+
   // Photo count
   const reportIds = useMemo(() => (reportsData || []).map(r => r.report_id).filter(Boolean), [reportsData]);
 
@@ -318,7 +353,7 @@ export default function ClientDashboard() {
 
   // Computed metrics — based purely on approver.status (native portal flow)
   const metrics = useMemo(() => {
-    const all = reportsData || [];
+    const all = visibleReports;
     const total = all.length;
 
     const approved = all.filter(r => r.status === 'approved');
@@ -372,20 +407,20 @@ export default function ClientDashboard() {
       totalProjects: projectSet.size,
       score,
     };
-  }, [reportsData]);
+  }, [visibleReports]);
 
   // Score status
 
   // Chart data
   const chartData = useMemo(() => {
-    if (!reportsData?.length) return [];
+    if (!visibleReports.length) return [];
     const now = new Date();
     const days = chartPeriod === '7d' ? 7 : 30;
     return Array.from({ length: days }, (_, i) => {
       const date = subDays(now, days - 1 - i);
       const start = startOfDay(date);
       const end = endOfDay(date);
-      const inRange = reportsData.filter(r => {
+      const inRange = visibleReports.filter(r => {
         const d = r.report?.date ? parseISO(r.report.date) : null;
         return d && isWithinInterval(d, { start, end });
       });
@@ -395,18 +430,18 @@ export default function ClientDashboard() {
         Pendentes: inRange.filter(r => r.status !== 'approved').length,
       };
     });
-  }, [reportsData, chartPeriod]);
+  }, [visibleReports, chartPeriod]);
 
   // Pending list (sorted by oldest first)
   const pendingList = useMemo(() => {
-    return (reportsData || [])
+    return visibleReports
       .filter(r => r.status !== 'approved')
       .sort((a, b) => {
         const da = a.report?.date || '';
         const db = b.report?.date || '';
         return da.localeCompare(db);
       });
-  }, [reportsData]);
+  }, [visibleReports]);
 
   // Unique activities for filter
   const uniqueActivities = useMemo(() => {
@@ -425,29 +460,6 @@ export default function ClientDashboard() {
 
   // Aggregate by Month/Year and then by Activity (project)
   type ActivityReport = { id: string; date: string | null; status: string; rdoNumber: number | null };
-
-  // ===== Pastas de mês ocultas (somente super admin gerencia) =====
-  const isSuperAdmin = role === 'super_admin';
-  const hiddenScopeCompanyId = adminCompanyId || clientProfile?.company_id || null;
-
-  const { data: hiddenMonths } = useQuery({
-    queryKey: ['portal-hidden-months', hiddenScopeCompanyId, adminSiteId],
-    queryFn: async () => {
-      let q = supabase.from('portal_hidden_months').select('id, company_id, site_id, year, month');
-      if (adminSiteId) q = q.eq('site_id', adminSiteId);
-      else if (hiddenScopeCompanyId) q = q.eq('company_id', hiddenScopeCompanyId);
-      const { data } = await q;
-      return (data || []) as { id: string; company_id: string; site_id: string; year: number; month: number }[];
-    },
-    enabled: !!hiddenScopeCompanyId || !!adminSiteId,
-  });
-
-  const hiddenMonthKeys = useMemo(
-    () => new Set((hiddenMonths || []).map(h => `${h.year}-${h.month}`)),
-    [hiddenMonths],
-  );
-
-  const canToggleHiddenMonth = isSuperAdmin && !!adminSiteId && !!adminCompanyId;
 
   const toggleHiddenMonth = async (
     e: React.MouseEvent,
