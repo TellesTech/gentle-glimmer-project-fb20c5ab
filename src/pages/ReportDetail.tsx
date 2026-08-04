@@ -1432,7 +1432,7 @@ export default function ReportDetail() {
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-medium">{sig.signer_name}</span>
+                      <span className="font-medium">{(sig.signer_name || '').replace(/\s*-\s*Wees$/i, '').trim()}</span>
                     </div>
                     {sig.signer_role && (
                       <div className="flex items-center gap-2">

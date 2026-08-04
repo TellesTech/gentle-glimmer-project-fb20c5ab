@@ -202,7 +202,7 @@ export default function AdminSignatures() {
                   return (
                     <TableRow key={r.id}>
                       <TableCell>
-                        <div className="font-medium text-sm">{r.contact?.name || '—'}</div>
+                        <div className="font-medium text-sm">{(r.contact?.name || '—').replace(/\s*-\s*Wees$/i, '').trim()}</div>
                         <div className="text-xs text-muted-foreground">{r.contact?.email}</div>
                         {r.contact?.company?.name && (
                           <div className="text-xs text-muted-foreground">{r.contact.company.name}</div>
