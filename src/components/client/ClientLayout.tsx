@@ -19,6 +19,8 @@ import {
   Loader2,
   KeyRound,
   ChevronLeft,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { WhatsAppIcon } from '@/components/shared/WhatsAppIcon';
