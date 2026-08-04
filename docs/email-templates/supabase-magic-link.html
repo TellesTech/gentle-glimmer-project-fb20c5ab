@@ -1,0 +1,55 @@
+<!--
+  Portal WEES — template do e-mail de acesso (Magic Link).
+  Cole este HTML no painel do Supabase em:
+  Authentication -> Emails -> Magic Link  (e também em "Confirm signup", se quiser o mesmo visual)
+  Variáveis suportadas: {{ .ConfirmationURL }}  {{ .Token }}  {{ .SiteURL }}  {{ .Email }}
+-->
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;margin:0;padding:32px 12px;font-family:Arial,Helvetica,sans-serif;">
+  <tr>
+    <td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e4e4e7;">
+        <tr>
+          <td style="background-color:#991919;padding:24px 28px;">
+            <p style="margin:0;color:#ffffff;font-size:18px;font-weight:bold;letter-spacing:.5px;">Portal WEES</p>
+            <p style="margin:4px 0 0;color:#f6dede;font-size:13px;">Diário de Obra • Relatórios e assinaturas</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px 28px 8px;">
+            <h1 style="margin:0 0 12px;font-size:21px;color:#18181b;">Seu acesso ao Portal WEES</h1>
+            <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#52525b;">
+              Recebemos um pedido de acesso para <strong>{{ .Email }}</strong>.
+              Clique no botão abaixo para entrar no portal. Não é necessário senha.
+            </p>
+            <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+              <tr>
+                <td align="center" style="background-color:#991919;border-radius:10px;">
+                  <a href="{{ .ConfirmationURL }}"
+                     style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:bold;text-decoration:none;">
+                    Entrar no portal
+                  </a>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:0 0 8px;font-size:13px;color:#71717a;">
+              Se o botão não funcionar, use o código de 6 dígitos na tela de acesso:
+            </p>
+            <p style="margin:0 0 24px;font-size:28px;letter-spacing:8px;font-weight:bold;color:#991919;">{{ .Token }}</p>
+            <p style="margin:0 0 28px;font-size:13px;line-height:1.6;color:#a1a1aa;">
+              Este link e este código expiram em 1 hora e podem ser usados uma única vez.
+              Se você não pediu este acesso, ignore este e-mail.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="border-top:1px solid #f0f0f1;padding:18px 28px;background-color:#fafafa;">
+            <p style="margin:0;font-size:12px;color:#a1a1aa;">
+              WEES Engenharia • <a href="https://rdo.wees.com.br" style="color:#991919;text-decoration:none;">rdo.wees.com.br</a><br />
+              Mensagem automática — não responda a este e-mail.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>

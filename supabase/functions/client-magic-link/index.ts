@@ -22,6 +22,28 @@ function randomPassword(): string {
   return btoa(String.fromCharCode(...bytes)).replace(/[^a-zA-Z0-9]/g, "").slice(0, 20) + "@9Wz";
 }
 
+const OFFICIAL_ORIGIN = "https://rdo.wees.com.br";
+
+/**
+ * Mantém o link do e-mail sempre no domínio oficial do portal.
+ * Localhost é preservado para desenvolvimento; qualquer outro host
+ * (preview, lovable.app, etc.) é reescrito para rdo.wees.com.br.
+ */
+function normalizeRedirect(raw: string | null): string {
+  if (!raw) return `${OFFICIAL_ORIGIN}/client/dashboard?first_access=1`;
+  try {
+    const url = new URL(raw);
+    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") return url.toString();
+    const official = new URL(OFFICIAL_ORIGIN);
+    official.pathname = url.pathname;
+    official.search = url.search;
+    official.hash = url.hash;
+    return official.toString();
+  } catch {
+    return `${OFFICIAL_ORIGIN}/client/dashboard?first_access=1`;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -32,6 +54,7 @@ serve(async (req) => {
     const siteId: string | null = body.siteId ?? null;
     const contactId: string | null = body.contactId ?? null;
     const redirectTo: string | null = body.redirectTo ?? null;
+    const finalRedirect = normalizeRedirect(redirectTo);
 
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     if (!emailOk && !contactId) return json({ error: "E-mail inválido" }, 400);
@@ -119,19 +142,30 @@ serve(async (req) => {
       email: contactEmail,
       options: {
         shouldCreateUser: false,
-        emailRedirectTo: redirectTo || undefined,
+        emailRedirectTo: finalRedirect,
       },
     });
 
     if (otpError) {
       console.error("[client-magic-link] signInWithOtp failed", otpError);
-      const status = (otpError as any).status === 429 ? 429 : 500;
+      const rawStatus = Number((otpError as any).status ?? 0);
+      const code = String((otpError as any).code ?? "");
+      const msg = String(otpError.message ?? "");
+      const isRateLimit =
+        rawStatus === 429 ||
+        code === "over_email_send_rate_limit" ||
+        /rate limit/i.test(msg);
+      const isSmtp = /smtp|sending|provider|relay/i.test(msg) && !isRateLimit;
+
+      const status = isRateLimit ? 429 : 500;
       return json(
         {
-          error:
-            status === 429
-              ? "Muitas tentativas. Aguarde alguns minutos antes de pedir um novo acesso."
+          error: isRateLimit
+            ? "Limite de envios do provedor atingido. Aguarde alguns minutos ou aumente o limite de e-mails por hora nas configurações de autenticação."
+            : isSmtp
+              ? "O servidor de e-mail (SMTP) recusou o envio. Verifique as credenciais do Resend e se o domínio de envio está verificado."
               : "Não foi possível enviar o e-mail de acesso agora.",
+          details: msg || undefined,
         },
         status,
       );
