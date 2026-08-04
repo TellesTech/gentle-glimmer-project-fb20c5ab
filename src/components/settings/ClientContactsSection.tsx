@@ -597,7 +597,7 @@ Atenciosamente,
     };
     const rows: { label: string; value: string }[] = [
       { label: 'E-mail', value: c.email },
-      { label: 'Senha', value: c.password },
+      { label: 'Senha temporária', value: c.password },
       { label: 'Link (e-mail e senha)', value: c.emailLoginUrl || c.loginUrl },
       ...(c.pin ? [{ label: 'PIN', value: c.pin }] : []),
       ...(c.pin ? [{ label: 'Link (PIN)', value: c.pinLoginUrl || c.loginUrl }] : []),
@@ -617,11 +617,14 @@ Atenciosamente,
             </div>
           ))}
         </div>
-        {!c.password && (
+        {c.password ? (
+          <p className="text-xs text-muted-foreground">
+            Senha temporária gerada agora — a senha anterior deixou de funcionar.
+          </p>
+        ) : (
           <div className="rounded-lg border border-dashed p-3 space-y-2">
             <p className="text-xs text-muted-foreground">
-              Este contato já tem acesso e a senha atual foi mantida (ela não é exibida por segurança).
-              Se o cliente não souber a senha, gere uma nova agora.
+              Não foi possível gerar a senha temporária automaticamente. Gere uma nova agora.
             </p>
             <Button
               variant="outline"
