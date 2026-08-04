@@ -128,7 +128,7 @@ serve(async (req) => {
   }
 
   try {
-    const { contactId, contactName, contactEmail, companyName, companyId, pin: providedPin }: InvitationRequest = await req.json();
+    const { contactId, contactName, contactEmail, companyName, companyId, pin: providedPin, resetPassword }: InvitationRequest = await req.json();
 
     console.log(`[Invitation] Processing invitation for ${contactName} (${contactEmail})`);
 
@@ -169,7 +169,7 @@ serve(async (req) => {
 
     // 2. Provision auth user (email/password) in background
     const { password } = await provisionAuthUser(
-      supabase, contactId, contactName, contactEmail, companyName, contact.user_id
+      supabase, contactId, contactName, contactEmail, companyName, contact.user_id, resetPassword === true,
     );
 
     // 3. Build login URL — login is PER UNIT (site), not per company.
