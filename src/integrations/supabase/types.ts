@@ -2254,6 +2254,8 @@ export type Database = {
         Row: {
           access_id: string | null
           document_hash: string | null
+          document_version: string | null
+          geolocation: Json | null
           id: string
           ip_address: string | null
           legal_basis: string | null
@@ -2269,6 +2271,8 @@ export type Database = {
         Insert: {
           access_id?: string | null
           document_hash?: string | null
+          document_version?: string | null
+          geolocation?: Json | null
           id?: string
           ip_address?: string | null
           legal_basis?: string | null
@@ -2284,6 +2288,8 @@ export type Database = {
         Update: {
           access_id?: string | null
           document_hash?: string | null
+          document_version?: string | null
+          geolocation?: Json | null
           id?: string
           ip_address?: string | null
           legal_basis?: string | null
@@ -2715,6 +2721,57 @@ export type Database = {
             columns: ["site_id"]
             isOneToOne: false
             referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      signature_audit_log: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: string | null
+          signature_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          signature_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          signature_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signature_audit_log_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signature_audit_log_signature_id_fkey"
+            columns: ["signature_id"]
+            isOneToOne: false
+            referencedRelation: "report_signatures"
             referencedColumns: ["id"]
           },
         ]

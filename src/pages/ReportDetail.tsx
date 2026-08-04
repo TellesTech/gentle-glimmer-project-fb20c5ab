@@ -32,6 +32,7 @@ import type { Shift, DeviationType, ImpactLevel, ReportStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { ReportDetailTabs } from '@/components/reports/ReportDetailTabs';
 import { OneClickSignatureCard } from '@/components/signatures/OneClickSignatureCard';
+import { getEdgeFunctionErrorMessage } from '@/lib/edgeFunctionError';
 
 
 const SHIFT_CONFIG: Record<Shift, { label: string; icon: typeof Sun; color: string }> = {
@@ -282,27 +283,14 @@ export default function ReportDetail() {
     if (!reportId || !currentUserProfile) return;
     setIsSigningInline(true);
     try {
-      const signerName = currentUserProfile.name || user?.email || 'Colaborador';
-      const signerRole =
-        currentUserProfile.job_title ||
-        (role === 'super_admin'
-          ? 'Super Administrador'
-          : role === 'admin'
-          ? 'Administrador'
-          : 'Colaborador');
-      const signerEmail = currentUserProfile.email || user?.email || null;
-
       const response = await supabase.functions.invoke('submit-signature', {
         body: {
           reportId,
           signatureData: signatureDataUrl,
-          signerName,
-          signerRole,
-          signerEmail,
         },
       });
 
-      if (response.error) throw new Error(response.error.message);
+      if (response.error) throw new Error(await getEdgeFunctionErrorMessage(response.error, 'Erro ao assinar relatório'));
       if (response.data?.error) throw new Error(response.data.error);
 
       toast.success('✨ Relatório assinado com sucesso!');
