@@ -93,6 +93,23 @@ export default function ClientLogin() {
   const [resolvedIds, setResolvedIds] = useState<{ companyId: string | null; siteId: string | null }>({ companyId: null, siteId: null });
   // Direct link contact data
   const [directContact, setDirectContact] = useState<ContactInfo | null>(null);
+  const [urlModeApplied, setUrlModeApplied] = useState(false);
+
+  // Prefill login mode/email from the invitation link (?mode=email&email=...)
+  useEffect(() => {
+    if (loading || urlModeApplied) return;
+    const params = new URLSearchParams(window.location.search);
+    const urlMode = params.get('mode');
+    const urlEmail = params.get('email');
+    if (urlEmail) {
+      setEmail(urlEmail);
+      setMagicEmail(urlEmail);
+    }
+    if (urlMode === 'email' || urlMode === 'pin' || urlMode === 'magic') {
+      setMode(urlMode as LoginMode);
+    }
+    if (urlMode || urlEmail) setUrlModeApplied(true);
+  }, [loading, urlModeApplied]);
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -356,6 +373,7 @@ export default function ClientLogin() {
   useEffect(() => {
     if (
       !loading &&
+      !urlModeApplied &&
       !showSiteSelection &&
       !hasConfiguredContacts &&
       contacts.length === 0 &&
@@ -363,7 +381,7 @@ export default function ClientLogin() {
     ) {
       setMode('magic');
     }
-  }, [loading, showSiteSelection, hasConfiguredContacts, contacts.length, mode]);
+  }, [loading, urlModeApplied, showSiteSelection, hasConfiguredContacts, contacts.length, mode]);
 
   if (loading) {
     return (

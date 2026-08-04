@@ -54,6 +54,8 @@ interface GeneratedCredentials {
   password: string;
   loginUrl: string;
   pin: string;
+  emailLoginUrl?: string;
+  pinLoginUrl?: string;
 }
 
 interface EditingState {
@@ -231,6 +233,8 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
           password: data?.password || finalPassword,
           loginUrl: buildLoginUrl(contact.id),
           pin: savedPins[contact.id] || '',
+          emailLoginUrl: `${buildLoginUrl(contact.id)}?mode=email&email=${encodeURIComponent(data?.email || contact.email)}`,
+          pinLoginUrl: savedPins[contact.id] ? `${buildLoginUrl(contact.id)}?mode=pin` : '',
         },
       });
       fetchData();
@@ -453,16 +457,13 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
   };
 
   const handleGenerateInvite = async (contact: Contact) => {
-    // Check savedPins first, then inlinePin, then editing state
-    const pinToPass = savedPins[contact.id] || inlinePin[contact.id] || editing[contact.id]?.pin;
-    if (!pinToPass || !/^\d{4}$/.test(pinToPass)) {
-      toast({ title: 'PIN obrigatório', description: 'Digite o PIN de 4 dígitos do contato', variant: 'destructive' });
-      return;
-    }
+    // PIN is optional: use it when available (saved, inline or in the editing form)
+    const candidatePin = savedPins[contact.id] || inlinePin[contact.id] || editing[contact.id]?.pin || '';
+    const pinToPass = /^\d{4}$/.test(candidatePin) ? candidatePin : '';
     setGeneratingInvite(contact.id);
     try {
       // If PIN comes from inlinePin (not from savedPins), sync hash in DB first
-      const isFromInline = !savedPins[contact.id] && inlinePin[contact.id];
+      const isFromInline = !!pinToPass && !savedPins[contact.id] && !!inlinePin[contact.id];
       if (isFromInline) {
         const { error: pinError } = await supabase.functions.invoke('set-pin', {
           body: { pin: pinToPass, contactId: contact.id }
@@ -478,15 +479,32 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
           contactEmail: contact.email, 
           companyName, 
           companyId,
-          pin: pinToPass,
+          pin: pinToPass || undefined,
         }
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       if (data?.credentials) {
+        const c = data.credentials;
+        const baseUrl = c.loginUrl || buildLoginUrl(contact.id);
+        let password = c.password as string | undefined;
+        if (!password) {
+          const { data: pwData } = await supabase.functions.invoke('set-client-password', {
+            body: { contactId: contact.id, password: generateStrongPassword(contact.name) },
+          });
+          password = pwData?.password;
+        }
         setCredentialsDialog({
           open: true,
-          credentials: { contactName: contact.name, email: data.credentials.email, password: data.credentials.password, loginUrl: data.credentials.loginUrl, pin: data.credentials.pin || '' },
+          credentials: {
+            contactName: contact.name,
+            email: c.email || contact.email,
+            password: password || '',
+            loginUrl: baseUrl,
+            pin: c.pin || pinToPass || '',
+            emailLoginUrl: c.emailLoginUrl || `${baseUrl}?mode=email&email=${encodeURIComponent(c.email || contact.email)}`,
+            pinLoginUrl: (c.pin || pinToPass) ? (c.pinLoginUrl || `${baseUrl}?mode=pin`) : '',
+          },
         });
       }
       fetchData();
@@ -499,13 +517,19 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
 
   const getWhatsAppMessage = () => {
     if (!credentialsDialog.credentials) return '';
-    const { contactName, pin, loginUrl, email, password } = credentialsDialog.credentials;
-    const accessLines = [
-      pin ? `🔐 *Seu PIN de acesso:* ${pin}` : '',
-      password ? `📧 *E-mail:* ${email}` : '',
-      password ? `🔑 *Senha:* ${password}` : '',
-      `🔹 *Acesse aqui:* ${loginUrl}`,
-    ].filter(Boolean).join('\n');
+    const { contactName, pin, loginUrl, email, password, emailLoginUrl, pinLoginUrl } = credentialsDialog.credentials;
+    const emailBlock = password
+      ? `*Acesso por e-mail e senha*
+📧 E-mail: ${email}
+🔑 Senha: ${password}
+🔗 Link: ${emailLoginUrl || loginUrl}`
+      : '';
+    const pinBlock = pin
+      ? `*Acesso rápido por PIN*
+🔐 PIN: ${pin}
+🔗 Link: ${pinLoginUrl || loginUrl}`
+      : '';
+    const accessLines = [emailBlock, pinBlock].filter(Boolean).join('\n\n');
     return `Olá, *${contactName}*! 👋
 
 A *Equipe WEES* preparou seu acesso ao *Portal ${companyName}*.
@@ -514,7 +538,7 @@ Através dele, você poderá acompanhar os *Diários de Obra (RDOs)*, visualizar
 
 ${accessLines}
 
-Abra o link acima e entre com o PIN (ou com e-mail e senha, se informados acima).
+Basta abrir o link e entrar com os dados acima.
 
 Atenciosamente,
 *Equipe WEES* 🏗️`;
@@ -529,6 +553,48 @@ Atenciosamente,
     } catch {
       toast({ title: 'Erro ao copiar', variant: 'destructive' });
     }
+  };
+
+  const copyValue = async (value: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast({ title: `${label} copiado` });
+    } catch {
+      toast({ title: 'Erro ao copiar', variant: 'destructive' });
+    }
+  };
+
+  const renderCredentialsBody = () => {
+    const c = credentialsDialog.credentials;
+    if (!c) return null;
+    const rows: { label: string; value: string }[] = [
+      { label: 'E-mail', value: c.email },
+      { label: 'Senha', value: c.password },
+      { label: 'Link (e-mail e senha)', value: c.emailLoginUrl || c.loginUrl },
+      ...(c.pin ? [{ label: 'PIN', value: c.pin }] : []),
+      ...(c.pin ? [{ label: 'Link (PIN)', value: c.pinLoginUrl || c.loginUrl }] : []),
+    ].filter(r => !!r.value);
+    return (
+      <div className="space-y-4">
+        <div className="rounded-lg border divide-y">
+          {rows.map(row => (
+            <div key={row.label} className="flex items-center gap-2 px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] text-muted-foreground">{row.label}</p>
+                <p className="text-xs font-mono break-all">{row.value}</p>
+              </div>
+              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => copyValue(row.value, row.label)}>
+                <Copy className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ))}
+        </div>
+        <Textarea readOnly value={getWhatsAppMessage()} className="min-h-[180px] font-mono text-sm resize-none" />
+        <Button onClick={handleCopyMessage} className="w-full" variant={copied ? 'secondary' : 'default'}>
+          {copied ? <><Check className="h-4 w-4 mr-2" />Copiado!</> : <><Copy className="h-4 w-4 mr-2" />Copiar Mensagem</>}
+        </Button>
+      </div>
+    );
   };
 
   const formatInvitationStatus = (contact: Contact) => {
@@ -784,55 +850,19 @@ Atenciosamente,
               <div className="flex flex-col gap-2 w-full">
                 {(() => {
                   const hasPinInMemory = !!(savedPins[contact.id] && /^\d{4}$/.test(savedPins[contact.id]));
-                  const needsInlinePin = !hasPinInMemory && !!contact.pin_hash;
-                  const noPinAtAll = !hasPinInMemory && !contact.pin_hash;
+                  const showPinInput = !hasPinInMemory;
 
-                  if (noPinAtAll) {
-                    return (
-                      <div className="flex flex-col gap-1.5 w-full">
-                        <Button
-                          variant="default"
-                          className="w-full bg-black text-white hover:bg-black/90 gap-2"
-                          onClick={() => { startEditing(contact); toast({ title: 'Defina um PIN', description: 'Configure um PIN de 4 dígitos para gerar o convite' }); }}
-                        >
-                          <KeyRound className="h-4 w-4 shrink-0" />
-                          Configurar PIN
-                        </Button>
-                        <p className="text-[11px] text-muted-foreground text-center leading-tight px-1">
-                          Defina um PIN de 4 dígitos para liberar o convite
-                        </p>
-                      </div>
-                    );
-                  }
-
-                  if (needsInlinePin) {
-                    return (
-                      <div className="flex flex-col gap-1.5 w-full">
+                  return (
+                    <div className="flex flex-col gap-1.5 w-full">
+                      {showPinInput && (
                         <Input
                           type="text" inputMode="numeric" maxLength={4}
                           value={inlinePin[contact.id] || ''}
                           onChange={e => setInlinePin(prev => ({ ...prev, [contact.id]: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
                           className="h-9 text-sm w-full text-center tracking-widest"
-                          placeholder="Digite o PIN de 4 dígitos"
+                          placeholder="PIN de 4 dígitos (opcional)"
                         />
-                        <Button
-                          variant="default"
-                          className="w-full bg-black text-white hover:bg-black/90 gap-2"
-                          disabled={isGenerating || !inlinePin[contact.id] || inlinePin[contact.id]?.length !== 4}
-                          onClick={() => handleGenerateInvite(contact)}
-                        >
-                          {isGenerating ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Link2 className="h-4 w-4 shrink-0" />}
-                          Gerar texto de convite
-                        </Button>
-                        <p className="text-[11px] text-muted-foreground text-center leading-tight px-1">
-                          Copiar o texto gerado e colar no WhatsApp do cliente
-                        </p>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div className="flex flex-col gap-1.5 w-full">
+                      )}
                       <Button
                         variant="default"
                         className="w-full bg-black text-white hover:bg-black/90 gap-2"
@@ -843,7 +873,7 @@ Atenciosamente,
                         Gerar texto de convite
                       </Button>
                       <p className="text-[11px] text-muted-foreground text-center leading-tight px-1">
-                        Copiar o texto gerado e colar no WhatsApp do cliente
+                        Gera e-mail + senha e o link de acesso. O PIN é opcional.
                       </p>
                     </div>
                   );
@@ -984,14 +1014,9 @@ Atenciosamente,
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Convite Gerado</DialogTitle>
-            <DialogDescription>Copie a mensagem abaixo e envie via WhatsApp</DialogDescription>
+            <DialogDescription>Credenciais e links de acesso do cliente</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <Textarea readOnly value={getWhatsAppMessage()} className="min-h-[200px] font-mono text-sm resize-none" />
-            <Button onClick={handleCopyMessage} className="w-full" variant={copied ? "secondary" : "default"}>
-              {copied ? <><Check className="h-4 w-4 mr-2" />Copiado!</> : <><Copy className="h-4 w-4 mr-2" />Copiar Mensagem</>}
-            </Button>
-          </div>
+          {renderCredentialsBody()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setCredentialsDialog({ open: false, credentials: null })}>Fechar</Button>
           </DialogFooter>
@@ -1219,14 +1244,9 @@ Atenciosamente,
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Convite Gerado</DialogTitle>
-            <DialogDescription>Copie a mensagem abaixo e envie via WhatsApp</DialogDescription>
+            <DialogDescription>Credenciais e links de acesso do cliente</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <Textarea readOnly value={getWhatsAppMessage()} className="min-h-[200px] font-mono text-sm resize-none" />
-            <Button onClick={handleCopyMessage} className="w-full" variant={copied ? "secondary" : "default"}>
-              {copied ? <><Check className="h-4 w-4 mr-2" />Copiado!</> : <><Copy className="h-4 w-4 mr-2" />Copiar Mensagem</>}
-            </Button>
-          </div>
+          {renderCredentialsBody()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setCredentialsDialog({ open: false, credentials: null })}>Fechar</Button>
           </DialogFooter>
