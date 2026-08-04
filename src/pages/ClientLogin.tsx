@@ -266,8 +266,6 @@ export default function ClientLogin() {
     }
   };
 
-  const handleEmailLogin = async () => {
-
   const buildRedirectTo = () => {
     const url = new URL(window.location.href);
     url.searchParams.set('first_access', '1');
