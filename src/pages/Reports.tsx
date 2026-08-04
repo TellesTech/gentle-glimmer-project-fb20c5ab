@@ -6,7 +6,7 @@ import {
   Plus, Search, Filter, Calendar, Building2, 
   Clock, MapPin, Users, ChevronRight, FileText,
   Loader2, CheckSquare, Square, X, Download,
-  FolderOpen, Timer, FileSignature, ChevronLeft, Send,
+  FolderOpen, Timer, FileSignature, ChevronLeft, ArrowLeft, Send,
   MoreVertical, Edit, Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -447,22 +447,20 @@ export default function Reports() {
           size="sm"
           onClick={() => {
             if (cabinetBreadcrumbs.length > 0 && cabinetBreadcrumbs[0].onClick) {
-              // Go back one level: find the second-to-last crumb with onClick
               const backIndex = cabinetBreadcrumbs.length - 2;
               if (backIndex >= 0 && cabinetBreadcrumbs[backIndex].onClick) {
                 cabinetBreadcrumbs[backIndex].onClick!();
               } else {
-                // At first level, go to root (clear company)
                 navigate('/reports', { replace: true });
               }
             } else {
               navigate(-1);
             }
           }}
-          className="gap-1 h-7 px-2"
+          className="gap-1.5 h-7 px-2 text-muted-foreground hover:text-foreground transition-colors"
         >
-          <ChevronLeft className="h-4 w-4" />
-          Voltar
+          <ArrowLeft className="h-4 w-4" />
+          <span>Voltar</span>
         </Button>
         {cabinetBreadcrumbs.length > 0 && (
           <>
