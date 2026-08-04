@@ -721,56 +721,58 @@ export default function ClientDashboard() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-12 p-3 sm:p-6 pt-10">
-                  {month.activities.map((a) => {
-                    const status = a.pending === 0 ? 'completed' : a.signed > 0 ? 'partial' : 'pending';
-                    const gradient = 'linear-gradient(135deg, #f4c430, #d4a017)';
-                    const subtitle = a.lastDate
-                      ? `${a.total} RDO(s) · ${format(parseISO(a.lastDate), 'dd/MM/yyyy', { locale: ptBR })}`
-                      : `${a.total} RDO(s)`;
-                    
-                    const realReports = a.reports.slice(0, 5);
-                    const projects: FolderProject[] = realReports.length > 0
-                      ? realReports.map((r) => {
-                          const dateLabel = r.date ? format(parseISO(r.date), 'dd/MM/yyyy', { locale: ptBR }) : 'Sem data';
-                          const numLabel = r.rdoNumber != null ? `RDO ${r.rdoNumber}` : 'RDO';
-                          return {
-                            id: r.id,
-                            image: coverPhotosMap?.get(r.id) || buildRdoCardImage(r.rdoNumber, dateLabel, r.status),
-                            title: `${numLabel} · ${dateLabel} · ${r.status === 'approved' ? 'Assinado' : 'Pendente'}`,
-                          };
-                        })
-                      : [{ id: `${a.id}-empty`, image: buildRdoCardImage(null, 'Sem RDOs', 'pending'), title: 'Sem RDOs' }];
-                    
-                    return (
-                      <div key={a.id} className="flex flex-col items-center gap-2 group">
-                        <AnimatedFolder
-                          title={a.name}
-                          subtitle={subtitle}
-                          projects={projects}
-                          gradient={gradient}
-                          onFolderClick={() => navigate(`/client/activity/${a.id}?${searchParams.toString()}`)}
-                        />
-                        <div className="mt-2 flex items-center gap-1.5 flex-wrap justify-center min-h-[24px]">
-                          {status === 'completed' && (
-                            <Badge className="bg-[hsl(var(--success))] hover:bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] gap-1 text-[10px] px-2 py-0">
-                              <CheckCircle className="h-3 w-3" /> Tudo assinado
-                            </Badge>
-                          )}
-                          {status === 'partial' && (
-                            <Badge variant="secondary" className="gap-1 text-[10px] px-2 py-0 border-primary/20">
-                              <Clock className="h-3 w-3" /> {a.pending} pendente(s)
-                            </Badge>
-                          )}
-                          {status === 'pending' && (
-                            <Badge variant="outline" className="gap-1 bg-yellow-500 border-transparent text-white text-[10px] px-2 py-0">
-                              <Clock className="h-3 w-3" /> {a.pending} pendente(s)
-                            </Badge>
-                          )}
+                <CardContent className="p-0">
+                  <div className="divide-y divide-border">
+                    {month.activities.map((a) => {
+                      const status = a.pending === 0 ? 'completed' : a.signed > 0 ? 'partial' : 'pending';
+                      const subtitle = a.lastDate
+                        ? `${a.total} RDO(s) · Último: ${format(parseISO(a.lastDate), 'dd/MM/yyyy', { locale: ptBR })}`
+                        : `${a.total} RDO(s)`;
+
+                      return (
+                        <div
+                          key={a.id}
+                          className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer transition-colors group"
+                          onClick={() => navigate(`/client/activity/${a.id}?${searchParams.toString()}`)}
+                        >
+                          <div className="flex items-center gap-4 min-w-0">
+                            <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shadow-sm">
+                              <Activity className="h-6 w-6" />
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors truncate max-w-[200px] sm:max-w-md">
+                                {a.name}
+                              </h3>
+                              <p className="text-sm text-muted-foreground truncate">
+                                {subtitle}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-4 shrink-0">
+                            <div className="hidden sm:flex items-center gap-2">
+                              {status === 'completed' && (
+                                <Badge className="bg-[hsl(var(--success))] hover:bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] gap-1">
+                                  <CheckCircle className="h-3 w-3" /> Tudo assinado
+                                </Badge>
+                              )}
+                              {status === 'partial' && (
+                                <Badge variant="secondary" className="gap-1 border-primary/20">
+                                  <Clock className="h-3 w-3" /> {a.pending} pendente(s)
+                                </Badge>
+                              )}
+                              {status === 'pending' && (
+                                <Badge variant="outline" className="gap-1 bg-yellow-500 border-transparent text-white">
+                                  <Clock className="h-3 w-3" /> {a.pending} pendente(s)
+                                </Badge>
+                              )}
+                            </div>
+                            <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </CardContent>
               </Card>
             ))}
