@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
  import {
-   ChevronLeft, Sun, Sunset, Moon, MapPin, Clock, Users, User,
+   ChevronLeft, ArrowLeft, Sun, Sunset, Moon, MapPin, Clock, Users, User,
    AlertTriangle, AlertCircle, CheckCircle2, Circle, Camera, Building2, FolderKanban,
    Edit, Copy, Download, Loader2, X, Archive, Trash2, RotateCcw,
    FileText, CalendarDays, Timer, MessageSquare, ClipboardList, History, Share2,
@@ -758,9 +758,14 @@ export default function ReportDetail() {
   return (
     <div className="space-y-6 pb-28 md:pb-6">
       {/* Back Button */}
-      <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-2">
-        <ChevronLeft className="h-4 w-4" />
-        Voltar
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => navigate(-1)}
+        className="gap-1.5 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        <span>Voltar</span>
       </Button>
 
       {/* Sibling Report Tabs - always visible */}
@@ -1538,9 +1543,9 @@ export default function ReportDetail() {
           
           {/* Grupo de Ações de Edição - Centralizado */}
           <div className="flex gap-1.5 sm:gap-2 flex-wrap justify-center w-full">
-            <Button variant="outline" size="sm" className="min-w-0 px-2 sm:px-3" onClick={() => navigate(-1)}>
-              <ChevronLeft className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Voltar</span>
+            <Button variant="outline" size="sm" className="min-w-0 px-2 sm:px-3 text-muted-foreground hover:text-foreground transition-colors" onClick={() => navigate(-1)}>
+              <ArrowLeft className="w-4 h-4 sm:mr-2" />
+              <span>Voltar</span>
             </Button>
             {canEdit && !isArchived && (
               <Button asChild variant="outline" size="sm" className="min-w-0 px-2 sm:px-3">
