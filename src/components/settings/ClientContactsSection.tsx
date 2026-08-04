@@ -555,8 +555,49 @@ Atenciosamente,
     }
   };
 
-  const formatInvitationStatus = (contact: Contact) => {
+  const copyValue = async (value: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast({ title: `${label} copiado` });
+    } catch {
+      toast({ title: 'Erro ao copiar', variant: 'destructive' });
+    }
+  };
 
+  const renderCredentialsBody = () => {
+    const c = credentialsDialog.credentials;
+    if (!c) return null;
+    const rows: { label: string; value: string }[] = [
+      { label: 'E-mail', value: c.email },
+      { label: 'Senha', value: c.password },
+      { label: 'Link (e-mail e senha)', value: c.emailLoginUrl || c.loginUrl },
+      ...(c.pin ? [{ label: 'PIN', value: c.pin }] : []),
+      ...(c.pin ? [{ label: 'Link (PIN)', value: c.pinLoginUrl || c.loginUrl }] : []),
+    ].filter(r => !!r.value);
+    return (
+      <div className="space-y-4">
+        <div className="rounded-lg border divide-y">
+          {rows.map(row => (
+            <div key={row.label} className="flex items-center gap-2 px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] text-muted-foreground">{row.label}</p>
+                <p className="text-xs font-mono break-all">{row.value}</p>
+              </div>
+              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => copyValue(row.value, row.label)}>
+                <Copy className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ))}
+        </div>
+        <Textarea readOnly value={getWhatsAppMessage()} className="min-h-[180px] font-mono text-sm resize-none" />
+        <Button onClick={handleCopyMessage} className="w-full" variant={copied ? 'secondary' : 'default'}>
+          {copied ? <><Check className="h-4 w-4 mr-2" />Copiado!</> : <><Copy className="h-4 w-4 mr-2" />Copiar Mensagem</>}
+        </Button>
+      </div>
+    );
+  };
+
+  const formatInvitationStatus = (contact: Contact) => {
     if (contact.invitation_sent_at) {
       const date = format(new Date(contact.invitation_sent_at), "dd/MM/yyyy", { locale: ptBR });
       const count = contact.invitation_count || 1;
