@@ -200,6 +200,47 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
     }
   }, [siteId, isCreating]);
 
+  const generateStrongPassword = (name: string) => {
+    const clean = (name || 'Cliente').normalize('NFD').replace(/[^a-zA-Z]/g, '').slice(0, 8) || 'Cliente';
+    const base = clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+    const digits = Math.floor(1000 + Math.random() * 9000);
+    return `${base}@${digits}`;
+  };
+
+  const buildLoginUrl = (contactId?: string) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    if (!companySlug) return `${origin}/login`;
+    const siteSlug = contactId ? contactSiteSlugs?.[contactId] : undefined;
+    return siteSlug ? `${origin}/${companySlug}/${siteSlug}` : `${origin}/${companySlug}`;
+  };
+
+  const handleSetPassword = async (contact: Contact, password?: string) => {
+    const finalPassword = password && password.length >= 8 ? password : generateStrongPassword(contact.name);
+    setSettingPassword(contact.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('set-client-password', {
+        body: { contactId: contact.id, password: finalPassword },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setCredentialsDialog({
+        open: true,
+        credentials: {
+          contactName: contact.name,
+          email: data?.email || contact.email,
+          password: data?.password || finalPassword,
+          loginUrl: buildLoginUrl(contact.id),
+          pin: savedPins[contact.id] || '',
+        },
+      });
+      fetchData();
+    } catch (error: any) {
+      toast({ title: 'Erro ao definir senha', description: error.message, variant: 'destructive' });
+    } finally {
+      setSettingPassword(null);
+    }
+  };
+
   const startEditing = (contact: Contact) => {
     setShowPassword(prev => ({ ...prev, [contact.id]: false }));
     setEditing(prev => ({
