@@ -225,6 +225,13 @@ export default function ClientReportView() {
     staleTime: 10 * 60 * 1000,
   });
 
+  // Status global das assinaturas do RDO (quem já assinou / quem falta)
+  const resolvedReportId = reportId || (data as any)?.report?.id;
+  const { data: signatureTimeline, summary: signatureSummary } =
+    useReportSignaturesRealtime(resolvedReportId);
+  const pendingSigners = (signatureTimeline?.entries || []).filter((e) => !e.signed);
+  const fullySigned = signatureSummary.total > 0 && signatureSummary.pending === 0;
+
   // Update local profile when data changes
   useEffect(() => {
     if (data?.clientProfile) {
