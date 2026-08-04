@@ -233,6 +233,8 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
           password: data?.password || finalPassword,
           loginUrl: buildLoginUrl(contact.id),
           pin: savedPins[contact.id] || '',
+          emailLoginUrl: `${buildLoginUrl(contact.id)}?mode=email&email=${encodeURIComponent(data?.email || contact.email)}`,
+          pinLoginUrl: savedPins[contact.id] ? `${buildLoginUrl(contact.id)}?mode=pin` : '',
         },
       });
       fetchData();
