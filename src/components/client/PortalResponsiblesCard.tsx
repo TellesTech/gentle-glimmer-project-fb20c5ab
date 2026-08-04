@@ -74,6 +74,11 @@ export function PortalResponsiblesCard({ companyId, siteIds }: Props) {
                 <CardTitle className="text-base flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-primary" />
                   Equipe WEES
+                  {data && data.wees.length > 0 && !weesOpen && (
+                    <span className="text-xs font-normal text-muted-foreground ml-2 truncate max-w-[150px]">
+                      {data.wees.find(p => p.hasSignature)?.name || data.wees[0].name}
+                    </span>
+                  )}
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   {!isLoading && (
@@ -114,7 +119,17 @@ export function PortalResponsiblesCard({ companyId, siteIds }: Props) {
                   <Users className="h-4 w-4 text-primary" />
                   {(() => {
                     const factory = data?.client.find((p) => p.companyName)?.companyName;
-                    return factory ? `Equipe (${factory})` : 'Equipe Cliente';
+                    const label = factory ? `Equipe (${factory})` : 'Equipe Cliente';
+                    return (
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <span className="shrink-0">{label}</span>
+                        {data && data.client.length > 0 && !clientOpen && (
+                          <span className="text-xs font-normal text-muted-foreground truncate max-w-[150px]">
+                            {data.client.find(p => p.hasSignature)?.name || data.client[0].name}
+                          </span>
+                        )}
+                      </div>
+                    );
                   })()}
                 </CardTitle>
                 <div className="flex items-center gap-2">
