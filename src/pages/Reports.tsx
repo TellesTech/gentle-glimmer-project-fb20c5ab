@@ -6,7 +6,7 @@ import {
   Plus, Search, Filter, Calendar, Building2, 
   Clock, MapPin, Users, ChevronRight, FileText,
   Loader2, CheckSquare, Square, X, Download,
-  FolderOpen, Timer, FileSignature, ChevronLeft, Send,
+  FolderOpen, Timer, FileSignature, ChevronLeft, ArrowLeft, Send,
   MoreVertical, Edit, Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
