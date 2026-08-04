@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { PenTool } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -84,6 +85,7 @@ export function SendForSignatureDialog({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [signerType, setSignerType] = useState<'wees' | 'client'>('client');
 
   // Load logged-in WEES profile (signature data)
   useEffect(() => {
@@ -299,22 +301,46 @@ export function SendForSignatureDialog({
 
   const handleSubmit = async () => {
     if (!user?.id) return;
-    if (!weesSigner) {
-      toast.error('Perfil não carregado. Recarregue a página e tente novamente.');
-      return;
-    }
-    if (!weesSigner.signatureData) {
-      toast.error('Cadastre sua assinatura no Perfil antes de enviar.');
-      return;
-    }
-    if (selectedIds.size === 0) {
-      toast.error('Selecione ao menos 1 signatário do cliente.');
-      return;
+    if (signerType === 'wees') {
+      if (!weesSigner) {
+        toast.error('Perfil não carregado. Recarregue a página e tente novamente.');
+        return;
+      }
+      if (!weesSigner.signatureData) {
+        toast.error('Cadastre sua assinatura no Perfil antes de assinar.');
+        return;
+      }
+    } else {
+      if (selectedIds.size === 0) {
+        toast.error('Selecione ao menos 1 signatário do cliente.');
+        return;
+      }
     }
 
     setIsSending(true);
     try {
-      // 1) Insert WEES signature in report_signatures (if not already there for this user)
+      if (signerType === 'wees') {
+        // Just register the WEES signature and we're done (the user might not want to send to client yet)
+        const { error: sigErr } = await supabase
+          .from('report_signatures')
+          .insert({
+            report_id: report.id,
+            signature_data: weesSigner!.signatureData,
+            signer_name: weesSigner!.name,
+            signer_role: weesSigner!.role || 'Equipe WEES',
+            signer_email: weesSigner!.email,
+            signer_user_id: user.id,
+            legal_basis: 'MP 2.200-2/2001',
+          });
+        if (sigErr) throw sigErr;
+
+        await queryClient.invalidateQueries({ queryKey: ['report', report.id] });
+        toast.success('Assinatura WEES registrada com sucesso!');
+        onOpenChange(false);
+        return;
+      }
+
+      // 1) Insert WEES signature if sending to client and not already signed
       const { data: existingSig } = await supabase
         .from('report_signatures')
         .select('id')
@@ -327,10 +353,10 @@ export function SendForSignatureDialog({
           .from('report_signatures')
           .insert({
             report_id: report.id,
-            signature_data: weesSigner.signatureData,
-            signer_name: weesSigner.name,
-            signer_role: weesSigner.role || 'Equipe WEES',
-            signer_email: weesSigner.email,
+            signature_data: weesSigner!.signatureData,
+            signer_name: weesSigner!.name,
+            signer_role: weesSigner!.role || 'Equipe WEES',
+            signer_email: weesSigner!.email,
             signer_user_id: user.id,
             legal_basis: 'MP 2.200-2/2001',
           });
@@ -475,29 +501,94 @@ export function SendForSignatureDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          {/* WEES signer card */}
-          {weesSigner ? (
-            <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-2">
-                <Building2 className="w-4 h-4" />
-                Assinatura WEES (você)
-              </Label>
-              <Card className="border-primary/30 bg-primary/5">
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                      <Building2 className="h-5 w-5 text-primary" />
+        <div className="space-y-6 py-2">
+          {/* Signer Selection */}
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold">Quem irá assinar agora?</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                type="button"
+                variant={signerType === 'wees' ? 'default' : 'outline'}
+                className={cn(
+                  "h-auto py-4 flex flex-col gap-2 border-2",
+                  signerType === 'wees' ? "border-primary bg-primary/10 text-primary hover:bg-primary/20" : "border-muted"
+                )}
+                onClick={() => setSignerType('wees')}
+              >
+                <Building2 className="w-6 h-6" />
+                <div className="text-center">
+                  <p className="font-bold text-xs uppercase tracking-wider">Responsável Wees</p>
+                  <p className="text-[10px] opacity-70 font-normal">Assinatura interna</p>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                variant={signerType === 'client' ? 'default' : 'outline'}
+                className={cn(
+                  "h-auto py-4 flex flex-col gap-2 border-2",
+                  signerType === 'client' ? "border-primary bg-primary/10 text-primary hover:bg-primary/20" : "border-muted"
+                )}
+                onClick={() => setSignerType('client')}
+              >
+                <UserCheck className="w-6 h-6" />
+                <div className="text-center">
+                  <p className="font-bold text-xs uppercase tracking-wider">Cliente</p>
+                  <p className="text-[10px] opacity-70 font-normal">Enviar para o portal</p>
+                </div>
+              </Button>
+            </div>
+          </div>
+
+          {signerType === 'wees' && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12 border-2 border-primary/20">
+                    <AvatarImage src={user?.user_metadata?.avatar_url} />
+                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                      {weesSigner?.name ? weesSigner.name.substring(0, 2).toUpperCase() : 'W'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm truncate">{weesSigner?.name || 'Carregando...'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{weesSigner?.role || weesSigner?.email}</p>
+                  </div>
+                </div>
+
+                {!weesSigner?.signatureData ? (
+                  <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5 text-destructive shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-destructive">Assinatura não cadastrada</p>
+                      <p className="text-[10px] text-destructive/80">Você precisa cadastrar sua firma no perfil antes de assinar.</p>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{weesSigner.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {weesSigner.role ?? weesSigner.email}
-                      </p>
-                    </div>
-                    {weesSigner.signatureData ? (
-                      <Check className="h-4 w-4 text-primary shrink-0" />
-                    ) : (
+                    <Button variant="link" size="sm" className="text-destructive font-bold p-0 h-auto underline" onClick={() => window.location.href = '/settings'}>
+                      Ir para Perfil
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-lg p-2 border border-primary/10">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1 px-1">Prévia da Assinatura</p>
+                    <img src={weesSigner.signatureData} className="max-h-16 mx-auto object-contain" alt="Assinatura" />
+                  </div>
+                )}
+              </div>
+              
+              <Button 
+                className="w-full h-12 text-sm font-bold shadow-lg shadow-primary/20" 
+                onClick={handleSubmit} 
+                disabled={isSending || !weesSigner?.signatureData}
+              >
+                {isSending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <PenTool className="w-4 h-4 mr-2" />}
+                Confirmar Assinatura WEES
+              </Button>
+            </div>
+          )}
+
+          {signerType === 'client' && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+
                       <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
                     )}
                   </div>
