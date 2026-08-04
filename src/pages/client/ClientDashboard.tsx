@@ -666,41 +666,29 @@ export default function ClientDashboard() {
           </Alert>
         )}
 
-        {/* ===== TOP INDICATORS (FLAT LIST STYLE) ===== */}
-        <div className="flex flex-wrap gap-3">
-          <div className="flex-1 min-w-[140px] flex items-center justify-between p-3 bg-card rounded-xl border border-border shadow-sm">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-muted text-muted-foreground">
-                <FileText className="h-4 w-4" />
-              </div>
-              <p className="text-xs font-medium text-muted-foreground">RDOs</p>
-            </div>
-            {reportsLoading ? <Skeleton className="h-5 w-8" /> : (
-              <p className="text-lg font-bold">{metrics.total}</p>
+        {/* ===== TOP INDICATORS (COMPACT PILLS STYLE) ===== */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-card rounded-full border border-border shadow-sm">
+            <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">RDOs</span>
+            {reportsLoading ? <Skeleton className="h-4 w-6" /> : (
+              <span className="text-sm font-bold ml-1">{metrics.total}</span>
             )}
           </div>
 
-          <div className="flex-1 min-w-[140px] flex items-center justify-between p-3 bg-card rounded-xl border border-l-4 border-l-[hsl(var(--success))] shadow-sm">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-[hsl(var(--success))/10] text-[hsl(var(--success))]">
-                <CheckCircle className="h-4 w-4" />
-              </div>
-              <p className="text-xs font-medium text-muted-foreground">Assinados</p>
-            </div>
-            {reportsLoading ? <Skeleton className="h-5 w-8" /> : (
-              <p className="text-lg font-bold text-[hsl(var(--success))]">{metrics.signed}</p>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[hsl(var(--success))/5] rounded-full border border-[hsl(var(--success))/20] shadow-sm">
+            <CheckCircle className="h-3.5 w-3.5 text-[hsl(var(--success))]" />
+            <span className="text-xs font-semibold text-[hsl(var(--success))] uppercase tracking-wider">Assinados</span>
+            {reportsLoading ? <Skeleton className="h-4 w-6" /> : (
+              <span className="text-sm font-bold ml-1 text-[hsl(var(--success))]">{metrics.signed}</span>
             )}
           </div>
 
-          <div className="flex-1 min-w-[140px] flex items-center justify-between p-3 bg-card rounded-xl border border-l-4 border-l-primary shadow-sm">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
-                <Clock className="h-4 w-4" />
-              </div>
-              <p className="text-xs font-medium text-muted-foreground">Pendentes</p>
-            </div>
-            {reportsLoading ? <Skeleton className="h-5 w-8" /> : (
-              <p className="text-lg font-bold text-primary">{metrics.pending}</p>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 rounded-full border border-primary/20 shadow-sm">
+            <Clock className="h-3.5 w-3.5 text-primary" />
+            <span className="text-xs font-semibold text-primary uppercase tracking-wider">Pendentes</span>
+            {reportsLoading ? <Skeleton className="h-4 w-6" /> : (
+              <span className="text-sm font-bold ml-1 text-primary">{metrics.pending}</span>
             )}
           </div>
         </div>
