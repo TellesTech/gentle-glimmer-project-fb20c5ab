@@ -3549,6 +3549,10 @@ export type Database = {
     }
     Functions: {
       can_create_company: { Args: { _user_id: string }; Returns: boolean }
+      can_view_portal_report: {
+        Args: { _report_id: string; _user_id: string }
+        Returns: boolean
+      }
       client_has_role: {
         Args: {
           _role: Database["public"]["Enums"]["client_role"]
@@ -3706,6 +3710,7 @@ export type Database = {
           source: string
         }[]
       }
+      portal_user_site_ids: { Args: { _user_id: string }; Returns: string[] }
       rdo_can: { Args: { _action: string }; Returns: boolean }
       resolve_client_portal_branding: {
         Args: { p_company_id?: string; p_site_id?: string }
