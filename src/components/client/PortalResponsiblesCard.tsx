@@ -74,6 +74,11 @@ export function PortalResponsiblesCard({ companyId, siteIds }: Props) {
                 <CardTitle className="text-base flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-primary" />
                   Equipe WEES
+                  {data && data.wees.length > 0 && !weesOpen && (
+                    <span className="text-xs font-normal text-muted-foreground ml-2 truncate max-w-[150px]">
+                      {data.wees.find(p => p.hasSignature)?.name || data.wees[0].name}
+                    </span>
+                  )}
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   {!isLoading && (
