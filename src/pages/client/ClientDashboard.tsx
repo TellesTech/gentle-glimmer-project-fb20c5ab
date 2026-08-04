@@ -330,7 +330,7 @@ export default function ClientDashboard() {
     return all.filter(r => {
       if (!r.report?.date) return true;
       const d = parseISO(r.report.date);
-      return !hiddenMonthKeys.has(`${d.getFullYear()}-${d.getMonth() + 1}`);
+      return !hiddenMonthKeys.has(`${getYear(d)}-${getMonth(d)}`);
     });
   }, [reportsData, hiddenMonthKeys, isSuperAdmin]);
 
