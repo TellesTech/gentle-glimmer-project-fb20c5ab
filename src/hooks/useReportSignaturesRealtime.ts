@@ -50,9 +50,10 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
       const clientCompanyName = (report as any)?.project?.site?.company?.name || null;
 
       // WEES brand name + lista de assinantes ad-hoc considerados internos (sem email)
-      const [{ data: branding }, { data: settings }] = await Promise.all([
+      const [{ data: branding }, { data: settings }, { data: directory }] = await Promise.all([
         (supabase as any).rpc('get_public_branding'),
         (supabase as any).from('system_settings').select('internal_signer_names').limit(1).maybeSingle(),
+        (supabase as any).rpc('get_internal_signer_directory'),
       ]);
       const weesCompanyName = (branding?.[0] as any)?.system_name || 'WEES';
       const normalize = (s: string) =>
@@ -64,6 +65,16 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
       const internalSignerNames = new Set<string>(
         ((settings?.internal_signer_names as string[]) || []).map(normalize),
       );
+
+      // Diretório oficial de colaboradores internos (profiles), acessível também
+      // no portal do cliente via função SECURITY DEFINER. É a fonte de verdade
+      // para separar quem é da WEES de quem é do cliente.
+      const internalDirectory = new Map<string, { name: string; jobTitle: string | null }>();
+      ((directory as any[]) || []).forEach((d) => {
+        const key = normalize(d.display_name || d.name_key || '');
+        if (key) internalDirectory.set(key, { name: d.display_name, jobTitle: d.job_title || null });
+      });
+      const internalInfo = (name: string) => internalDirectory.get(normalize(name || ''));
 
       // 2) Recorded signatures + approvers + responsibles in parallel
       const [
