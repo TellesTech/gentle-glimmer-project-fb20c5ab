@@ -666,37 +666,43 @@ export default function ClientDashboard() {
           </Alert>
         )}
 
-        {/* ===== TOP CARDS: Total, Assinados, Pendentes ===== */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center p-4 sm:p-6 text-center">
-              <FileText className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground mb-2" />
-              {reportsLoading ? <Skeleton className="h-10 w-14" /> : (
-                <p className="text-3xl sm:text-4xl font-extrabold">{metrics.total}</p>
-              )}
-              <p className="text-sm text-muted-foreground mt-1">Total de RDOs Enviados para Assinatura</p>
-            </CardContent>
-          </Card>
+        {/* ===== TOP INDICATORS (FLAT LIST STYLE) ===== */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1 flex items-center justify-between p-4 bg-card rounded-xl border border-border shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-muted text-muted-foreground">
+                <FileText className="h-5 w-5" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">Total de RDOs</p>
+            </div>
+            {reportsLoading ? <Skeleton className="h-6 w-10" /> : (
+              <p className="text-xl font-bold">{metrics.total}</p>
+            )}
+          </div>
 
-          <Card className="border-l-4 border-l-[hsl(var(--success))]">
-            <CardContent className="flex flex-col items-center justify-center p-4 sm:p-6 text-center">
-              <CheckCircle className="h-7 w-7 sm:h-8 sm:w-8 text-[hsl(var(--success))] mb-2" />
-              {reportsLoading ? <Skeleton className="h-10 w-14" /> : (
-                <p className="text-3xl sm:text-4xl font-extrabold text-[hsl(var(--success))]">{metrics.signed}</p>
-              )}
-              <p className="text-sm text-muted-foreground mt-1">Assinados</p>
-            </CardContent>
-          </Card>
+          <div className="flex-1 flex items-center justify-between p-4 bg-card rounded-xl border border-l-4 border-l-[hsl(var(--success))] shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-[hsl(var(--success))/10] text-[hsl(var(--success))]">
+                <CheckCircle className="h-5 w-5" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">Assinados</p>
+            </div>
+            {reportsLoading ? <Skeleton className="h-6 w-10" /> : (
+              <p className="text-xl font-bold text-[hsl(var(--success))]">{metrics.signed}</p>
+            )}
+          </div>
 
-          <Card className="border-l-4 border-l-primary">
-            <CardContent className="flex flex-col items-center justify-center p-4 sm:p-6 text-center">
-              <Clock className="h-7 w-7 sm:h-8 sm:w-8 text-primary mb-2" />
-              {reportsLoading ? <Skeleton className="h-10 w-14" /> : (
-                <p className="text-3xl sm:text-4xl font-extrabold text-primary">{metrics.pending}</p>
-              )}
-              <p className="text-sm text-muted-foreground mt-1">Pendentes</p>
-            </CardContent>
-          </Card>
+          <div className="flex-1 flex items-center justify-between p-4 bg-card rounded-xl border border-l-4 border-l-primary shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <Clock className="h-5 w-5" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">Pendentes</p>
+            </div>
+            {reportsLoading ? <Skeleton className="h-6 w-10" /> : (
+              <p className="text-xl font-bold text-primary">{metrics.pending}</p>
+            )}
+          </div>
         </div>
 
         {/* Histórico chart removed */}
