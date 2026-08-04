@@ -461,29 +461,6 @@ export default function ClientDashboard() {
   // Aggregate by Month/Year and then by Activity (project)
   type ActivityReport = { id: string; date: string | null; status: string; rdoNumber: number | null };
 
-  // ===== Pastas de mês ocultas (somente super admin gerencia) =====
-  const isSuperAdmin = role === 'super_admin';
-  const hiddenScopeCompanyId = adminCompanyId || clientProfile?.company_id || null;
-
-  const { data: hiddenMonths } = useQuery({
-    queryKey: ['portal-hidden-months', hiddenScopeCompanyId, adminSiteId],
-    queryFn: async () => {
-      let q = supabase.from('portal_hidden_months').select('id, company_id, site_id, year, month');
-      if (adminSiteId) q = q.eq('site_id', adminSiteId);
-      else if (hiddenScopeCompanyId) q = q.eq('company_id', hiddenScopeCompanyId);
-      const { data } = await q;
-      return (data || []) as { id: string; company_id: string; site_id: string; year: number; month: number }[];
-    },
-    enabled: !!hiddenScopeCompanyId || !!adminSiteId,
-  });
-
-  const hiddenMonthKeys = useMemo(
-    () => new Set((hiddenMonths || []).map(h => `${h.year}-${h.month}`)),
-    [hiddenMonths],
-  );
-
-  const canToggleHiddenMonth = isSuperAdmin && !!adminSiteId && !!adminCompanyId;
-
   const toggleHiddenMonth = async (
     e: React.MouseEvent,
     month: { year: number; month: number; monthName: string },
