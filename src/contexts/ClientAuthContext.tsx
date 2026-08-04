@@ -13,6 +13,7 @@ interface ClientProfile {
   company_id: string | null;
   is_active: boolean;
   can_approve: boolean;
+  must_change_password?: boolean;
   _source?: 'client_profiles' | 'company_contacts';
 }
 
@@ -56,7 +57,7 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
       // Fallback: search in company_contacts
       const { data: contact, error: contactError } = await supabase
         .from('company_contacts')
-        .select('id, email, name, company_id, role, signature_data, is_active, can_approve')
+        .select('id, email, name, company_id, role, signature_data, is_active, can_approve, must_change_password')
         .eq('user_id', userId)
         .eq('is_active', true)
         .maybeSingle();
@@ -77,6 +78,7 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
           signature_data: contact.signature_data,
           is_active: contact.is_active ?? true,
           can_approve: contact.can_approve ?? false,
+          must_change_password: (contact as any).must_change_password ?? false,
           _source: 'company_contacts' as const,
         } as ClientProfile;
       }

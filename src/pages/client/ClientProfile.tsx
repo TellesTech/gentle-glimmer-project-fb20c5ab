@@ -40,6 +40,12 @@ export default function ClientProfile() {
   } | null>(null);
 
   useEffect(() => {
+    if (window.location.hash === '#seguranca') {
+      setTimeout(() => document.getElementById('seguranca')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    }
+  }, []);
+
+  useEffect(() => {
     if (isInternalUser && user?.id) {
       supabase.from('profiles').select('name, email, job_title, signature_data').eq('id', user.id).single()
         .then(({ data }) => { if (data) setAdminFullProfile(data); });
@@ -167,8 +173,8 @@ export default function ClientProfile() {
   };
 
   const handlePasswordChange = async () => {
-    if (newPassword.length < 6) {
-      toast({ title: 'Senha muito curta', description: 'A senha deve ter pelo menos 6 caracteres', variant: 'destructive' });
+    if (newPassword.length < 8) {
+      toast({ title: 'Senha muito curta', description: 'A senha deve ter pelo menos 8 caracteres', variant: 'destructive' });
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -179,6 +185,12 @@ export default function ClientProfile() {
     try {
       const { error } = await (supabase as any).auth.updateUser({ password: newPassword });
       if (error) throw error;
+      if (clientProfile?._source === 'company_contacts') {
+        await supabase.from('company_contacts').update({ must_change_password: false }).eq('id', clientProfile.id);
+      } else if (clientProfile?._source === 'client_profiles') {
+        await supabase.from('client_profiles').update({ must_change_password: false }).eq('id', clientProfile.id);
+      }
+      await refreshProfile();
       setNewPassword('');
       setConfirmPassword('');
       toast({ title: 'Senha alterada', description: 'Sua senha foi atualizada com sucesso' });
@@ -405,14 +417,16 @@ export default function ClientProfile() {
         </Card>
 
         {/* Security - Password Change */}
-        <Card>
+        <Card id="seguranca" className={clientProfile?.must_change_password ? 'border-amber-500/60 order-first' : ''}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
               Segurança
             </CardTitle>
             <CardDescription>
-              Altere sua senha de acesso por email
+              {clientProfile?.must_change_password
+                ? 'Você está usando uma senha temporária. Defina sua própria senha de acesso.'
+                : 'Altere sua senha de acesso por e-mail'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -425,7 +439,7 @@ export default function ClientProfile() {
                     type={showPassword ? 'text' : 'password'}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder="Mínimo 8 caracteres"
                   />
                   <Button
                     type="button"

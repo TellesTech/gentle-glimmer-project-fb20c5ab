@@ -89,8 +89,9 @@ serve(async (req) => {
     let userId = contact.user_id as string | null;
 
     if (userId) {
-      const { error: updErr } = await admin.auth.admin.updateUserById(userId, { password });
+      const { error: updErr } = await admin.auth.admin.updateUserById(userId, { password, email_confirm: true });
       if (updErr) return json({ error: `Falha ao definir a senha: ${updErr.message}` }, 500);
+      await admin.from("company_contacts").update({ must_change_password: true }).eq("id", contact.id);
     } else {
       const { data: created, error: createErr } = await admin.auth.admin.createUser({
         email: contact.email,
@@ -103,12 +104,12 @@ serve(async (req) => {
         const existing = list?.users?.find((u: any) => u.email === contact.email);
         if (!existing) return json({ error: `Falha ao criar acesso: ${createErr.message}` }, 500);
         userId = existing.id;
-        const { error: updErr } = await admin.auth.admin.updateUserById(userId!, { password });
+        const { error: updErr } = await admin.auth.admin.updateUserById(userId!, { password, email_confirm: true });
         if (updErr) return json({ error: `Falha ao definir a senha: ${updErr.message}` }, 500);
       } else {
         userId = created.user.id;
       }
-      await admin.from("company_contacts").update({ user_id: userId }).eq("id", contact.id);
+      await admin.from("company_contacts").update({ user_id: userId, must_change_password: true }).eq("id", contact.id);
     }
 
     return json({ success: true, userId, email: contact.email, password });
