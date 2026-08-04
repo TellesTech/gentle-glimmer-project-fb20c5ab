@@ -238,8 +238,10 @@ export default function ClientLogin() {
       setMode('pin');
       setPin('');
     } else {
-      setMode('email');
-      setEmail(contact.email);
+      setMode('magic');
+      setMagicEmail(contact.email);
+      setMagicSent(false);
+      setMagicCode('');
     }
   };
 
@@ -363,7 +365,7 @@ export default function ClientLogin() {
       contacts.length === 0 &&
       mode === 'select'
     ) {
-      setMode('email');
+      setMode('magic');
     }
   }, [loading, showSiteSelection, hasConfiguredContacts, contacts.length, mode]);
 
