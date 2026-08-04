@@ -229,10 +229,6 @@ export default function ClientLogin() {
   };
 
   const handleContactSelect = (contact: ContactInfo) => {
-    if (!contact.has_auth && !contact.has_pin) {
-      toast({ title: 'Convite pendente', description: 'Este contato ainda não recebeu o convite de acesso. Solicite ao administrador.', variant: 'destructive' });
-      return;
-    }
     setSelectedContact(contact);
     if (contact.has_pin) {
       setMode('pin');
