@@ -827,14 +827,16 @@ export default function ClientDashboard() {
         {/* Histórico chart removed */}
 
         {/* ===== NAVEGAÇÃO POR PASTAS (ESTILO WINDOWS) ===== */}
-        {monthFolders.length > 0 && (
+        {visibleMonthFolders.length > 0 && (
           <div className="space-y-6">
             {!selectedMonthId ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 sm:gap-10 py-4">
-                {monthFolders.map((month) => (
+                {visibleMonthFolders.map((month) => {
+                  const isHidden = hiddenMonthKeys.has(`${month.year}-${month.month}`);
+                  return (
                   <div
                     key={month.id}
-                    className="flex flex-col items-center gap-3 group cursor-pointer"
+                    className={cn('flex flex-col items-center gap-3 group cursor-pointer', isHidden && 'opacity-50')}
                     onClick={() => setSelectedMonthId(month.id)}
                   >
                     <div className="relative w-24 h-20 sm:w-32 sm:h-24 transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
@@ -864,10 +866,25 @@ export default function ClientDashboard() {
                           <Download className="h-3.5 w-3.5" />
                         )}
                       </button>
+
+                      {/* Ocultar/reexibir pasta do mês (somente super admin) */}
+                      {canToggleHiddenMonth && (
+                        <button
+                          type="button"
+                          title={isHidden ? 'Reexibir pasta para o cliente' : 'Ocultar pasta do cliente'}
+                          onClick={(e) => toggleHiddenMonth(e, month, isHidden)}
+                          className="absolute -top-2 -left-2 z-30 rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-primary hover:border-primary transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                        >
+                          {isHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                        </button>
+                      )}
                     </div>
                     <div className="text-center min-w-0 px-1">
                       <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">{month.monthName}</p>
                       <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-tight">{month.year}</p>
+                      {isHidden && (
+                        <Badge variant="secondary" className="mt-1 h-4 px-1.5 text-[10px]">Oculto</Badge>
+                      )}
                       {downloadingMonthId === month.id && downloadProgress && (
                         <p className="text-[10px] text-primary font-semibold mt-0.5">
                           {downloadProgress.done}/{downloadProgress.total}
@@ -875,7 +892,8 @@ export default function ClientDashboard() {
                       )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="space-y-1 animate-in fade-in slide-in-from-left-4 duration-300">
@@ -883,12 +901,12 @@ export default function ClientDashboard() {
                   onBack={() => setSelectedMonthId(null)}
                   icon={<Calendar className="h-5 w-5" />}
                   iconClassName="bg-yellow-100 text-yellow-700"
-                  title={`${monthFolders.find(m => m.id === selectedMonthId)?.monthName ?? ''} ${monthFolders.find(m => m.id === selectedMonthId)?.year ?? ''}`}
+                  title={`${visibleMonthFolders.find(m => m.id === selectedMonthId)?.monthName ?? ''} ${visibleMonthFolders.find(m => m.id === selectedMonthId)?.year ?? ''}`}
                   className="mb-0"
                 />
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 sm:gap-10 pt-1 pb-4">
-                  {monthFolders.find(m => m.id === selectedMonthId)?.activities.map((a) => {
+                  {visibleMonthFolders.find(m => m.id === selectedMonthId)?.activities.map((a) => {
                     const status = a.pending === 0 ? 'completed' : a.signed > 0 ? 'partial' : 'pending';
                     
                     return (
