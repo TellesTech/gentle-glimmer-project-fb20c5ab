@@ -564,6 +564,25 @@ Atenciosamente,
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEditing(contact)}>
                   <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        disabled={settingPassword === contact.id}
+                        onClick={() => handleSetPassword(contact)}
+                        aria-label="Gerar senha de acesso"
+                      >
+                        {settingPassword === contact.id
+                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          : <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Gerar nova senha de acesso (e-mail + senha)</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteConfirm({ open: true, contact })}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
