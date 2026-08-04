@@ -40,6 +40,12 @@ export default function ClientProfile() {
   } | null>(null);
 
   useEffect(() => {
+    if (window.location.hash === '#seguranca') {
+      setTimeout(() => document.getElementById('seguranca')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    }
+  }, []);
+
+  useEffect(() => {
     if (isInternalUser && user?.id) {
       supabase.from('profiles').select('name, email, job_title, signature_data').eq('id', user.id).single()
         .then(({ data }) => { if (data) setAdminFullProfile(data); });
