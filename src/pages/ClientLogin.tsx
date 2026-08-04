@@ -369,19 +369,18 @@ export default function ClientLogin() {
   const pinContacts = contacts.filter(c => c.has_pin);
   const hasPinContacts = pinContacts.length > 0;
 
-  // Email/password is the default entry point. The PIN screen only shows up
-  // once at least one contact of this unit has already created a PIN.
+  // Email/password is always the default entry point. PIN is a secondary path,
+  // reachable through a link below the form (or via ?mode=pin in the invite).
   useEffect(() => {
     if (
       !loading &&
       !urlModeApplied &&
       !showSiteSelection &&
-      !hasPinContacts &&
       mode === 'select'
     ) {
       setMode('email');
     }
-  }, [loading, urlModeApplied, showSiteSelection, hasPinContacts, mode]);
+  }, [loading, urlModeApplied, showSiteSelection, mode]);
 
   if (loading) {
     return (
