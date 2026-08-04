@@ -2898,6 +2898,7 @@ export type Database = {
           longitude: number | null
           name: string
           photo_url: string | null
+          portal_collaborator_id: string | null
           slug: string | null
           state: string | null
           updated_at: string | null
@@ -2912,6 +2913,7 @@ export type Database = {
           longitude?: number | null
           name: string
           photo_url?: string | null
+          portal_collaborator_id?: string | null
           slug?: string | null
           state?: string | null
           updated_at?: string | null
@@ -2926,6 +2928,7 @@ export type Database = {
           longitude?: number | null
           name?: string
           photo_url?: string | null
+          portal_collaborator_id?: string | null
           slug?: string | null
           state?: string | null
           updated_at?: string | null
@@ -2936,6 +2939,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sites_portal_collaborator_id_fkey"
+            columns: ["portal_collaborator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3543,6 +3553,42 @@ export type Database = {
       get_client_profile_id: { Args: { _user_id: string }; Returns: string }
       get_client_project_ids: { Args: { _user_id: string }; Returns: string[] }
       get_company_contact_id: { Args: { _user_id: string }; Returns: string }
+      get_company_login_contacts: {
+        Args: { p_company_id: string; p_site_id?: string }
+        Returns: {
+          avatar_url: string
+          email: string
+          has_auth: boolean
+          has_pin: boolean
+          id: string
+          name: string
+          role: string
+        }[]
+      }
+      get_company_login_stats: { Args: { p_company_id: string }; Returns: Json }
+      get_company_portal_settings: {
+        Args: { p_company_id: string }
+        Returns: {
+          client_accent_color: string
+          client_logo_url: string
+          client_primary_color: string
+          company_id: string
+          id: string
+          login_background_url: string
+          login_welcome_text: string
+          welcome_subtitle: string
+          welcome_title: string
+        }[]
+      }
+      get_company_public_info: {
+        Args: { p_company_id: string }
+        Returns: {
+          id: string
+          logo_url: string
+          name: string
+          photo_url: string
+        }[]
+      }
       get_contact_project_ids: { Args: { _user_id: string }; Returns: string[] }
       get_eligible_supervisors: {
         Args: never
@@ -3560,6 +3606,25 @@ export type Database = {
         }[]
       }
       get_login_stats: { Args: never; Returns: Json }
+      get_portal_collaborator: {
+        Args: { p_profile_id: string }
+        Returns: {
+          avatar_url: string
+          id: string
+          job_title: string
+          name: string
+        }[]
+      }
+      get_portal_wees_responsibles: {
+        Args: { _company_id: string }
+        Returns: {
+          avatar_url: string
+          has_signature: boolean
+          id: string
+          job_title: string
+          name: string
+        }[]
+      }
       get_project_predictions: {
         Args: never
         Returns: {
@@ -3603,8 +3668,10 @@ export type Database = {
           name: string
         }[]
       }
+      get_site_login_stats: { Args: { p_site_id: string }; Returns: Json }
       get_user_companies_count: { Args: { _user_id: string }; Returns: number }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
+      get_user_project_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
@@ -3634,9 +3701,31 @@ export type Database = {
         }[]
       }
       rdo_can: { Args: { _action: string }; Returns: boolean }
+      resolve_client_portal_branding: {
+        Args: { p_company_id?: string; p_site_id?: string }
+        Returns: {
+          company_id: string
+          logo_url: string
+          name: string
+          site_id: string
+        }[]
+      }
+      resolve_company_slug: { Args: { p_slug: string }; Returns: string }
+      resolve_site_slug: {
+        Args: { p_company_id: string; p_slug: string }
+        Returns: string
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       unaccent: { Args: { "": string }; Returns: string }
+      user_has_project_access: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_has_site_access: {
+        Args: { _site_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       client_role: "viewer" | "approver" | "admin"
