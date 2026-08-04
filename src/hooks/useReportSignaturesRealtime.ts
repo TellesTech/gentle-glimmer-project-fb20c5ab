@@ -191,7 +191,9 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
         const email = (s.signer_email || '').toLowerCase();
         const nameKey = normalize(s.signer_name || '');
         const isInternalByEmail = !!email && weesEmailSet.has(email);
-        const isInternalByName = !email && !!nameKey && internalSignerNames.has(nameKey);
+        const dirEntry = internalDirectory.get(nameKey);
+        const isInternalByName =
+          !!nameKey && (internalSignerNames.has(nameKey) || !!dirEntry);
         const isInternal = isInternalByEmail || isInternalByName;
         const alreadyListed = weesEntries.some(
           (e) =>
@@ -201,8 +203,10 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
         if (isInternal && !alreadyListed) {
           weesEntries.push({
             key: `sig-${s.id}`,
-            name: s.signer_name || 'Assinante',
-            role: s.signer_role && s.signer_role !== 'Cliente' ? s.signer_role : 'Equipe WEES',
+            name: dirEntry?.name || s.signer_name || 'Assinante',
+            role:
+              dirEntry?.jobTitle ||
+              (s.signer_role && s.signer_role !== 'Cliente' ? s.signer_role : 'Equipe WEES'),
             email: s.signer_email,
             avatarUrl: null,
             companyName: weesCompanyName,
