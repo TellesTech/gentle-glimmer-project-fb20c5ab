@@ -29,6 +29,8 @@ import { useReportSignaturesRealtime } from '@/hooks/useReportSignaturesRealtime
 import { getReportPdfBlob } from '@/lib/clientReportDownload';
 import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
 import { getEdgeFunctionErrorMessage } from '@/lib/edgeFunctionError';
+import { WeesActionsBar } from '@/components/signatures/WeesActionsBar';
+import { useClientPreviewMode } from '@/hooks/useClientPreviewMode';
 import type { Shift, DeviationType, ImpactLevel } from '@/types';
 
 const SHIFT_CONFIG: Record<Shift, { label: string; icon: typeof Sun; color: string }> = {
@@ -73,6 +75,7 @@ export default function ClientReportView() {
   const navigate = useNavigate();
   const { clientProfile: authProfile } = useClientAuth();
   const { user: weesUser, profile: weesProfile, role: weesRole } = useAuth();
+  const { canPreviewAsClient, isClientPreview, toggleClientPreview } = useClientPreviewMode();
   const queryClient = useQueryClient();
   
   const [signatureData, setSignatureData] = useState<string | null>(null);
@@ -195,7 +198,9 @@ export default function ClientReportView() {
   });
 
   // WEES internal user is logged in (admin/super_admin/collaborator) and not a client
-  const isWeesUser = !!weesUser && !!weesRole && !authProfile;
+  const isWeesUserRaw = !!weesUser && !!weesRole && !authProfile;
+  // No modo "ver como cliente" o usuário interno enxerga a página como o cliente.
+  const isWeesUser = isWeesUserRaw && !isClientPreview;
 
   // Fetch WEES profile extras (job_title, signature_data) for the signature card
   const { data: weesExtras } = useQuery({
@@ -463,6 +468,15 @@ export default function ClientReportView() {
       />
 
       <main className="max-w-6xl mx-auto p-4 md:px-8 md:py-6 space-y-6 pb-24">
+        {(isWeesUserRaw || canPreviewAsClient) && (
+          <WeesActionsBar
+            reportId={report.id}
+            rdoLabel={`Nº ${rdoNumber} - ${rdoDateFormatted}`}
+            isClientPreview={isClientPreview}
+            onTogglePreview={toggleClientPreview}
+          />
+        )}
+
         {/* Report Header */}
         <Card className="bg-gradient-to-br from-primary via-primary/95 to-primary/80 text-primary-foreground shadow-xl overflow-hidden">
           <CardContent className="p-6">

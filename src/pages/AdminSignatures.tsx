@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText, Loader2, Search, Download, CheckCircle2, Clock, XCircle, ExternalLink } from 'lucide-react';
+import { ArrowLeft, FileText, Loader2, Search, Download, CheckCircle2, Clock, XCircle, ExternalLink, Eye, EyeOff, Copy, Send, ChevronDown, ChevronRight, UserCheck } from 'lucide-react';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,6 +10,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { SignatureTimeline } from '@/components/client/SignatureTimeline';
+import { useClientPreviewMode } from '@/hooks/useClientPreviewMode';
+import { buildClientReportUrl } from '@/components/signatures/WeesActionsBar';
+import { getReportPdfBlob } from '@/lib/clientReportDownload';
+import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
 import {
   Table,
   TableBody,
@@ -53,6 +59,36 @@ export default function AdminSignatures() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState<string | null>(null);
+  const { canPreviewAsClient, isClientPreview, toggleClientPreview } = useClientPreviewMode();
+  const showInternalActions = !isClientPreview;
+
+  const copyText = async (text: string, message: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(message);
+    } catch {
+      toast.error('Não foi possível copiar');
+    }
+  };
+
+  const downloadPdf = async (reportId: string, signedUrl?: string | null) => {
+    if (signedUrl) {
+      window.open(signedUrl, '_blank');
+      return;
+    }
+    setPdfLoading(reportId);
+    try {
+      const { blob, filename } = await getReportPdfBlob(reportId);
+      triggerDownloadFromBlob(blob, filename);
+      toast.success('PDF gerado com sucesso');
+    } catch {
+      toast.error('Não foi possível gerar o PDF deste RDO');
+    } finally {
+      setPdfLoading(null);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -129,7 +165,20 @@ export default function AdminSignatures() {
             Acompanhe todos os RDOs enviados aos clientes — pendentes, assinados e rejeitados.
           </p>
         </div>
+        {canPreviewAsClient && (
+          <Button variant="outline" size="sm" className="ml-auto gap-2" onClick={toggleClientPreview}>
+            {isClientPreview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            {isClientPreview ? 'Voltar à visão WEES' : 'Ver como cliente'}
+          </Button>
+        )}
       </div>
+
+      {isClientPreview && (
+        <Card className="p-3 border-dashed border-primary/40 bg-primary/5 text-sm text-muted-foreground flex items-center gap-2">
+          <Eye className="w-4 h-4 text-primary" />
+          Você está vendo esta página sem as ações internas, como o cliente veria.
+        </Card>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="p-4">
@@ -200,7 +249,8 @@ export default function AdminSignatures() {
                   const meta = statusMeta[r.status] || statusMeta.pending;
                   const Icon = meta.icon;
                   return (
-                    <TableRow key={r.id}>
+                    <Fragment key={r.id}>
+                    <TableRow>
                       <TableCell>
                         <div className="font-medium text-sm">{(r.contact?.name || '—').replace(/\s*-\s*Wees$/i, '').trim()}</div>
                         <div className="text-xs text-muted-foreground">{r.contact?.email}</div>
@@ -235,29 +285,95 @@ export default function AdminSignatures() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          {r.report?.signed_pdf_url && (
+                          {r.report?.id && (
                             <Button
                               variant="ghost"
                               size="icon"
-                              title="Baixar PDF assinado"
-                              onClick={() => window.open(r.report!.signed_pdf_url!, '_blank')}
+                              title="Baixar PDF"
+                              disabled={pdfLoading === r.report.id}
+                              onClick={() => downloadPdf(r.report!.id, r.report!.signed_pdf_url)}
                             >
-                              <Download className="w-4 h-4" />
+                              {pdfLoading === r.report.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Download className="w-4 h-4" />
+                              )}
                             </Button>
                           )}
                           {r.report?.id && (
                             <Button
                               variant="ghost"
                               size="icon"
-                              title="Abrir RDO"
-                              onClick={() => navigate(`/reports/${r.report!.id}`)}
+                              title="Ver assinaturas"
+                              onClick={() => setExpanded(expanded === r.id ? null : r.id)}
                             >
-                              <ExternalLink className="w-4 h-4" />
+                              {expanded === r.id ? (
+                                <ChevronDown className="w-4 h-4" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4" />
+                              )}
                             </Button>
+                          )}
+                          {showInternalActions && r.report?.id && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Ver na visão do cliente"
+                                onClick={() => navigate(`/client/reports/${r.report!.id}?view=client`)}
+                              >
+                                <UserCheck className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Copiar link de assinatura"
+                                onClick={() =>
+                                  copyText(buildClientReportUrl(r.report!.id), 'Link de assinatura copiado')
+                                }
+                              >
+                                <Copy className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Copiar cobrança de assinatura (WhatsApp)"
+                                onClick={() =>
+                                  copyText(
+                                    `Olá${r.contact?.name ? ` ${r.contact.name.split(' ')[0]}` : ''}! O RDO de ${
+                                      r.report?.date
+                                        ? format(new Date(r.report.date), 'dd/MM/yyyy', { locale: ptBR })
+                                        : ''
+                                    } está no Portal Wees aguardando sua assinatura eletrônica.\n\nAcesse: ${buildClientReportUrl(
+                                      r.report!.id,
+                                    )}\n\nAtenciosamente,\n*Equipe WEES* 🏗️`,
+                                    'Mensagem de cobrança copiada',
+                                  )
+                                }
+                              >
+                                <Send className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Abrir RDO na área WEES"
+                                onClick={() => navigate(`/reports/${r.report!.id}`)}
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </Button>
+                            </>
                           )}
                         </div>
                       </TableCell>
                     </TableRow>
+                    {expanded === r.id && r.report?.id && (
+                      <TableRow key={`${r.id}-details`} className="bg-muted/30">
+                        <TableCell colSpan={7} className="p-4">
+                          <SignatureTimeline reportId={r.report.id} />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    </Fragment>
                   );
                 })}
               </TableBody>
