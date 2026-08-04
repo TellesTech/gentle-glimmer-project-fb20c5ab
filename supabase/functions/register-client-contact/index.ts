@@ -56,13 +56,23 @@ async function provisionAuthUser(
   contactId: string,
   name: string,
   email: string,
-  existingUserId: string | null
+  existingUserId: string | null,
+  customPassword?: string | null
 ): Promise<string> {
-  if (existingUserId) return existingUserId;
+  if (existingUserId) {
+    if (customPassword) {
+      await ensureNotInternalCollaborator(supabaseAdmin, email);
+      const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(existingUserId, {
+        password: customPassword,
+      });
+      if (updErr) throw new Error(`Falha ao definir a senha: ${updErr.message}`);
+    }
+    return existingUserId;
+  }
 
   await ensureNotInternalCollaborator(supabaseAdmin, email);
 
-  const password = generatePassword(name);
+  const password = customPassword || generatePassword(name);
 
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email,
@@ -79,6 +89,12 @@ async function provisionAuthUser(
         // Re-check: existing auth user may be a collaborator
         await ensureNotInternalCollaborator(supabaseAdmin, email);
         await supabaseAdmin.from('company_contacts').update({ user_id: existing.id }).eq('id', contactId);
+        if (customPassword) {
+          const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(existing.id, {
+            password: customPassword,
+          });
+          if (updErr) throw new Error(`Falha ao definir a senha: ${updErr.message}`);
+        }
         console.log('Linked existing auth user:', existing.id);
         return existing.id;
       }
@@ -98,7 +114,7 @@ serve(async (req) => {
   }
 
   try {
-    const { companyId, siteId, name, email, pin } = await req.json();
+    const { companyId, siteId, name, email, pin, password } = await req.json();
 
     if (!companyId || !name || !email || !pin) {
       return new Response(
@@ -106,6 +122,17 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    if (password !== undefined && password !== null && password !== '') {
+      if (typeof password !== 'string' || password.length < 8 || password.length > 72) {
+        return new Response(
+          JSON.stringify({ error: 'A senha deve ter entre 8 e 72 caracteres' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+    const customPassword: string | null =
+      typeof password === 'string' && password.length >= 8 ? password : null;
 
     if (!/^\d{4}$/.test(pin)) {
       return new Response(
@@ -144,10 +171,10 @@ serve(async (req) => {
       }
 
       // Provision auth user if not yet linked
-      const userId = await provisionAuthUser(supabaseAdmin, existing.id, name, email.toLowerCase(), existing.user_id);
+      const userId = await provisionAuthUser(supabaseAdmin, existing.id, name, email.toLowerCase(), existing.user_id, customPassword);
 
       return new Response(
-        JSON.stringify({ success: true, contactId: existing.id, updated: true, userId }),
+        JSON.stringify({ success: true, contactId: existing.id, updated: true, userId, password: customPassword || undefined }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -182,18 +209,18 @@ serve(async (req) => {
     }
 
     // Provision auth user
-    const userId = await provisionAuthUser(supabaseAdmin, newContact.id, name, email.toLowerCase(), null);
+    const userId = await provisionAuthUser(supabaseAdmin, newContact.id, name, email.toLowerCase(), null, customPassword);
 
     console.log('Contact registered:', newContact.id);
     return new Response(
-      JSON.stringify({ success: true, contactId: newContact.id, created: true, userId }),
+      JSON.stringify({ success: true, contactId: newContact.id, created: true, userId, password: customPassword || undefined }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('Error in register-client-contact:', error);
     return new Response(
-      JSON.stringify({ error: 'Erro interno do servidor' }),
+      JSON.stringify({ error: (error as Error)?.message || 'Erro interno do servidor' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

@@ -63,6 +63,7 @@ interface EditingState {
     phone: string;
     role: string;
     pin: string;
+    password: string;
     avatar_url: string;
     can_approve: boolean;
     is_active: boolean;
@@ -116,7 +117,9 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
   }, [savedPins, pinsStorageKey]);
   const [inlinePin, setInlinePin] = useState<Record<string, string>>({});
   const [isCreating, setIsCreating] = useState(false);
-  const [newContact, setNewContact] = useState({ name: '', email: '', phone: '', role: '', pin: '', avatar_url: '', can_approve: true, is_active: true, siteIds: [] as string[] });
+  const [newContact, setNewContact] = useState({ name: '', email: '', phone: '', role: '', pin: '', password: '', avatar_url: '', can_approve: true, is_active: true, siteIds: [] as string[] });
+  const [showPassword, setShowPassword] = useState<Record<string, boolean>>({});
+  const [settingPassword, setSettingPassword] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; contact: Contact | null }>({ open: false, contact: null });
   const [credentialsDialog, setCredentialsDialog] = useState<{ open: boolean; credentials: GeneratedCredentials | null }>({ open: false, credentials: null });
   const [copied, setCopied] = useState(false);
@@ -197,7 +200,49 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
     }
   }, [siteId, isCreating]);
 
+  const generateStrongPassword = (name: string) => {
+    const clean = (name || 'Cliente').normalize('NFD').replace(/[^a-zA-Z]/g, '').slice(0, 8) || 'Cliente';
+    const base = clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+    const digits = Math.floor(1000 + Math.random() * 9000);
+    return `${base}@${digits}`;
+  };
+
+  const buildLoginUrl = (contactId?: string) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    if (!companySlug) return `${origin}/login`;
+    const siteSlug = contactId ? contactSiteSlugs?.[contactId] : undefined;
+    return siteSlug ? `${origin}/${companySlug}/${siteSlug}` : `${origin}/${companySlug}`;
+  };
+
+  const handleSetPassword = async (contact: Contact, password?: string) => {
+    const finalPassword = password && password.length >= 8 ? password : generateStrongPassword(contact.name);
+    setSettingPassword(contact.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('set-client-password', {
+        body: { contactId: contact.id, password: finalPassword },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setCredentialsDialog({
+        open: true,
+        credentials: {
+          contactName: contact.name,
+          email: data?.email || contact.email,
+          password: data?.password || finalPassword,
+          loginUrl: buildLoginUrl(contact.id),
+          pin: savedPins[contact.id] || '',
+        },
+      });
+      fetchData();
+    } catch (error: any) {
+      toast({ title: 'Erro ao definir senha', description: error.message, variant: 'destructive' });
+    } finally {
+      setSettingPassword(null);
+    }
+  };
+
   const startEditing = (contact: Contact) => {
+    setShowPassword(prev => ({ ...prev, [contact.id]: false }));
     setEditing(prev => ({
       ...prev,
       [contact.id]: {
@@ -206,6 +251,7 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
         phone: contact.phone || '',
         role: contact.role || '',
         pin: savedPins[contact.id] || '',
+        password: '',
         avatar_url: contact.avatar_url || '',
         can_approve: contact.can_approve,
         is_active: contact.is_active,
@@ -284,6 +330,16 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
       if (data.pin && data.pin.length === 4) {
         setSavedPins(prev => ({ ...prev, [contactId]: data.pin }));
       }
+
+      // Optional: manual password for this client's login
+      if (data.password && data.password.length >= 8) {
+        const { data: pwData, error: pwError } = await supabase.functions.invoke('set-client-password', {
+          body: { contactId, password: data.password },
+        });
+        if (pwError) throw pwError;
+        if (pwData?.error) throw new Error(pwData.error);
+        toast({ title: 'Senha definida', description: `Senha de acesso atualizada para ${data.email}` });
+      }
       toast({ title: 'Contato atualizado', description: data.pin && data.pin.length === 4 ? `PIN configurado: ${data.pin}` : undefined });
       cancelEditing(contactId);
       fetchData();
@@ -307,8 +363,13 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
       toast({ title: 'PIN obrigatório', description: 'Defina um PIN de 4 dígitos para o cliente', variant: 'destructive' });
       return;
     }
+    if (newContact.password && newContact.password.length < 8) {
+      toast({ title: 'Senha muito curta', description: 'A senha deve ter pelo menos 8 caracteres', variant: 'destructive' });
+      return;
+    }
     setSaving('new');
     try {
+      const passwordToUse = newContact.password || generateStrongPassword(newContact.name);
       // Provisionar contato + auth user via edge function (cria user_id em auth.users)
       const { data, error } = await supabase.functions.invoke('register-client-contact', {
         body: {
@@ -317,6 +378,7 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
           name: newContact.name,
           email: newContact.email,
           pin: newContact.pin,
+          password: passwordToUse,
         },
       });
       if (error) throw error;
@@ -347,9 +409,22 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
         setSavedPins(prev => ({ ...prev, [contactId]: newContact.pin }));
       }
 
+      const createdPassword = data?.password || passwordToUse;
       toast({ title: 'Contato adicionado', description: `PIN configurado: ${newContact.pin}` });
+      if (createdPassword) {
+        setCredentialsDialog({
+          open: true,
+          credentials: {
+            contactName: newContact.name,
+            email: newContact.email,
+            password: createdPassword,
+            loginUrl: buildLoginUrl(),
+            pin: newContact.pin,
+          },
+        });
+      }
       setIsCreating(false);
-      setNewContact({ name: '', email: '', phone: '', role: '', pin: '', avatar_url: '', can_approve: true, is_active: true, siteIds: [] });
+      setNewContact({ name: '', email: '', phone: '', role: '', pin: '', password: '', avatar_url: '', can_approve: true, is_active: true, siteIds: [] });
       fetchData();
     } catch (error: any) {
       const msg = error?.message?.includes('duplicate') || error?.message?.includes('already')
@@ -424,17 +499,22 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
 
   const getWhatsAppMessage = () => {
     if (!credentialsDialog.credentials) return '';
-    const { contactName, pin, loginUrl } = credentialsDialog.credentials;
+    const { contactName, pin, loginUrl, email, password } = credentialsDialog.credentials;
+    const accessLines = [
+      pin ? `🔐 *Seu PIN de acesso:* ${pin}` : '',
+      password ? `📧 *E-mail:* ${email}` : '',
+      password ? `🔑 *Senha:* ${password}` : '',
+      `🔹 *Acesse aqui:* ${loginUrl}`,
+    ].filter(Boolean).join('\n');
     return `Olá, *${contactName}*! 👋
 
 A *Equipe WEES* preparou seu acesso ao *Portal ${companyName}*.
 
 Através dele, você poderá acompanhar os *Diários de Obra (RDOs)*, visualizar o andamento das atividades, fotos e aprovar relatórios da sua obra.
 
-🔐 *Seu PIN de acesso:* ${pin}
-🔹 *Acesse aqui:* ${loginUrl}
+${accessLines}
 
-Abra o link acima, selecione seu perfil e digite o PIN informado para entrar no portal.
+Abra o link acima e entre com o PIN (ou com e-mail e senha, se informados acima).
 
 Atenciosamente,
 *Equipe WEES* 🏗️`;
@@ -484,6 +564,25 @@ Atenciosamente,
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEditing(contact)}>
                   <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        disabled={settingPassword === contact.id}
+                        onClick={() => handleSetPassword(contact)}
+                        aria-label="Gerar senha de acesso"
+                      >
+                        {settingPassword === contact.id
+                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          : <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Gerar nova senha de acesso (e-mail + senha)</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteConfirm({ open: true, contact })}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
@@ -544,6 +643,38 @@ Atenciosamente,
                   className="h-9 text-sm tracking-widest"
                   placeholder={contact.pin_hash ? '••••' : 'Definir PIN'}
                 />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Senha de acesso</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type={showPassword[contact.id] ? 'text' : 'password'}
+                    value={ed.password}
+                    onChange={e => updateField(contact.id, 'password', e.target.value)}
+                    className="h-9 text-sm"
+                    placeholder="Nova senha (mín. 8) — opcional"
+                    autoComplete="new-password"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    onClick={() => setShowPassword(p => ({ ...p, [contact.id]: !p[contact.id] }))}
+                    aria-label={showPassword[contact.id] ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 shrink-0"
+                    onClick={() => updateField(contact.id, 'password', generateStrongPassword(ed.name))}
+                  >
+                    Gerar
+                  </Button>
+                </div>
               </div>
               {sites.length > 0 && (
                 <div>
@@ -778,6 +909,41 @@ Atenciosamente,
               className="h-9 text-sm tracking-widest"
               placeholder="Definir PIN"
             />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Senha de acesso (e-mail + senha)</Label>
+            <div className="flex gap-2">
+              <Input
+                type={showPassword['new'] ? 'text' : 'password'}
+                value={newContact.password}
+                onChange={e => setNewContact(p => ({ ...p, password: e.target.value }))}
+                className="h-9 text-sm"
+                placeholder="Mín. 8 caracteres (opcional)"
+                autoComplete="new-password"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 shrink-0"
+                onClick={() => setShowPassword(p => ({ ...p, new: !p['new'] }))}
+                aria-label={showPassword['new'] ? 'Ocultar senha' : 'Mostrar senha'}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 shrink-0"
+                onClick={() => setNewContact(p => ({ ...p, password: generateStrongPassword(p.name) }))}
+              >
+                Gerar
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Se deixar em branco, uma senha é gerada automaticamente e exibida ao salvar.
+            </p>
           </div>
           {!siteId && sites.length > 0 && (
             <div>
