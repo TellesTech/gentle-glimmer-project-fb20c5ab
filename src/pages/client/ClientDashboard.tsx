@@ -485,6 +485,67 @@ export default function ClientDashboard() {
     return Array.from(ids);
   }, [monthFolders]);
 
+  // ===== Download de pasta de RDOs do mês (ZIP) =====
+  const [downloadingMonthId, setDownloadingMonthId] = useState<string | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState<{ done: number; total: number } | null>(null);
+
+  const handleDownloadMonth = async (
+    e: React.MouseEvent,
+    month: (typeof monthFolders)[number],
+  ) => {
+    e.stopPropagation();
+    if (downloadingMonthId) return;
+
+    const items = month.activities.flatMap((a) =>
+      a.reports.map((r) => ({ ...r, activityName: a.name })),
+    );
+    if (items.length === 0) {
+      toast({ title: 'Nenhum RDO neste mês', variant: 'destructive' });
+      return;
+    }
+
+    setDownloadingMonthId(month.id);
+    setDownloadProgress({ done: 0, total: items.length });
+
+    try {
+      const zip = new JSZip();
+      let ok = 0;
+      let failed = 0;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        try {
+          const { blob, filename } = await getReportPdfBlob(item.id);
+          const folder = (item.activityName || 'Atividade').replace(/[^\w\-À-ÿ ]+/g, '_').trim();
+          zip.file(`${folder}/${filename}`, blob);
+          ok += 1;
+        } catch (err) {
+          console.warn('[ClientDashboard] falha no RDO', item.id, err);
+          failed += 1;
+        }
+        setDownloadProgress({ done: i + 1, total: items.length });
+      }
+
+      if (ok === 0) {
+        toast({ title: 'Não foi possível gerar os PDFs', variant: 'destructive' });
+        return;
+      }
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      triggerDownloadFromBlob(blob, `RDOs_${month.monthName}_${month.year}.zip`);
+      toast({
+        title: `${ok} RDO(s) baixados`,
+        description: failed > 0 ? `${failed} não puderam ser gerados.` : undefined,
+      });
+    } catch (err) {
+      console.error('[ClientDashboard] erro no ZIP', err);
+      toast({ title: 'Erro ao gerar o arquivo ZIP', variant: 'destructive' });
+    } finally {
+      setDownloadingMonthId(null);
+      setDownloadProgress(null);
+    }
+  };
+
 
   const { data: coverPhotosMap } = useQuery({
     queryKey: ['client-activity-cover-photos', folderReportIds],
