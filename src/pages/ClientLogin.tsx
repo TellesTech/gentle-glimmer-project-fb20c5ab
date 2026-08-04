@@ -367,21 +367,22 @@ export default function ClientLogin() {
   // when the company has any sites and the URL doesn't include one.
   const showSiteSelection = !siteId && !contactId && sites.length > 0;
   const hasConfiguredContacts = contacts.some(c => c.has_pin || c.has_auth);
+  const pinContacts = contacts.filter(c => c.has_pin);
+  const hasPinContacts = pinContacts.length > 0;
 
-  // Default to email login only when a site is already selected (or there are no sites)
-  // and the selected scope has no PIN/auth contacts configured.
+  // Email/password is the default entry point. The PIN screen only shows up
+  // once at least one contact of this unit has already created a PIN.
   useEffect(() => {
     if (
       !loading &&
       !urlModeApplied &&
       !showSiteSelection &&
-      !hasConfiguredContacts &&
-      contacts.length === 0 &&
+      !hasPinContacts &&
       mode === 'select'
     ) {
-      setMode('magic');
+      setMode('email');
     }
-  }, [loading, urlModeApplied, showSiteSelection, hasConfiguredContacts, contacts.length, mode]);
+  }, [loading, urlModeApplied, showSiteSelection, hasPinContacts, mode]);
 
   if (loading) {
     return (
