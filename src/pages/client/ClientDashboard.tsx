@@ -255,14 +255,25 @@ export default function ClientDashboard() {
           .eq('client_id', clientProfile.id);
         (rca || []).forEach((r: any) => approverByReport.set(r.report_id, r));
       }
-      const reportIds = Array.from(approverByReport.keys());
-      if (!reportIds.length) return [];
 
-      // 2) Fetch only those reports (must be signed/finalized)
+      // 2) Todos os RDOs assinados das unidades do usuário (visibilidade
+      //    automática; RLS já exclui meses ocultados pela WEES).
+      const { data: siteRows } = await (supabase as any).rpc('portal_user_site_ids', {
+        _user_id: user?.id,
+      });
+      const siteIds: string[] = (siteRows || [])
+        .map((s: any) => (typeof s === 'string' ? s : s?.portal_user_site_ids))
+        .filter(Boolean);
+      if (!siteIds.length) return [];
+
+      const { data: projRows } = await supabase.from('projects').select('id').in('site_id', siteIds);
+      const projectIds = (projRows || []).map((p: any) => p.id);
+      if (!projectIds.length) return [];
+
       const { data: reports, error } = await supabase
         .from('reports')
         .select(`id, date, shift, status, rdo_number, project:projects (id, name, company:companies (id, name))`)
-        .in('id', reportIds)
+        .in('project_id', projectIds)
         .in('status', ['signed', 'finalized'])
         .order('date', { ascending: false });
       if (error) throw error;
