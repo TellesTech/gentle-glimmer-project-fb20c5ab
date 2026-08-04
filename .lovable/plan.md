@@ -1,4 +1,13 @@
-# RDOs da WEES aparecem automaticamente para o cliente
+# Corrigir erro ao abrir "Meus RDOs" + RDOs visíveis automaticamente
+
+## 1. Erro ao acessar os RDOs (corrigir primeiro)
+A tela quebra com "Rendered more hooks than during the previous render", vindo de `src/components/reports/DocumentCabinet.tsx`.
+
+Causa confirmada: os hooks `useMemo` de `availableYears` (linha 1789) e `filteredCompanyFolders` (linha 1801) estão declarados **depois** dos `return` antecipados dos níveis de navegação (empresa/unidade/ano/mês). Ao entrar ou sair de uma pasta, o componente renderiza uma quantidade diferente de hooks e o React derruba a tela.
+
+Correção: mover esses dois `useMemo` (e o cálculo de `currentYear`/`selectedMainYear` que eles usam) para antes de qualquer `return` antecipado, junto dos demais hooks no topo do componente. Nenhuma mudança de comportamento ou layout.
+
+## 2. RDOs da WEES aparecem automaticamente para o cliente
 
 ## O problema (confirmado nos dados)
 Hoje o portal só mostra um RDO para o cliente quando alguém da WEES **convida aquele contato como aprovador** daquele relatório específico. Sem esse convite, o RDO não aparece — mesmo estando assinado.
