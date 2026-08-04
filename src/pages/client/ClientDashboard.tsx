@@ -788,7 +788,7 @@ export default function ClientDashboard() {
                             "font-bold text-sm truncate transition-colors",
                             status === 'pending' ? "text-red-600 group-hover:text-red-700" : "text-foreground group-hover:text-primary"
                           )}>
-                            {a.name}
+                            preciso do texto completo da pasta
                           </p>
                           <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">
                             {a.total} RDO(s)
