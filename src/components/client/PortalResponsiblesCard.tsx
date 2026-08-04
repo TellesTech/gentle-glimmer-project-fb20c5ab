@@ -103,7 +103,7 @@ export function PortalResponsiblesCard({ companyId, siteIds }: Props) {
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-6">
-                  Nenhum responsável WEES vinculado.
+                  Nenhum responsável por assinatura definido.
                 </p>
               )}
             </CardContent>
@@ -154,7 +154,7 @@ export function PortalResponsiblesCard({ companyId, siteIds }: Props) {
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-6">
-                  Nenhum responsável do cliente cadastrado.
+                  Nenhum responsável por assinatura definido.
                 </p>
               )}
             </CardContent>

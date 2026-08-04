@@ -80,6 +80,7 @@ export function usePortalResponsibles({ companyId, siteIds }: Params) {
           email: c.email,
           avatar_url: c.avatar_url || null,
           hasSignature: !!c.signature_data,
+          canApprove: !!c.can_approve,
           source: 'client' as const,
           companyName: clientCompanyName,
         })),
@@ -90,10 +91,13 @@ export function usePortalResponsibles({ companyId, siteIds }: Params) {
           email: c.email,
           avatar_url: null,
           hasSignature: !!c.signature_data,
+          canApprove: true,
           source: 'client' as const,
           companyName: clientCompanyName || c.company || null,
         })),
       ]
+        // Only signatories: signature on file or explicitly allowed to approve.
+        .filter((p: any) => p.hasSignature || p.canApprove)
         .reduce((acc: PortalPerson[], cur) => {
           const dup = cur.email && acc.find((p) => p.email && p.email.toLowerCase() === cur.email!.toLowerCase());
           if (!dup) acc.push(cur);
