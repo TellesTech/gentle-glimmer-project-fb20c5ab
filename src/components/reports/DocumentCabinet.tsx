@@ -1808,27 +1808,6 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
   }
 
   // Level 1: Main view - show year selection then company folders
-  const currentYear = new Date().getFullYear();
-  const availableYears = useMemo(() => {
-    const years = new Set<number>();
-    years.add(currentYear);
-    reports.forEach(r => years.add(getYear(parseISO(r.date))));
-    allProjects.forEach((p: any) => {
-      if (p.created_at) years.add(getYear(parseISO(p.created_at)));
-    });
-    return Array.from(years).sort((a, b) => b - a);
-  }, [reports, allProjects, currentYear]);
-
-  const selectedMainYear = openYear || currentYear;
-
-  const filteredCompanyFolders = useMemo(() => {
-    return companyFolders.map(cf => {
-      // Filter sites to only those that have something in this year
-      const filteredSites = cf.sites.filter(s => s.years.some(y => y.year === selectedMainYear));
-      return { ...cf, sites: filteredSites };
-    }).filter(cf => cf.sites.length > 0 || cf.reports.length === 0);
-  }, [companyFolders, selectedMainYear]);
-
   return (
     <>
       <div className="space-y-6">
