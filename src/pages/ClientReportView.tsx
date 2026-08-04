@@ -25,6 +25,7 @@ import { useClientAuth } from '@/contexts/ClientAuthContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { PhotoGallery } from '@/components/reports/PhotoGallery';
 import { SignatureTimeline } from '@/components/client/SignatureTimeline';
+import { useReportSignaturesRealtime } from '@/hooks/useReportSignaturesRealtime';
 import { getReportPdfBlob } from '@/lib/clientReportDownload';
 import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
 import { getEdgeFunctionErrorMessage } from '@/lib/edgeFunctionError';
