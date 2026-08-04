@@ -2253,6 +2253,7 @@ export type Database = {
       report_signatures: {
         Row: {
           access_id: string | null
+          document_hash: string | null
           id: string
           ip_address: string | null
           legal_basis: string | null
@@ -2267,6 +2268,7 @@ export type Database = {
         }
         Insert: {
           access_id?: string | null
+          document_hash?: string | null
           id?: string
           ip_address?: string | null
           legal_basis?: string | null
@@ -2281,6 +2283,7 @@ export type Database = {
         }
         Update: {
           access_id?: string | null
+          document_hash?: string | null
           id?: string
           ip_address?: string | null
           legal_basis?: string | null
