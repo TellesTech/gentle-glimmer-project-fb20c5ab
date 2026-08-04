@@ -739,87 +739,78 @@ export default function ClientDashboard() {
                 ))}
               </div>
             ) : (
-              <Card className="overflow-hidden border-t-4 border-t-primary/20 shadow-sm animate-in fade-in slide-in-from-left-4 duration-300">
-                <CardHeader className="pb-3 bg-muted/30">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-3">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedMonthId(null)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <ChevronRight className="h-4 w-4 rotate-180" />
-                      </Button>
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <Calendar className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg">
-                          {monthFolders.find(m => m.id === selectedMonthId)?.monthName} {monthFolders.find(m => m.id === selectedMonthId)?.year}
-                        </CardTitle>
-                        <CardDescription>
-                          {monthFolders.find(m => m.id === selectedMonthId)?.activities.length} atividade(s) · {monthFolders.find(m => m.id === selectedMonthId)?.activities.reduce((sum, a) => sum + a.total, 0)} RDO(s)
-                        </CardDescription>
-                      </div>
+              <div className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-300">
+                <div className="flex items-center gap-3 mb-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedMonthId(null)}
+                    className="h-9 w-9 p-0 rounded-full hover:bg-muted"
+                  >
+                    <ChevronRight className="h-5 w-5 rotate-180" />
+                  </Button>
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-yellow-100 text-yellow-700">
+                      <Calendar className="h-5 w-5" />
                     </div>
+                    <h2 className="text-xl font-bold">
+                      {monthFolders.find(m => m.id === selectedMonthId)?.monthName} {monthFolders.find(m => m.id === selectedMonthId)?.year}
+                    </h2>
                   </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="divide-y divide-border">
-                    {monthFolders.find(m => m.id === selectedMonthId)?.activities.map((a) => {
-                      const status = a.pending === 0 ? 'completed' : a.signed > 0 ? 'partial' : 'pending';
-                      const subtitle = a.lastDate
-                        ? `${a.total} RDO(s) · Último: ${format(parseISO(a.lastDate), 'dd/MM/yyyy', { locale: ptBR })}`
-                        : `${a.total} RDO(s)`;
+                </div>
 
-                      return (
-                        <div
-                          key={a.id}
-                          className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer transition-colors group"
-                          onClick={() => navigate(`/client/activity/${a.id}?${searchParams.toString()}`)}
-                        >
-                          <div className="flex items-center gap-4 min-w-0">
-                            <div className={cn(
-                              "p-3 rounded-xl transition-colors shadow-sm",
-                              status === 'pending' ? "bg-red-50 text-red-600 group-hover:bg-red-600 group-hover:text-white" : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
-                            )}>
-                              <Activity className="h-6 w-6" />
-                            </div>
-                            <div className="min-w-0">
-                              <h3 className={cn(
-                                "font-semibold transition-colors truncate max-w-[200px] sm:max-w-md",
-                                status === 'pending' ? "text-red-600 group-hover:text-red-700" : "text-foreground group-hover:text-primary"
-                              )}>
-                                {a.name}
-                              </h3>
-                              <p className="text-sm text-muted-foreground truncate">
-                                {subtitle}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-4 shrink-0">
-                            <div className="hidden sm:flex items-center gap-2">
-                              {status === 'completed' && (
-                                <Badge className="bg-[hsl(var(--success))] hover:bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] gap-1">
-                                  <CheckCircle className="h-3 w-3" /> Tudo assinado
-                                </Badge>
-                              )}
-                              {status !== 'completed' && (
-                                <Badge variant={status === 'pending' ? "destructive" : "secondary"} className="gap-1">
-                                  <Clock className="h-3 w-3" /> {a.pending} pendente(s)
-                                </Badge>
-                              )}
-                            </div>
-                            <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 sm:gap-10 py-4">
+                  {monthFolders.find(m => m.id === selectedMonthId)?.activities.map((a) => {
+                    const status = a.pending === 0 ? 'completed' : a.signed > 0 ? 'partial' : 'pending';
+                    
+                    return (
+                      <div
+                        key={a.id}
+                        className="flex flex-col items-center gap-3 group cursor-pointer"
+                        onClick={() => navigate(`/client/activity/${a.id}?${searchParams.toString()}`)}
+                      >
+                        <div className="relative w-24 h-20 sm:w-32 sm:h-24 transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
+                          {/* Folder Rear Part */}
+                          <div className={cn(
+                            "absolute inset-x-0 bottom-0 top-3 rounded-lg shadow-sm",
+                            status === 'pending' ? "bg-red-200" : "bg-[#e5b52a]"
+                          )} />
+                          {/* Folder Tab */}
+                          <div className={cn(
+                            "absolute top-0 left-0 w-10 h-6 rounded-t-lg",
+                            status === 'pending' ? "bg-red-200" : "bg-[#e5b52a]"
+                          )} />
+                          {/* Folder Front Part */}
+                          <div className={cn(
+                            "absolute inset-x-0 bottom-0 top-5 rounded-lg shadow-md transition-transform group-hover:-rotate-1 origin-bottom-left",
+                            status === 'pending' ? "bg-red-500" : "bg-[#f4c430]"
+                          )} />
+                          
+                          {/* Status Icon Overlay */}
+                          <div className="absolute inset-0 flex items-center justify-center pt-4">
+                            {status === 'completed' ? (
+                              <CheckCircle className="h-6 w-6 text-green-800/40" />
+                            ) : (
+                              <Activity className={cn("h-6 w-6", status === 'pending' ? "text-white/40" : "text-yellow-900/30")} />
+                            )}
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
+                        <div className="text-center min-w-0 px-1 w-full">
+                          <p className={cn(
+                            "font-bold text-sm truncate transition-colors",
+                            status === 'pending' ? "text-red-600 group-hover:text-red-700" : "text-foreground group-hover:text-primary"
+                          )}>
+                            {a.name}
+                          </p>
+                          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">
+                            {a.total} RDO(s)
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
         )}
