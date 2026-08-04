@@ -297,6 +297,41 @@ export default function ClientDashboard() {
   const reportsData = isAdminView ? adminReportsData : clientReportsData;
   const reportsLoading = isAdminView ? adminReportsLoading : clientReportsLoading;
 
+  // ===== Pastas de mês ocultas (somente super admin gerencia) =====
+  const isSuperAdmin = role === 'super_admin';
+  const hiddenScopeCompanyId = adminCompanyId || clientProfile?.company_id || null;
+
+  const { data: hiddenMonths } = useQuery({
+    queryKey: ['portal-hidden-months', hiddenScopeCompanyId, adminSiteId],
+    queryFn: async () => {
+      let q = supabase.from('portal_hidden_months').select('id, company_id, site_id, year, month');
+      if (adminSiteId) q = q.eq('site_id', adminSiteId);
+      else if (hiddenScopeCompanyId) q = q.eq('company_id', hiddenScopeCompanyId);
+      const { data } = await q;
+      return (data || []) as { id: string; company_id: string; site_id: string; year: number; month: number }[];
+    },
+    enabled: !!hiddenScopeCompanyId || !!adminSiteId,
+  });
+
+  const hiddenMonthKeys = useMemo(
+    () => new Set((hiddenMonths || []).map(h => `${h.year}-${h.month}`)),
+    [hiddenMonths],
+  );
+
+  const canToggleHiddenMonth = isSuperAdmin && !!adminSiteId && !!adminCompanyId;
+
+  // Relatórios visíveis: o cliente não conta os meses ocultos nas métricas.
+  // O super admin continua vendo os números totais (ele enxerga as pastas ocultas).
+  const visibleReports = useMemo(() => {
+    const all = reportsData || [];
+    if (isSuperAdmin || hiddenMonthKeys.size === 0) return all;
+    return all.filter(r => {
+      if (!r.report?.date) return true;
+      const d = parseISO(r.report.date);
+      return !hiddenMonthKeys.has(`${d.getFullYear()}-${d.getMonth() + 1}`);
+    });
+  }, [reportsData, hiddenMonthKeys, isSuperAdmin]);
+
   // Photo count
   const reportIds = useMemo(() => (reportsData || []).map(r => r.report_id).filter(Boolean), [reportsData]);
 
