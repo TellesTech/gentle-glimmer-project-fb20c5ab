@@ -523,7 +523,7 @@ export default function ClientLogin() {
           <div className="flex gap-4 pt-4">
             <div className="flex flex-col">
               <span className="text-3xl font-bold text-primary-foreground">
-                {companyStats.totalReports}+
+                {companyStats.totalReports}
               </span>
               <span className="text-primary-foreground/70 text-sm">Relatórios</span>
             </div>
@@ -593,7 +593,7 @@ export default function ClientLogin() {
             )}
             <div className="flex items-center gap-4 text-xs">
               <div className="text-center">
-                <p className="text-lg font-bold text-primary">{companyStats.totalReports}+</p>
+                <p className="text-lg font-bold text-primary">{companyStats.totalReports}</p>
                 <p className="text-muted-foreground">Relatórios</p>
               </div>
               <div className="w-px h-8 bg-border" />
