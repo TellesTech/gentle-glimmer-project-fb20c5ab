@@ -816,16 +816,7 @@ export default function ClientDashboard() {
         )}
 
 
-        {/* All clear message */}
-        {pendingList.length === 0 && !reportsLoading && (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-10 text-center">
-              <CheckCircle className="h-12 w-12 text-[hsl(var(--success))] mb-3" />
-              <p className="text-lg font-semibold">Tudo em dia!</p>
-              <p className="text-sm text-muted-foreground">Nenhum relatório pendente de assinatura.</p>
-            </CardContent>
-          </Card>
-        )}
+        {/* Empty state removed as per user request */}
       </div>
     </ClientLayout>
   );
