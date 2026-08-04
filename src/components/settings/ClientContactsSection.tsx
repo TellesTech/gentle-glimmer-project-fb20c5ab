@@ -488,16 +488,16 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
       if (data?.credentials) {
         const c = data.credentials;
         const baseUrl = c.loginUrl || buildLoginUrl(contact.id);
-        let password = c.password as string | undefined;
-        if (!password) {
-          const { data: pwData } = await supabase.functions.invoke('set-client-password', {
-            body: { contactId: contact.id, password: generateStrongPassword(contact.name) },
-          });
-          password = pwData?.password;
-        }
+        // Never overwrite an existing password: reuse what the backend returned
+        // (only for brand-new users) or the password the admin typed manually.
+        const manualPassword = editing[contact.id]?.password;
+        const password =
+          (c.password as string | undefined) ||
+          (manualPassword && manualPassword.length >= 8 ? manualPassword : '');
         setCredentialsDialog({
           open: true,
           credentials: {
+            contactId: contact.id,
             contactName: contact.name,
             email: c.email || contact.email,
             password: password || '',
