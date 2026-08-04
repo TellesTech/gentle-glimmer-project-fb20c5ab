@@ -27,6 +27,7 @@ import { PhotoGallery } from '@/components/reports/PhotoGallery';
 import { SignatureTimeline } from '@/components/client/SignatureTimeline';
 import { getReportPdfBlob } from '@/lib/clientReportDownload';
 import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
+import { getEdgeFunctionErrorMessage } from '@/lib/edgeFunctionError';
 import type { Shift, DeviationType, ImpactLevel } from '@/types';
 
 const SHIFT_CONFIG: Record<Shift, { label: string; icon: typeof Sun; color: string }> = {
@@ -255,25 +256,15 @@ export default function ClientReportView() {
 
   const submitSignatureMutation = useMutation({
     mutationFn: async (params: { signatureData: string; signerName: string; signerRole?: string; signerEmail?: string | null }) => {
-      const signerEmail =
-        params.signerEmail ??
-        (isWeesUser ? weesProfile?.email : null) ??
-        authProfile?.email ??
-        localProfile?.email ??
-        data?.accessInfo?.clientEmail ??
-        null;
       const response = await supabase.functions.invoke('submit-signature', {
         body: {
           accessToken: accessToken || undefined,
-          reportId: !accessToken ? (reportId || data?.report?.id) : undefined,
+          reportId: reportId || data?.report?.id,
           signatureData: params.signatureData,
-          signerName: params.signerName,
-          signerRole: params.signerRole || null,
-          signerEmail,
         },
       });
 
-      if (response.error) throw new Error(response.error.message);
+      if (response.error) throw new Error(await getEdgeFunctionErrorMessage(response.error, 'Erro ao assinar relatório'));
       if (response.data.error) throw new Error(response.data.error);
       
       return response.data;

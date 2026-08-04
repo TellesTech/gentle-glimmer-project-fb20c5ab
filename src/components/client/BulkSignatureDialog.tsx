@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { parseISO, differenceInDays } from 'date-fns';
+import { getEdgeFunctionErrorMessage } from '@/lib/edgeFunctionError';
 
 export interface BulkSignItem {
   reportApproverId: string;
@@ -83,15 +84,11 @@ export function BulkSignatureDialog({
         body: {
           items: items.map(i => ({ reportId: i.reportId })),
           signatureData,
-          signerName,
-          signerRole,
-          signerEmail,
-          signerUserId,
           geolocation,
         },
       });
 
-      if (error) throw error;
+      if (error) throw new Error(await getEdgeFunctionErrorMessage(error, 'Falha ao assinar os RDOs'));
 
       // Mark approvers as approved client-side (faster UI feedback)
       const approverIds = items.map(i => i.reportApproverId).filter(Boolean);
