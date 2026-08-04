@@ -207,7 +207,7 @@ export default function ClientActivityList() {
                 className="flex flex-col items-center gap-3 group cursor-pointer"
                 onClick={() => navigate(`/client/reports/${r.id}?${searchParams.toString()}`)}
               >
-                <div className="relative w-20 h-26 sm:w-24 sm:h-32 transition-transform duration-200 group-hover:-translate-y-1 group-hover:scale-105 group-active:scale-95">
+                <div className="relative w-20 h-[6.5rem] sm:w-24 sm:h-32 transition-transform duration-200 group-hover:-translate-y-1 group-hover:scale-105 group-active:scale-95">
                   {/* Paper sheet */}
                   <div className="absolute inset-0 bg-white border border-border rounded-sm shadow-md overflow-hidden">
                     {/* Status stripe */}
