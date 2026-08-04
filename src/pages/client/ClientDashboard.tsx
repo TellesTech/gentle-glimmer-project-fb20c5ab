@@ -41,6 +41,9 @@ import { format, parseISO, subDays, startOfDay, endOfDay, isWithinInterval, diff
 import { ptBR } from 'date-fns/locale';
 
 import { cn } from '@/lib/utils';
+import JSZip from 'jszip';
+import { getReportPdfBlob } from '@/lib/clientReportDownload';
+import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
 import { ResponsiveContainer, BarChart, Bar, XAxis as RechartsXAxis, YAxis as RechartsYAxis, Tooltip, CartesianGrid } from 'recharts';
 
 interface PendingReport {
