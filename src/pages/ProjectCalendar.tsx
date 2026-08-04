@@ -677,6 +677,8 @@ export default function ProjectCalendar() {
     if (dayReports.some(r => (r as any).no_activity === true)) return 'bg-red-100 border-red-300/50';
     if (dayReports.some(r => r.status === 'draft')) return 'bg-muted border-muted-foreground/30';
     if (dayReports.some(r => r.status === 'sent')) return 'bg-blue-100 border-blue-300/50';
+    if (dayReports.some(r => r.status === 'signed' || r.status === 'finalized'))
+      return 'bg-primary/15 border-primary/40';
     return 'bg-success/20 border-success/50';
   };
 
@@ -998,6 +1000,7 @@ export default function ProjectCalendar() {
                               "w-1.5 h-1.5 rounded-full border-[0.5px] border-black/10",
                               r.status === 'draft' ? "bg-muted-foreground" :
                               r.status === 'sent' ? "bg-blue-500" :
+                              (r.status === 'signed' || r.status === 'finalized') ? "bg-primary" :
                               "bg-success"
                             )} 
                           />
