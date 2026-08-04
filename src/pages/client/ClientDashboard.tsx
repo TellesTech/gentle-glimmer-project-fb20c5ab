@@ -628,13 +628,13 @@ export default function ClientDashboard() {
 
         {/* Page identifier — Portal {Empresa} */}
         {portalContextName && (
-          <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-gradient-to-r from-primary/10 to-primary/5 px-4 py-3">
-            <div className="p-2 rounded-md bg-primary/15 shrink-0">
+          <div className="flex items-center gap-3 rounded-xl border border-primary/10 bg-primary/5 px-4 py-3 shadow-sm">
+            <div className="p-2 rounded-lg bg-primary/10 shrink-0 shadow-inner">
               <Building2 className="h-5 w-5 text-primary" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Portal</p>
-              <p className="text-base sm:text-lg font-bold text-foreground truncate leading-tight">{portalContextName}</p>
+              <p className="text-[10px] uppercase tracking-widest text-primary/70 font-bold">Unidade Operacional</p>
+              <p className="text-base sm:text-lg font-black text-foreground truncate leading-tight tracking-tight">{portalContextName}</p>
             </div>
           </div>
         )}

@@ -69,7 +69,7 @@ export function PortalResponsiblesCard({ companyId, siteIds }: Props) {
       <Collapsible open={weesOpen} onOpenChange={setWeesOpen}>
         <Card className="overflow-hidden border-border/50 shadow-none bg-muted/20">
           <CollapsibleTrigger asChild>
-            <CardHeader className="pb-3 cursor-pointer hover:bg-muted/30 transition-colors select-none">
+            <CardHeader className="py-2.5 px-4 cursor-pointer hover:bg-muted/50 transition-colors select-none">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-primary" />
@@ -106,9 +106,9 @@ export function PortalResponsiblesCard({ companyId, siteIds }: Props) {
 
       {/* Client Team */}
       <Collapsible open={clientOpen} onOpenChange={setClientOpen}>
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden border-border/50 shadow-none bg-muted/20">
           <CollapsibleTrigger asChild>
-            <CardHeader className="pb-3 cursor-pointer hover:bg-muted/30 transition-colors select-none">
+            <CardHeader className="py-2.5 px-4 cursor-pointer hover:bg-muted/50 transition-colors select-none">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Users className="h-4 w-4 text-primary" />
