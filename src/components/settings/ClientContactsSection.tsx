@@ -524,9 +524,11 @@ export function ClientContactsSection({ companyId, companyName, companySlug, con
     const emailBlock = password
       ? `*Acesso por e-mail e senha*
 📧 E-mail: ${email}
-🔑 Senha: ${password}
+🔑 Senha temporária: ${password}
 🔗 Link: ${emailLoginUrl || loginUrl}`
-      : '';
+      : `*Acesso por e-mail e senha*
+📧 E-mail: ${email}
+🔗 Link: ${emailLoginUrl || loginUrl}`;
     const pinBlock = pin
       ? `*Acesso rápido por PIN*
 🔐 PIN: ${pin}
@@ -541,7 +543,7 @@ Através dele, você poderá acompanhar os *Diários de Obra (RDOs)*, visualizar
 
 ${accessLines}
 
-Basta abrir o link e entrar com os dados acima.
+Basta abrir o link e entrar com os dados acima. A senha é temporária e pode ser alterada depois no seu perfil.
 
 Atenciosamente,
 *Equipe WEES* 🏗️`;
