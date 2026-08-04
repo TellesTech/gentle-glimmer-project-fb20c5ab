@@ -33,8 +33,9 @@ import {
   Building2,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { format, parseISO, subDays, startOfDay, endOfDay, isWithinInterval, differenceInDays } from 'date-fns';
+import { format, parseISO, subDays, startOfDay, endOfDay, isWithinInterval, differenceInDays, getYear, getMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
 import { cn } from '@/lib/utils';
 import { ResponsiveContainer, BarChart, Bar, XAxis as RechartsXAxis, YAxis as RechartsYAxis, Tooltip, CartesianGrid } from 'recharts';
 
