@@ -356,6 +356,7 @@ export type Database = {
           email: string
           id: string
           is_active: boolean | null
+          must_change_password: boolean
           name: string
           notes: string | null
           phone: string | null
@@ -382,6 +383,7 @@ export type Database = {
           email: string
           id?: string
           is_active?: boolean | null
+          must_change_password?: boolean
           name: string
           notes?: string | null
           phone?: string | null
@@ -408,6 +410,7 @@ export type Database = {
           email?: string
           id?: string
           is_active?: boolean | null
+          must_change_password?: boolean
           name?: string
           notes?: string | null
           phone?: string | null
@@ -631,6 +634,7 @@ export type Database = {
           invitation_count: number | null
           invitation_sent_at: string | null
           is_active: boolean | null
+          must_change_password: boolean
           name: string
           phone: string | null
           pin_hash: string | null
@@ -649,6 +653,7 @@ export type Database = {
           invitation_count?: number | null
           invitation_sent_at?: string | null
           is_active?: boolean | null
+          must_change_password?: boolean
           name: string
           phone?: string | null
           pin_hash?: string | null
@@ -667,6 +672,7 @@ export type Database = {
           invitation_count?: number | null
           invitation_sent_at?: string | null
           is_active?: boolean | null
+          must_change_password?: boolean
           name?: string
           phone?: string | null
           pin_hash?: string | null
