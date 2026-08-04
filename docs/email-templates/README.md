@@ -6,15 +6,40 @@ do portal, é necessário configurar SMTP e template no painel do Supabase.
 
 ## 1. Resend (verificar o domínio)
 
-1. Criar conta em https://resend.com (grátis até 3.000 e-mails/mês).
-2. **Domains → Add Domain →** `wees.com.br`.
-3. Copiar os registros DNS exibidos (MX/TXT de envio, TXT DKIM, TXT DMARC) para o
-   provedor de DNS de `wees.com.br`.
-4. Aguardar o status ficar **Verified**.
-5. **API Keys → Create API Key** (Full access) e guardar o valor.
+> A API Key do Resend conectada a este workspace é **restrita a envio** (`restricted_api_key`),
+> então o domínio **não pode** ser criado/verificado por API — é preciso fazer no painel.
 
-> `rdo.wees.com.br` continua sendo apenas o endereço do site — os registros de e-mail
-> ficam no domínio raiz e não afetam o portal.
+1. Acessar https://resend.com → **Domains → Add Domain**.
+2. Usar o subdomínio **`send.wees.com.br`** (região `sa-east-1` ou `us-east-1`).
+   Motivo: o domínio raiz `wees.com.br` já usa **Zoho Mail** (MX `mx.zoho.com`,
+   SPF `include:zohomail.com`). O Resend pede um MX próprio de envio — colocá-lo na
+   raiz quebraria o e-mail corporativo. Um subdomínio isola o envio transacional.
+3. Adicionar no Cloudflare (DNS de `wees.com.br`) os registros mostrados pelo Resend,
+   todos com proxy **DNS only**:
+   - `MX  send  →  feedback-smtp.<região>.amazonses.com` (prioridade 10)
+   - `TXT send  →  v=spf1 include:amazonses.com ~all`
+   - `TXT resend._domainkey.send  →  p=<chave DKIM do painel>`
+4. Aguardar o status ficar **Verified** (minutos até algumas horas).
+5. **API Keys → Create API Key** com permissão **Full access** (a atual só envia) e guardar.
+
+### Estado atual do DNS (verificado)
+
+| Registro | Situação |
+| --- | --- |
+| `wees.com.br` MX | Zoho (`mx.zoho.com`, `mx2`, `mx3`) — **não mexer** |
+| `wees.com.br` SPF | `v=spf1 include:zohomail.com include:_spf.mail.hostinger.com ~all` |
+| `_dmarc.wees.com.br` | `v=DMARC1; p=quarantine; ... adkim=r; aspf=r` — já existe, cobre subdomínios |
+| `resend._domainkey.wees.com.br` | **ausente** |
+| `send.wees.com.br` | **ausente** — criar |
+
+O DMARC está em modo relaxado (`adkim=r`), então o DKIM de `send.wees.com.br` alinha
+corretamente. Nenhuma alteração no DMARC é necessária.
+
+> Remetente resultante: `Portal WEES <portal@send.wees.com.br>`.
+> Se preferir `portal@wees.com.br`, é preciso adicionar o SPF do Resend ao SPF da raiz
+> (`include:amazonses.com`) e o MX de feedback — o que conflita com o Zoho. Recomendado
+> manter o subdomínio.
+> `rdo.wees.com.br` continua sendo apenas o endereço do site.
 
 ## 2. SMTP no Supabase
 
@@ -25,7 +50,7 @@ Host:         smtp.resend.com
 Port:         465
 Username:     resend
 Password:     <API Key do Resend>
-Sender email: portal@wees.com.br
+Sender email: portal@send.wees.com.br
 Sender name:  Portal WEES
 ```
 
