@@ -6,6 +6,9 @@ do portal, é necessário configurar SMTP e template no painel do Supabase.
 
 ## 1. Resend (verificar o domínio)
 
+> Passo a passo detalhado dos registros no Cloudflare: [`dns-send-wees.md`](./dns-send-wees.md).
+> Verificação automática: `./scripts/check-send-dns.sh`.
+
 > A API Key do Resend conectada a este workspace é **restrita a envio** (`restricted_api_key`),
 > então o domínio **não pode** ser criado/verificado por API — é preciso fazer no painel.
 
