@@ -13,6 +13,7 @@ import { ClientLayout } from '@/components/client/ClientLayout';
 import { useClientPortalSettings } from '@/hooks/useClientPortalSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { PortalResponsiblesCard } from '@/components/client/PortalResponsiblesCard';
+import { PageBackHeader } from '@/components/client/PageBackHeader';
 import { AnimatedFolder, type Project as FolderProject } from '@/components/ui/3d-folder';
 import {
   FileText,
