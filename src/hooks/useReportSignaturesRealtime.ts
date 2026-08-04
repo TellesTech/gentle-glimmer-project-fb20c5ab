@@ -41,7 +41,7 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
       // 1) Resolve report -> project -> site -> company
       const { data: report } = await supabase
         .from('reports')
-        .select('id, project:projects(id, site:sites(id, company:companies(id, name)))')
+        .select('id, created_by, project:projects(id, site:sites(id, company:companies(id, name)))')
         .eq('id', reportId)
         .maybeSingle();
 
@@ -87,19 +87,12 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
           .from('report_company_approvers')
           .select('id, contact_id, status, approved_at, contact:company_contacts(id, name, email, role, avatar_url)')
           .eq('report_id', reportId),
-        // WEES responsibles for this site (apenas responsáveis formais da obra;
-        // portal_admin_access lista dezenas de usuários e poluía o painel)
-        siteId
-          ? supabase
-              .from('site_responsibles')
-              .select('user_id')
-              .eq('site_id', siteId)
-              .then(({ data: sr }) => {
-                const set = new Set<string>();
-                (sr || []).forEach((r: any) => r.user_id && set.add(r.user_id));
-                return Array.from(set);
-              })
-          : Promise.resolve([] as string[]),
+        // Lado WEES: apenas o responsável pelo RDO (autor). As listas de
+        // site_responsibles/portal_admin_access contêm dezenas de colaboradores
+        // e poluíam o painel com nomes que não assinam o documento.
+        Promise.resolve(
+          ((report as any)?.created_by ? [(report as any).created_by as string] : []) as string[],
+        ),
         // Client contacts for this company
         companyId
           ? supabase
