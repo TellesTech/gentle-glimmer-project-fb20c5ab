@@ -175,7 +175,7 @@ export function CompanyContactsDialog({ open, onOpenChange, companyId, companyNa
           pinHashValue = pinData?.pin_hash;
         }
 
-        const { error } = await supabase
+        const { data: inserted, error } = await supabase
           .from('company_contacts')
           .insert({
             company_id: companyId,
@@ -187,7 +187,9 @@ export function CompanyContactsDialog({ open, onOpenChange, companyId, companyNa
             is_active: formData.is_active,
             avatar_url: formData.avatar_url || null,
             pin_hash: pinHashValue,
-          });
+          })
+          .select('id')
+          .maybeSingle();
         
         if (error) {
           if (error.message.includes('duplicate')) {
@@ -196,6 +198,26 @@ export function CompanyContactsDialog({ open, onOpenChange, companyId, companyNa
           throw error;
         }
         toast({ title: 'Contato adicionado' });
+
+        // Envia automaticamente o e-mail de primeiro acesso (link mágico)
+        if (inserted?.id) {
+          const { data: mailData, error: mailError } = await supabase.functions.invoke('client-magic-link', {
+            body: {
+              contactId: inserted.id,
+              email: formData.email,
+              redirectTo: `${window.location.origin}/client/dashboard?first_access=1`,
+            },
+          });
+          if (mailError || (mailData as any)?.error) {
+            toast({
+              title: 'Contato salvo, mas o e-mail não saiu',
+              description: (mailData as any)?.error || mailError?.message,
+              variant: 'destructive',
+            });
+          } else {
+            toast({ title: 'Convite enviado', description: `Link de primeiro acesso enviado para ${formData.email}.` });
+          }
+        }
       }
       
       setIsFormOpen(false);
