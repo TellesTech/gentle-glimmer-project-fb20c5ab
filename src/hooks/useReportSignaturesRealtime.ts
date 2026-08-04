@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -366,10 +366,17 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
   });
 
   // Realtime subscriptions
+  const instanceIdRef = useRef<string>();
+  if (!instanceIdRef.current) {
+    instanceIdRef.current =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2);
+  }
   useEffect(() => {
     if (!reportId) return;
     const channel = supabase
-      .channel(`signature-timeline-${reportId}`)
+      .channel(`signature-timeline-${reportId}-${instanceIdRef.current}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'report_signatures', filter: `report_id=eq.${reportId}` }, () => {
         queryClient.invalidateQueries({ queryKey });
       })
