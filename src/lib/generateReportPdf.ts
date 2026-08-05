@@ -502,7 +502,7 @@ async function buildReportPdfDoc(
   }
   
   // Calcular altura total do box com responsáveis
-  const hasResponsibles = report.technicalResponsibleName || report.supervisorName;
+  const hasResponsibles = !!(report.technicalResponsibleName || report.supervisorName);
   const baseHeight = infoData.length * 6 + 4;
   const responsiblesHeight = hasResponsibles ? 18 : 0;
   const totalBoxHeight = baseHeight + responsiblesHeight;
