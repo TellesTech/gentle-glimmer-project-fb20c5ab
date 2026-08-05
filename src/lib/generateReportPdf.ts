@@ -944,7 +944,7 @@ async function buildReportPdfDoc(
       doc.text(aiLines, margin + 6, textY);
     }
     
-    y = boxY + boxHeight + 8;
+    y = boxY + boxHeight + 4;
   }
   
   // === HISTÓRICO ===
