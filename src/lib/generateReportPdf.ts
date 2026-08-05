@@ -693,7 +693,7 @@ async function buildReportPdfDoc(
       }
     });
     
-    y += 8;
+    y += 4;
   }
 
   // === ROTINA ===
