@@ -789,10 +789,10 @@ async function buildReportPdfDoc(
         const actionY = y + 10 + descHeight + 2;
         doc.setFontSize(6);
         setColor(COLORS.textMuted);
-        doc.setFont('helvetica', 'bold');
+        doc.setFont(font.family, font.style('bold'));
         doc.text('Ação Corretiva:', margin + 5, actionY);
         setColor(COLORS.text);
-        doc.setFont('helvetica', 'normal');
+        doc.setFont(font.family, font.style('normal'));
         doc.text(actionLines, margin + 5, actionY + 4);
       }
       
