@@ -594,10 +594,10 @@ async function buildReportPdfDoc(
     safetyItems.forEach((item) => {
       doc.setFontSize(7);
       setColor(COLORS.textMuted);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont(font.family, font.style('bold'));
       doc.text(item.label, margin + 3, y);
       setColor(COLORS.text);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont(font.family, font.style('normal'));
       doc.text(prepareText(item.value || ''), margin + 48, y);
       y += 5;
     });
