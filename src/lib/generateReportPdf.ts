@@ -835,7 +835,7 @@ async function buildReportPdfDoc(
       
       doc.setFontSize(7);
       setColor(COLORS.text);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont(font.family, font.style('normal'));
       
       // Nome
       const name = prepareText(person.userName).slice(0, 25);
