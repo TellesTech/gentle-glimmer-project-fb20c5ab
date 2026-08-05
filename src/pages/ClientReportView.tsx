@@ -464,7 +464,18 @@ export default function ClientReportView() {
       <ClientHeader 
         clientName={accessInfo?.clientName || authProfile?.name || localProfile?.name || 'Cliente'} 
         clientCompany={accessInfo?.clientCompany || authProfile?.company || localProfile?.company}
-        onBack={authProfile ? () => navigate('/client/dashboard') : () => window.history.back()}
+        onBack={() => {
+          if (authProfile) {
+            navigate(`/client/dashboard?${new URLSearchParams(window.location.search).toString()}`);
+          } else {
+            // Se for link de acesso rápido, tenta voltar no histórico ou vai para home
+            if (window.history.length > 1) {
+              navigate(-1);
+            } else {
+              navigate('/');
+            }
+          }
+        }}
       />
 
       <main className="max-w-6xl mx-auto p-4 md:px-8 md:py-6 space-y-6 pb-24">

@@ -316,6 +316,7 @@ export default function ClientReports() {
                   if (selectedMonth !== null) setSelectedMonth(null);
                   else if (selectedYear !== null) setSelectedYear(null);
                   else if (selectedActivity) setSelectedActivity(null);
+                  else navigate(`/client/dashboard?${new URLSearchParams(window.location.search).toString()}`);
                 }}
                 icon={<FileText className="h-5 w-5" />}
                 title="Meus Relatórios"
