@@ -31,7 +31,11 @@ export function PageBackHeader({
       <Button
         variant="ghost"
         size="sm"
-        onClick={onBack}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onBack();
+        }}
         aria-label="Voltar"
         className="h-9 w-9 p-0 rounded-full hover:bg-muted shrink-0"
       >
