@@ -930,6 +930,17 @@ export default function ClientDashboard() {
                   className="mb-0"
                 />
 
+                <div className="flex flex-wrap items-center gap-4 px-1 py-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500 shadow-sm" />
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Pendente de Assinatura</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#f4c430] shadow-sm" />
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Assinado ou Parcial</span>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 sm:gap-10 pt-1 pb-4">
                   {visibleMonthFolders.find(m => m.id === selectedMonthId)?.activities.map((a) => {
                     const status = a.pending === 0 ? 'completed' : a.signed > 0 ? 'partial' : 'pending';

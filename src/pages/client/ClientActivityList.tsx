@@ -168,6 +168,21 @@ export default function ClientActivityList() {
           className="mb-0"
         />
 
+        <div className="flex flex-wrap items-center gap-4 px-1">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm" />
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Assinado</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-amber-500 shadow-sm" />
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Assinatura Parcial</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-red-500 shadow-sm" />
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Pendente</span>
+          </div>
+        </div>
+
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 sm:gap-10 pt-1 pb-4">
             {[...Array(6)].map((_, i) => (
