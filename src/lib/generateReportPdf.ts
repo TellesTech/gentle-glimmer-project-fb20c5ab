@@ -639,13 +639,13 @@ async function buildReportPdfDoc(
       // Label
       doc.setFontSize(6);
       setColor(COLORS.textMuted);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont(font.family, font.style('bold'));
       doc.text(metric.label, cardX + cardWidth / 2, cardY + 6, { align: 'center' });
       
       // Valor
       doc.setFontSize(12);
       setColor(metric.color);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont(font.family, font.style('bold'));
       doc.text(metric.value, cardX + cardWidth / 2, cardY + 15, { align: 'center' });
     });
     
