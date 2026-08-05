@@ -602,7 +602,7 @@ async function buildReportPdfDoc(
       y += 5;
     });
     
-    y += 8;
+    y += 4;
   }
   
   // === EFETIVO E PRODUTIVIDADE ===
