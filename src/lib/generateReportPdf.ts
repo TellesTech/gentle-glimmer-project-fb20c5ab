@@ -879,7 +879,7 @@ async function buildReportPdfDoc(
     const commentLines = hasComments ? doc.splitTextToSize(commentText, contentWidth - 12) : [];
     
     // Calcular linhas para resumo (com label "Resumo:")
-    doc.setFont('Roboto', 'italic');
+    doc.setFont(font.family, font.style('italic'));
     const aiLines = hasAiSummary ? doc.splitTextToSize(aiText, contentWidth - 12) : [];
     
     // Calcular altura total da caixa
