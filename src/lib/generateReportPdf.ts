@@ -875,7 +875,7 @@ async function buildReportPdfDoc(
     
     // Calcular linhas para observações
     doc.setFontSize(8);
-    doc.setFont('Roboto', 'normal');
+    doc.setFont(font.family, font.style('normal'));
     const commentLines = hasComments ? doc.splitTextToSize(commentText, contentWidth - 12) : [];
     
     // Calcular linhas para resumo (com label "Resumo:")
