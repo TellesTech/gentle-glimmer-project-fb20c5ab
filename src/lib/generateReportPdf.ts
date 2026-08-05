@@ -1208,7 +1208,7 @@ async function buildReportPdfDoc(
         // Label abaixo da linha
         setColor(COLORS.textMuted);
         doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
+        doc.setFont(font.family, font.style('normal'));
         doc.text(prepareText(col2Label), x2 + fieldWidth / 2, lineY + 5, { align: 'center' });
         
         // "Nome:" e "Data:" acima da linha
