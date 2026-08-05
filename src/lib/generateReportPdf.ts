@@ -701,7 +701,7 @@ async function buildReportPdfDoc(
   if (routineText) {
     // Preparar texto
     doc.setFontSize(8);
-    doc.setFont('Roboto', 'normal');
+    doc.setFont(font.family, font.style('normal'));
     const routineLines = doc.splitTextToSize(prepareText(routineText), contentWidth - 12);
     
     // Calcular altura da caixa
