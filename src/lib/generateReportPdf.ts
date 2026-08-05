@@ -545,10 +545,10 @@ async function buildReportPdfDoc(
     if (report.technicalResponsibleName) {
       doc.setFontSize(7);
       setColor(COLORS.textMuted);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont(font.family, font.style('bold'));
       doc.text('Resp. Técnico:', margin + 3, y);
       setColor(COLORS.text);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont(font.family, font.style('normal'));
       const techResp = report.technicalResponsibleRole 
         ? `${prepareText(report.technicalResponsibleName)} - ${prepareText(report.technicalResponsibleRole)}`
         : prepareText(report.technicalResponsibleName);
