@@ -5,6 +5,7 @@ import { formatRdoNumber } from './formatters';
 import type { Report, Company, Site, Project } from '@/types';
 import { getLogoBase64 } from './logoBase64';
 import { supabase } from '@/integrations/supabase/client';
+import { registerPdfFont, type PdfFontHandle } from './pdfFonts';
 
 // === LABELS (com acentos - jsPDF suporta UTF-8) ===
 const SHIFT_LABELS: Record<string, string> = {
@@ -225,6 +226,9 @@ async function buildReportPdfDoc(
     : COLORS.accentDark;
   const doc = new jsPDF('p', 'mm', 'a4');
   
+  // Register Roboto font to support UTF-8 (accents) properly
+  const font = await registerPdfFont(doc);
+  
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 15;
@@ -339,11 +343,11 @@ async function buildReportPdfDoc(
     if (!logoRendered) {
       setColor(COLORS.white);
       doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont(font.family, font.style('bold'));
       const companyShortName = prepareText(company.name || 'RDO').substring(0, 12);
       doc.text(companyShortName, margin + col1Width / 2, 10, { align: 'center' });
       doc.setFontSize(6);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont(font.family, font.style('normal'));
       doc.text('Gestão de Atividades', margin + col1Width / 2, 14, { align: 'center' });
     }
     
@@ -352,11 +356,11 @@ async function buildReportPdfDoc(
     
     setColor(COLORS.white);
     doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(font.family, font.style('bold'));
     doc.text('RELATÓRIO DIÁRIO DE ATIVIDADE', col2Center, 8, { align: 'center' });
     
     doc.setFontSize(8);
-    doc.setFont('courier', 'normal');
+    doc.setFont('courier', 'normal'); // Keep courier for the code if desired, or switch to Roboto Mono if available
     doc.text(rdoCode, col2Center, 13, { align: 'center' });
     
     // === COLUNA 3: Status + Data ===
@@ -379,17 +383,17 @@ async function buildReportPdfDoc(
     doc.roundedRect(badgeX, 4, badgeWidth, 6, 1, 1, 'F');
     setColor(COLORS.white);
     doc.setFontSize(6);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(font.family, font.style('bold'));
     doc.text(statusLabel, col3Center, 8, { align: 'center' });
     
     // Data abaixo do badge
     doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(font.family, font.style('normal'));
     doc.text(format(reportDate, 'dd/MM/yyyy'), col3Center, 14, { align: 'center' });
     
     // === LINHA INFERIOR: Info do projeto (largura total) ===
     setColor(COLORS.white);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(font.family, font.style('normal'));
     doc.setFontSize(7);
     const projectInfo = `${prepareText(company.name)} | ${prepareText(site.name)} | ${prepareText(project.name)}`;
     doc.text(projectInfo, pageWidth / 2, headerHeight - 3, { align: 'center' });
@@ -406,11 +410,11 @@ async function buildReportPdfDoc(
     // === COLUNA ESQUERDA: Info da empresa ===
     doc.setFontSize(7);
     setColor(COLORS.text);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(font.family, font.style('bold'));
     doc.text(prepareText(company.name || 'Empresa'), margin, footerY + 5);
     
     setColor(COLORS.textMuted);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(font.family, font.style('normal'));
     doc.text(company.email || '', margin, footerY + 9);
     
     // === COLUNA CENTRO: Logo (usa logo principal, não a do PDF) ===
@@ -451,14 +455,14 @@ async function buildReportPdfDoc(
   
   // === TITULO DE SECAO ===
   const drawSectionTitle = (title: string, badge?: string) => {
-    checkPageBreak(14);
+    checkPageBreak(12);
     
     // Barra usando cor primária do tenant
     setFillColor(primaryColor);
     doc.rect(margin, y, 2, 7, 'F');
     
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(font.family, font.style('bold'));
     setColor(primaryColor);
     doc.text(prepareText(title.toUpperCase()), margin + 5, y + 5);
     
@@ -472,7 +476,7 @@ async function buildReportPdfDoc(
       doc.text(badge, badgeX + badgeWidth / 2, y + 4.5, { align: 'center' });
     }
     
-    y += 10;
+    y += 8;
   };
   
   // === LINHA SEPARADORA ===
@@ -480,7 +484,7 @@ async function buildReportPdfDoc(
     setDrawColor(COLORS.border);
     doc.setLineWidth(0.2);
     doc.line(margin + 3, y, pageWidth - margin - 3, y);
-    y += 3;
+    y += 2;
   };
   
   // === INFORMACOES GERAIS ===
@@ -498,7 +502,7 @@ async function buildReportPdfDoc(
   }
   
   // Calcular altura total do box com responsáveis
-  const hasResponsibles = report.technicalResponsibleName || report.supervisorName;
+  const hasResponsibles = !!(report.technicalResponsibleName || report.supervisorName);
   const baseHeight = infoData.length * 6 + 4;
   const responsiblesHeight = hasResponsibles ? 18 : 0;
   const totalBoxHeight = baseHeight + responsiblesHeight;
@@ -515,12 +519,12 @@ async function buildReportPdfDoc(
     
     doc.setFontSize(7);
     setColor(COLORS.textMuted);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(font.family, font.style('bold'));
     doc.text(row[0], col1X, y);
     if (row[2]) doc.text(row[2], col3X, y);
     
     setColor(COLORS.text);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(font.family, font.style('normal'));
     doc.text(row[1], col2X, y);
     if (row[3]) doc.text(row[3], col4X, y);
     
@@ -541,10 +545,10 @@ async function buildReportPdfDoc(
     if (report.technicalResponsibleName) {
       doc.setFontSize(7);
       setColor(COLORS.textMuted);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont(font.family, font.style('bold'));
       doc.text('Resp. Técnico:', margin + 3, y);
       setColor(COLORS.text);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont(font.family, font.style('normal'));
       const techResp = report.technicalResponsibleRole 
         ? `${prepareText(report.technicalResponsibleName)} - ${prepareText(report.technicalResponsibleRole)}`
         : prepareText(report.technicalResponsibleName);
@@ -556,10 +560,10 @@ async function buildReportPdfDoc(
       const supervisorX = report.technicalResponsibleName ? margin + contentWidth / 2 : margin + 3;
       doc.setFontSize(7);
       setColor(COLORS.textMuted);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont(font.family, font.style('bold'));
       doc.text('Supervisor:', supervisorX, y);
       setColor(COLORS.text);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont(font.family, font.style('normal'));
       const supervisor = report.supervisorRole 
         ? `${prepareText(report.supervisorName)} - ${prepareText(report.supervisorRole)}`
         : prepareText(report.supervisorName);
@@ -569,10 +573,10 @@ async function buildReportPdfDoc(
     y += 6;
   }
   
-  y += 8;
+  y += 4;
   
   // === SEGURANÇA E COMUNICAÇÃO ===
-  const hasSafetyInfo = report.ambulancePoint || report.meetingPoint || report.radioFrequencyWees || report.radioFrequencyOperation || report.arrivalTimeAtLiberator || report.documentReleaseTime || report.blockRevalidationTime;
+  const hasSafetyInfo = !!(report.ambulancePoint || report.meetingPoint || report.radioFrequencyWees || report.radioFrequencyOperation || report.arrivalTimeAtLiberator || report.documentReleaseTime || report.blockRevalidationTime);
   
   if (hasSafetyInfo) {
     drawSectionTitle('Segurança e Comunicação');
@@ -590,19 +594,19 @@ async function buildReportPdfDoc(
     safetyItems.forEach((item) => {
       doc.setFontSize(7);
       setColor(COLORS.textMuted);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont(font.family, font.style('bold'));
       doc.text(item.label, margin + 3, y);
       setColor(COLORS.text);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont(font.family, font.style('normal'));
       doc.text(prepareText(item.value || ''), margin + 48, y);
       y += 5;
     });
     
-    y += 8;
+    y += 4;
   }
   
   // === EFETIVO E PRODUTIVIDADE ===
-  const hasWorkforceInfo = report.plannedWorkforce !== undefined || report.actualWorkforce !== undefined;
+  const hasWorkforceInfo = !!(report.plannedWorkforce !== undefined || report.actualWorkforce !== undefined);
   
   if (hasWorkforceInfo) {
     drawSectionTitle('Efetivo e Produtividade');
@@ -635,13 +639,13 @@ async function buildReportPdfDoc(
       // Label
       doc.setFontSize(6);
       setColor(COLORS.textMuted);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont(font.family, font.style('bold'));
       doc.text(metric.label, cardX + cardWidth / 2, cardY + 6, { align: 'center' });
       
       // Valor
       doc.setFontSize(12);
       setColor(metric.color);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont(font.family, font.style('bold'));
       doc.text(metric.value, cardX + cardWidth / 2, cardY + 15, { align: 'center' });
     });
     
@@ -654,13 +658,13 @@ async function buildReportPdfDoc(
       
       doc.setFontSize(7);
       setColor(primaryColor);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont(font.family, font.style('bold'));
       doc.text('⚠ Efetivo abaixo do programado', margin + 4, y + 5);
       
       y += 12;
     }
     
-    y += 8;
+    y += 4;
   }
   
   // === ATIVIDADES EXECUTADAS ===
@@ -676,7 +680,7 @@ async function buildReportPdfDoc(
       
       doc.setFontSize(8);
       setColor(activity.completed ? COLORS.text : COLORS.textMuted);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont(font.family, font.style('normal'));
       doc.text(bullet, margin + 3, y);
       
       const lines = doc.splitTextToSize(prepareText(activity.description), contentWidth - 18);
@@ -689,7 +693,7 @@ async function buildReportPdfDoc(
       }
     });
     
-    y += 8;
+    y += 4;
   }
 
   // === ROTINA ===
@@ -697,7 +701,7 @@ async function buildReportPdfDoc(
   if (routineText) {
     // Preparar texto
     doc.setFontSize(8);
-    doc.setFont('Roboto', 'normal');
+    doc.setFont(font.family, font.style('normal'));
     const routineLines = doc.splitTextToSize(prepareText(routineText), contentWidth - 12);
     
     // Calcular altura da caixa
@@ -720,10 +724,10 @@ async function buildReportPdfDoc(
     // Renderizar texto
     setColor(COLORS.text);
     doc.setFontSize(8);
-    doc.setFont('Roboto', 'normal');
+    doc.setFont(font.family, font.style('normal'));
     doc.text(routineLines, margin + 6, boxY + 7);
     
-    y = boxY + boxHeight + 8;
+    y = boxY + boxHeight + 4;
   }
   
   // === DESVIOS / SEGURANÇA ===
@@ -764,7 +768,7 @@ async function buildReportPdfDoc(
       doc.roundedRect(margin + 5, y + 2, 12, 4, 1, 1, 'F');
       setColor(COLORS.white);
       doc.setFontSize(5);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont(font.family, font.style('bold'));
       doc.text(IMPACT_LABELS[impact], margin + 11, y + 4.8, { align: 'center' });
       
       // Badge tipo
@@ -777,7 +781,7 @@ async function buildReportPdfDoc(
       // Descrição (múltiplas linhas)
       setColor(COLORS.text);
       doc.setFontSize(7);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont(font.family, font.style('normal'));
       doc.text(descLines, margin + 5, y + 10);
       
       // Ação corretiva (múltiplas linhas)
@@ -785,17 +789,17 @@ async function buildReportPdfDoc(
         const actionY = y + 10 + descHeight + 2;
         doc.setFontSize(6);
         setColor(COLORS.textMuted);
-        doc.setFont('helvetica', 'bold');
+        doc.setFont(font.family, font.style('bold'));
         doc.text('Ação Corretiva:', margin + 5, actionY);
         setColor(COLORS.text);
-        doc.setFont('helvetica', 'normal');
+        doc.setFont(font.family, font.style('normal'));
         doc.text(actionLines, margin + 5, actionY + 4);
       }
       
       y += cardHeight + 4;
     });
     
-    y += 8;
+    y += 4;
   }
   
   // === EFETIVO (Tabela com Função e Horário) ===
@@ -809,7 +813,7 @@ async function buildReportPdfDoc(
     doc.roundedRect(margin, y, contentWidth, 6, 1, 1, 'F');
     setColor(COLORS.white);
     doc.setFontSize(6);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(font.family, font.style('bold'));
     
     // Posições das colunas: Nome | Função | Horário
     const colName = margin + 5;
@@ -831,7 +835,7 @@ async function buildReportPdfDoc(
       
       doc.setFontSize(7);
       setColor(COLORS.text);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont(font.family, font.style('normal'));
       
       // Nome
       const name = prepareText(person.userName).slice(0, 25);
@@ -856,7 +860,7 @@ async function buildReportPdfDoc(
       y += 6;
     });
     
-    y += 8;
+    y += 4;
   }
   
   // === OBSERVAÇÕES (com Resumo unificado) ===
@@ -871,11 +875,11 @@ async function buildReportPdfDoc(
     
     // Calcular linhas para observações
     doc.setFontSize(8);
-    doc.setFont('Roboto', 'normal');
+    doc.setFont(font.family, font.style('normal'));
     const commentLines = hasComments ? doc.splitTextToSize(commentText, contentWidth - 12) : [];
     
     // Calcular linhas para resumo (com label "Resumo:")
-    doc.setFont('Roboto', 'italic');
+    doc.setFont(font.family, font.style('italic'));
     const aiLines = hasAiSummary ? doc.splitTextToSize(aiText, contentWidth - 12) : [];
     
     // Calcular altura total da caixa
@@ -896,7 +900,7 @@ async function buildReportPdfDoc(
     const boxHeight = Math.max(totalLinesHeight + 12, 14);
     
     // Calcular altura total: título (12) + espaço (2) + caixa + margem (8)
-    const totalHeight = 12 + 2 + boxHeight + 8;
+    const totalHeight = 12 + 2 + boxHeight + 4;
     
     // Verificar page break ANTES do título para manter título e conteúdo juntos
     checkPageBreak(totalHeight);
@@ -918,7 +922,7 @@ async function buildReportPdfDoc(
     if (hasComments) {
       setColor(COLORS.text);
       doc.setFontSize(8);
-      doc.setFont('Roboto', 'normal');
+      doc.setFont(font.family, font.style('normal'));
       doc.text(commentLines, margin + 6, textY);
       textY += commentLines.length * lineHeightMm;
     }
@@ -930,17 +934,17 @@ async function buildReportPdfDoc(
       // Label "Resumo:" em negrito
       setColor(primaryColor);
       doc.setFontSize(8);
-      doc.setFont('Roboto', 'bold');
+      doc.setFont(font.family, font.style('bold'));
       doc.text('Resumo:', margin + 6, textY);
       textY += 4;
       
       // Texto do resumo em itálico
       setColor(COLORS.text);
-      doc.setFont('Roboto', 'italic');
+      doc.setFont(font.family, font.style('italic'));
       doc.text(aiLines, margin + 6, textY);
     }
     
-    y = boxY + boxHeight + 8;
+    y = boxY + boxHeight + 4;
   }
   
   // === HISTÓRICO ===
@@ -956,7 +960,7 @@ async function buildReportPdfDoc(
     
     doc.setFontSize(7);
     setColor(COLORS.text);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(font.family, font.style('normal'));
     
     const dateStr = item.date ? format(new Date(item.date), 'dd/MM/yyyy HH:mm') : '';
     const text = item.value 
@@ -1103,7 +1107,7 @@ async function buildReportPdfDoc(
       
       setColor(COLORS.text);
       doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont(font.family, font.style('bold'));
       const cleanSignerName = (sig.signerName || '').replace(/\s*-\s*Wees$/i, '').trim();
       doc.text(prepareText(cleanSignerName), infoX, infoY);
       
@@ -1112,7 +1116,7 @@ async function buildReportPdfDoc(
       if (sig.signerRole) {
         setColor(COLORS.textMuted);
         doc.setFontSize(7);
-        doc.setFont('helvetica', 'normal');
+        doc.setFont(font.family, font.style('normal'));
         doc.text(prepareText(sig.signerRole), infoX, infoY);
         infoY += 4;
       }
@@ -1121,7 +1125,7 @@ async function buildReportPdfDoc(
       if (sig.signedAt) {
         setColor(COLORS.textMuted);
         doc.setFontSize(7);
-        doc.setFont('helvetica', 'normal');
+        doc.setFont(font.family, font.style('normal'));
         const signedDate = format(new Date(sig.signedAt), 'dd/MM/yyyy HH:mm');
         doc.text(`Assinado em: ${signedDate}`, infoX, infoY);
         infoY += 4;
@@ -1175,7 +1179,7 @@ async function buildReportPdfDoc(
         // Label abaixo da linha
         setColor(COLORS.textMuted);
         doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
+        doc.setFont(font.family, font.style('normal'));
         doc.text(prepareText(col1Label), margin + fieldWidth / 2, lineY + 5, { align: 'center' });
         
         // "Nome:" e "Data:" acima da linha
@@ -1204,7 +1208,7 @@ async function buildReportPdfDoc(
         // Label abaixo da linha
         setColor(COLORS.textMuted);
         doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
+        doc.setFont(font.family, font.style('normal'));
         doc.text(prepareText(col2Label), x2 + fieldWidth / 2, lineY + 5, { align: 'center' });
         
         // "Nome:" e "Data:" acima da linha
