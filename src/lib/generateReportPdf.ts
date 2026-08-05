@@ -410,11 +410,11 @@ async function buildReportPdfDoc(
     // === COLUNA ESQUERDA: Info da empresa ===
     doc.setFontSize(7);
     setColor(COLORS.text);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(font.family, font.style('bold'));
     doc.text(prepareText(company.name || 'Empresa'), margin, footerY + 5);
     
     setColor(COLORS.textMuted);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(font.family, font.style('normal'));
     doc.text(company.email || '', margin, footerY + 9);
     
     // === COLUNA CENTRO: Logo (usa logo principal, não a do PDF) ===
