@@ -960,7 +960,7 @@ async function buildReportPdfDoc(
     
     doc.setFontSize(7);
     setColor(COLORS.text);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(font.family, font.style('normal'));
     
     const dateStr = item.date ? format(new Date(item.date), 'dd/MM/yyyy HH:mm') : '';
     const text = item.value 
