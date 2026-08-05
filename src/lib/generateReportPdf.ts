@@ -455,7 +455,7 @@ async function buildReportPdfDoc(
   
   // === TITULO DE SECAO ===
   const drawSectionTitle = (title: string, badge?: string) => {
-    checkPageBreak(14);
+    checkPageBreak(12);
     
     // Barra usando cor primária do tenant
     setFillColor(primaryColor);
