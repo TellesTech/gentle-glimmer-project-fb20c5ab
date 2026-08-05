@@ -484,7 +484,7 @@ async function buildReportPdfDoc(
     setDrawColor(COLORS.border);
     doc.setLineWidth(0.2);
     doc.line(margin + 3, y, pageWidth - margin - 3, y);
-    y += 3;
+    y += 2;
   };
   
   // === INFORMACOES GERAIS ===
