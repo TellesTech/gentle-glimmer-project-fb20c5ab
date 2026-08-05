@@ -724,7 +724,7 @@ async function buildReportPdfDoc(
     // Renderizar texto
     setColor(COLORS.text);
     doc.setFontSize(8);
-    doc.setFont('Roboto', 'normal');
+    doc.setFont(font.family, font.style('normal'));
     doc.text(routineLines, margin + 6, boxY + 7);
     
     y = boxY + boxHeight + 8;
