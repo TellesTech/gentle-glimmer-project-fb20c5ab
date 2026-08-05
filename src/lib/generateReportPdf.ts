@@ -606,7 +606,7 @@ async function buildReportPdfDoc(
   }
   
   // === EFETIVO E PRODUTIVIDADE ===
-  const hasWorkforceInfo = report.plannedWorkforce !== undefined || report.actualWorkforce !== undefined;
+  const hasWorkforceInfo = !!(report.plannedWorkforce !== undefined || report.actualWorkforce !== undefined);
   
   if (hasWorkforceInfo) {
     drawSectionTitle('Efetivo e Produtividade');
