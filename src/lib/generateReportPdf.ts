@@ -343,11 +343,11 @@ async function buildReportPdfDoc(
     if (!logoRendered) {
       setColor(COLORS.white);
       doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont(font.family, font.style('bold'));
       const companyShortName = prepareText(company.name || 'RDO').substring(0, 12);
       doc.text(companyShortName, margin + col1Width / 2, 10, { align: 'center' });
       doc.setFontSize(6);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont(font.family, font.style('normal'));
       doc.text('Gestão de Atividades', margin + col1Width / 2, 14, { align: 'center' });
     }
     
