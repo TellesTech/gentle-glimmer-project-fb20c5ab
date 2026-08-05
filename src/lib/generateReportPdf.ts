@@ -5,6 +5,7 @@ import { formatRdoNumber } from './formatters';
 import type { Report, Company, Site, Project } from '@/types';
 import { getLogoBase64 } from './logoBase64';
 import { supabase } from '@/integrations/supabase/client';
+import { registerPdfFont, type PdfFontHandle } from './pdfFonts';
 
 // === LABELS (com acentos - jsPDF suporta UTF-8) ===
 const SHIFT_LABELS: Record<string, string> = {
