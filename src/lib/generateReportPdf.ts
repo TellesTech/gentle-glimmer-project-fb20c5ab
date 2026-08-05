@@ -813,7 +813,7 @@ async function buildReportPdfDoc(
     doc.roundedRect(margin, y, contentWidth, 6, 1, 1, 'F');
     setColor(COLORS.white);
     doc.setFontSize(6);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(font.family, font.style('bold'));
     
     // Posições das colunas: Nome | Função | Horário
     const colName = margin + 5;
