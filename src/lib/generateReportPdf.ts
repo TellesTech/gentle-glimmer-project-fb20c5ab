@@ -934,7 +934,7 @@ async function buildReportPdfDoc(
       // Label "Resumo:" em negrito
       setColor(primaryColor);
       doc.setFontSize(8);
-      doc.setFont('Roboto', 'bold');
+      doc.setFont(font.family, font.style('bold'));
       doc.text('Resumo:', margin + 6, textY);
       textY += 4;
       
