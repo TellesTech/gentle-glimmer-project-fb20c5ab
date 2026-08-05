@@ -226,6 +226,9 @@ async function buildReportPdfDoc(
     : COLORS.accentDark;
   const doc = new jsPDF('p', 'mm', 'a4');
   
+  // Register Roboto font to support UTF-8 (accents) properly
+  const font = await registerPdfFont(doc);
+  
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 15;
