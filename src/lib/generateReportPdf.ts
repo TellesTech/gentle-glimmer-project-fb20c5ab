@@ -900,7 +900,7 @@ async function buildReportPdfDoc(
     const boxHeight = Math.max(totalLinesHeight + 12, 14);
     
     // Calcular altura total: título (12) + espaço (2) + caixa + margem (8)
-    const totalHeight = 12 + 2 + boxHeight + 8;
+    const totalHeight = 12 + 2 + boxHeight + 4;
     
     // Verificar page break ANTES do título para manter título e conteúdo juntos
     checkPageBreak(totalHeight);
