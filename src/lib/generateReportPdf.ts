@@ -573,7 +573,7 @@ async function buildReportPdfDoc(
     y += 6;
   }
   
-  y += 8;
+  y += 4;
   
   // === SEGURANÇA E COMUNICAÇÃO ===
   const hasSafetyInfo = !!(report.ambulancePoint || report.meetingPoint || report.radioFrequencyWees || report.radioFrequencyOperation || report.arrivalTimeAtLiberator || report.documentReleaseTime || report.blockRevalidationTime);
