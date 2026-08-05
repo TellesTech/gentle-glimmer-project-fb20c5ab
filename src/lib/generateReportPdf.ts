@@ -658,7 +658,7 @@ async function buildReportPdfDoc(
       
       doc.setFontSize(7);
       setColor(primaryColor);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont(font.family, font.style('bold'));
       doc.text('⚠ Efetivo abaixo do programado', margin + 4, y + 5);
       
       y += 12;
