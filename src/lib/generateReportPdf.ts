@@ -462,7 +462,7 @@ async function buildReportPdfDoc(
     doc.rect(margin, y, 2, 7, 'F');
     
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(font.family, font.style('bold'));
     setColor(primaryColor);
     doc.text(prepareText(title.toUpperCase()), margin + 5, y + 5);
     
