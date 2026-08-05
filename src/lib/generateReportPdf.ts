@@ -356,11 +356,11 @@ async function buildReportPdfDoc(
     
     setColor(COLORS.white);
     doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(font.family, font.style('bold'));
     doc.text('RELATÓRIO DIÁRIO DE ATIVIDADE', col2Center, 8, { align: 'center' });
     
     doc.setFontSize(8);
-    doc.setFont('courier', 'normal');
+    doc.setFont('courier', 'normal'); // Keep courier for the code if desired, or switch to Roboto Mono if available
     doc.text(rdoCode, col2Center, 13, { align: 'center' });
     
     // === COLUNA 3: Status + Data ===
