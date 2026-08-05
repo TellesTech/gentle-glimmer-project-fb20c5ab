@@ -664,7 +664,7 @@ async function buildReportPdfDoc(
       y += 12;
     }
     
-    y += 8;
+    y += 4;
   }
   
   // === ATIVIDADES EXECUTADAS ===
