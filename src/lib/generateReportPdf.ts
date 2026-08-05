@@ -393,7 +393,7 @@ async function buildReportPdfDoc(
     
     // === LINHA INFERIOR: Info do projeto (largura total) ===
     setColor(COLORS.white);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(font.family, font.style('normal'));
     doc.setFontSize(7);
     const projectInfo = `${prepareText(company.name)} | ${prepareText(site.name)} | ${prepareText(project.name)}`;
     doc.text(projectInfo, pageWidth / 2, headerHeight - 3, { align: 'center' });
