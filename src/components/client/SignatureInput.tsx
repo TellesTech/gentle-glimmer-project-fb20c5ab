@@ -19,6 +19,17 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
   const [typedName, setTypedName] = useState('');
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [signatureFontReady, setSignatureFontReady] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    document.fonts.load('180px "Great Vibes"').then(() => {
+      if (active) setSignatureFontReady(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const generateTypedSignature = useCallback((name: string): string | null => {
     const normalizedName = name.trim();
@@ -100,7 +111,7 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
     );
 
     return canvas.toDataURL('image/png');
-  }, []);
+  }, [signatureFontReady]);
 
   const typedSignaturePreview = useMemo(
     () => generateTypedSignature(typedName),
