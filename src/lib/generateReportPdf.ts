@@ -799,7 +799,7 @@ async function buildReportPdfDoc(
       y += cardHeight + 4;
     });
     
-    y += 8;
+    y += 4;
   }
   
   // === EFETIVO (Tabela com Função e Horário) ===
