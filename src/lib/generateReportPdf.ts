@@ -860,7 +860,7 @@ async function buildReportPdfDoc(
       y += 6;
     });
     
-    y += 8;
+    y += 4;
   }
   
   // === OBSERVAÇÕES (com Resumo unificado) ===
