@@ -680,7 +680,7 @@ async function buildReportPdfDoc(
       
       doc.setFontSize(8);
       setColor(activity.completed ? COLORS.text : COLORS.textMuted);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont(font.family, font.style('normal'));
       doc.text(bullet, margin + 3, y);
       
       const lines = doc.splitTextToSize(prepareText(activity.description), contentWidth - 18);
