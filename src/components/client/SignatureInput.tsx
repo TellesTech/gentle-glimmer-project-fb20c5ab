@@ -33,7 +33,7 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
 
   const generateTypedSignature = useCallback((name: string): string | null => {
     const normalizedName = name.trim();
-    if (!normalizedName) return null;
+    if (!normalizedName || !signatureFontReady) return null;
 
     // First render on a large transparent surface. We then inspect the pixels
     // actually painted by the cursive font, avoiding unreliable italic glyph
