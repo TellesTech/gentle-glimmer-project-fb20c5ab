@@ -940,7 +940,7 @@ async function buildReportPdfDoc(
       
       // Texto do resumo em itálico
       setColor(COLORS.text);
-      doc.setFont('Roboto', 'italic');
+      doc.setFont(font.family, font.style('italic'));
       doc.text(aiLines, margin + 6, textY);
     }
     
