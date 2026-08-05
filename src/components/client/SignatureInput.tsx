@@ -24,16 +24,35 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
     if (!name.trim()) return null;
 
     const canvas = document.createElement('canvas');
-    canvas.width = 400;
-    canvas.height = 120;
+    // Increase canvas width for better resolution and long names
+    const width = 600;
+    const height = 150;
+    canvas.width = width;
+    canvas.height = height;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
 
+    // White background
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.fillStyle = '#1a1a1a';
-    ctx.font = '56px "Great Vibes", "Dancing Script", cursive';
+    
+    // Dynamic font size calculation to prevent clipping
+    let fontSize = 72;
+    const padding = 40; // Horizontal padding
+    const maxTextWidth = width - padding;
+    
+    ctx.font = `${fontSize}px "Great Vibes", "Dancing Script", cursive`;
+    let textWidth = ctx.measureText(name).width;
+    
+    // Reduce font size until it fits
+    while (textWidth > maxTextWidth && fontSize > 24) {
+      fontSize -= 2;
+      ctx.font = `${fontSize}px "Great Vibes", "Dancing Script", cursive`;
+      textWidth = ctx.measureText(name).width;
+    }
+
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(name, canvas.width / 2, canvas.height / 2);
@@ -173,10 +192,13 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
             />
             
             {typedName.trim() && (
-              <div className="w-full h-32 border-2 border-primary rounded-lg bg-white flex items-center justify-center">
+              <div className="w-full h-32 border-2 border-primary rounded-lg bg-white flex items-center justify-center overflow-hidden">
                 <p 
-                  className="text-5xl text-foreground"
-                  style={{ fontFamily: '"Great Vibes", "Dancing Script", cursive' }}
+                  className="text-4xl sm:text-5xl text-foreground whitespace-nowrap px-4 text-center"
+                  style={{ 
+                    fontFamily: '"Great Vibes", "Dancing Script", cursive',
+                    fontSize: typedName.length > 25 ? '1.5rem' : typedName.length > 15 ? '2.5rem' : '3.5rem'
+                  }}
                 >
                   {typedName}
                 </p>
@@ -195,7 +217,7 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
           <div className="space-y-3">
             {uploadedImage ? (
               <div className="relative">
-                <div className="w-full h-32 border-2 border-primary rounded-lg bg-white flex items-center justify-center overflow-hidden">
+                <div className="w-full h-40 border-2 border-primary rounded-lg bg-white flex items-center justify-center overflow-hidden">
                   <img 
                     src={uploadedImage} 
                     alt="Assinatura enviada" 
