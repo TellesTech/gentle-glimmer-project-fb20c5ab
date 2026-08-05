@@ -768,7 +768,7 @@ async function buildReportPdfDoc(
       doc.roundedRect(margin + 5, y + 2, 12, 4, 1, 1, 'F');
       setColor(COLORS.white);
       doc.setFontSize(5);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont(font.family, font.style('bold'));
       doc.text(IMPACT_LABELS[impact], margin + 11, y + 4.8, { align: 'center' });
       
       // Badge tipo
