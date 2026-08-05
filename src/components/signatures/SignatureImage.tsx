@@ -73,7 +73,7 @@ export function SignatureImage({ value, alt, className, fallbackLabel }: Signatu
       src={src}
       alt={alt}
       onError={handleError}
-      className={cn('mx-auto object-contain w-full h-full', className)}
+      className={cn('mx-auto block max-w-full max-h-full object-contain box-border px-4 py-2', className)}
     />
   );
 }
