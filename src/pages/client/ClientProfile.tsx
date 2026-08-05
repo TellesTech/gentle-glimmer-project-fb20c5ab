@@ -9,6 +9,7 @@ import { useClientAuth } from '@/contexts/ClientAuthContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ClientLayout } from '@/components/client/ClientLayout';
 import { SignatureInput } from '@/components/client/SignatureInput';
+import { SignatureImage } from '@/components/signatures/SignatureImage';
 import { 
   User, 
   Mail, 
@@ -402,10 +403,10 @@ export default function ClientProfile() {
             ) : (
               <div className="space-y-4">
               <div className="p-3 sm:p-4 border-2 border-dashed rounded-lg bg-muted/30">
-                  <img
-                    src={effectiveProfile.signature_data}
+                  <SignatureImage
+                    value={effectiveProfile.signature_data}
                     alt="Sua assinatura"
-                    className="max-h-24 sm:max-h-32 mx-auto"
+                    className="h-28 sm:h-36"
                   />
                 </div>
                 <p className="text-sm text-muted-foreground text-center">
