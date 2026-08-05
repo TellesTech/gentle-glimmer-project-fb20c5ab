@@ -76,8 +76,8 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
     if (maxX < minX || maxY < minY) return null;
 
     const canvas = document.createElement('canvas');
-    const width = 900;
-    const height = 240;
+    const width = 1200;
+    const height = 320;
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
@@ -89,8 +89,11 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
 
     const sourceWidth = maxX - minX + 1;
     const sourceHeight = maxY - minY + 1;
-    const safeX = 72;
-    const safeY = 32;
+    // Keep a generous permanent margin inside the saved bitmap. This is
+    // intentionally larger than the visual container padding because cursive
+    // entry/exit strokes can otherwise look clipped after responsive scaling.
+    const safeX = 160;
+    const safeY = 56;
     const scale = Math.min(
       (width - safeX * 2) / sourceWidth,
       (height - safeY * 2) / sourceHeight,
@@ -151,8 +154,8 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
         const img = new Image();
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const maxWidth = 400;
-          const maxHeight = 120;
+          const maxWidth = 900;
+          const maxHeight = 240;
           
           let { width, height } = img;
           

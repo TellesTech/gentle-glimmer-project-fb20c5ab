@@ -63,11 +63,11 @@ function Row({ entry }: { entry: SignatureEntry }) {
       </div>
       </div>
       {entry.signed && getSignatureKind(entry.signatureData) !== 'none' && (
-        <div className="mt-3 bg-background rounded-md border border-border/50 p-2">
+        <div className="mt-3 h-24 w-full overflow-hidden bg-background rounded-md border border-border/50">
           <SignatureImage
             value={entry.signatureData}
             alt={`Assinatura de ${entry.name}`}
-            className="max-h-16"
+            className="h-full w-full"
           />
         </div>
       )}
