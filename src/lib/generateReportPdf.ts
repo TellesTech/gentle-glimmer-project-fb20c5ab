@@ -519,12 +519,12 @@ async function buildReportPdfDoc(
     
     doc.setFontSize(7);
     setColor(COLORS.textMuted);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(font.family, font.style('bold'));
     doc.text(row[0], col1X, y);
     if (row[2]) doc.text(row[2], col3X, y);
     
     setColor(COLORS.text);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(font.family, font.style('normal'));
     doc.text(row[1], col2X, y);
     if (row[3]) doc.text(row[3], col4X, y);
     
