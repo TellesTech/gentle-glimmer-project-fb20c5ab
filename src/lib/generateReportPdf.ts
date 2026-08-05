@@ -922,7 +922,7 @@ async function buildReportPdfDoc(
     if (hasComments) {
       setColor(COLORS.text);
       doc.setFontSize(8);
-      doc.setFont('Roboto', 'normal');
+      doc.setFont(font.family, font.style('normal'));
       doc.text(commentLines, margin + 6, textY);
       textY += commentLines.length * lineHeightMm;
     }
