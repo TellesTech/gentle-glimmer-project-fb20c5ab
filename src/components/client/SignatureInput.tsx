@@ -276,11 +276,11 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
           <div className="space-y-3">
             {uploadedImage ? (
               <div className="relative">
-                <div className="w-full h-40 border-2 border-primary rounded-lg bg-white flex items-center justify-center overflow-hidden">
+              <div className="w-full h-40 border-2 border-primary rounded-lg bg-white flex items-center justify-center overflow-visible px-8 py-4">
                   <img
                     src={uploadedImage} 
                     alt="Assinatura enviada" 
-                    className="max-w-full max-h-full object-contain p-3"
+                    className="block h-auto max-h-full w-auto max-w-full object-contain"
                   />
                 </div>
                 <Button

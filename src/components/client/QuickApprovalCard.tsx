@@ -107,11 +107,11 @@ export function QuickApprovalCard({
         {profile.signature_data && (
           <div className="space-y-2">
             <p className="text-sm font-medium text-muted-foreground">Sua Assinatura Salva:</p>
-            <div className="p-3 bg-white rounded-lg border flex items-center justify-center">
+            <div className="h-28 w-full overflow-visible bg-white rounded-lg border flex items-center justify-center">
               <SignatureImage
                 value={profile.signature_data}
                 alt="Assinatura" 
-                className="max-h-20"
+                className="h-full"
               />
             </div>
           </div>

@@ -69,14 +69,18 @@ export function SignatureImage({ value, alt, className, fallbackLabel }: Signatu
   }
 
   return (
-    <img
-      src={src}
-      alt={alt}
-      onError={handleError}
+    <div
       className={cn(
-        'mx-auto block h-full w-full max-w-full object-contain box-border px-8 py-4 sm:px-12',
+        'flex min-h-20 w-full items-center justify-center overflow-visible px-8 py-3 sm:px-14',
         className,
       )}
-    />
+    >
+      <img
+        src={src}
+        alt={alt}
+        onError={handleError}
+        className="block h-auto max-h-full w-auto max-w-full shrink object-contain"
+      />
+    </div>
   );
 }
