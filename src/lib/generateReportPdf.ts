@@ -781,7 +781,7 @@ async function buildReportPdfDoc(
       // Descrição (múltiplas linhas)
       setColor(COLORS.text);
       doc.setFontSize(7);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont(font.family, font.style('normal'));
       doc.text(descLines, margin + 5, y + 10);
       
       // Ação corretiva (múltiplas linhas)
