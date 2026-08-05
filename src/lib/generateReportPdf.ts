@@ -576,7 +576,7 @@ async function buildReportPdfDoc(
   y += 8;
   
   // === SEGURANÇA E COMUNICAÇÃO ===
-  const hasSafetyInfo = report.ambulancePoint || report.meetingPoint || report.radioFrequencyWees || report.radioFrequencyOperation || report.arrivalTimeAtLiberator || report.documentReleaseTime || report.blockRevalidationTime;
+  const hasSafetyInfo = !!(report.ambulancePoint || report.meetingPoint || report.radioFrequencyWees || report.radioFrequencyOperation || report.arrivalTimeAtLiberator || report.documentReleaseTime || report.blockRevalidationTime);
   
   if (hasSafetyInfo) {
     drawSectionTitle('Segurança e Comunicação');
