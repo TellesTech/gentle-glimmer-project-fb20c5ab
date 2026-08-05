@@ -476,7 +476,7 @@ async function buildReportPdfDoc(
       doc.text(badge, badgeX + badgeWidth / 2, y + 4.5, { align: 'center' });
     }
     
-    y += 10;
+    y += 8;
   };
   
   // === LINHA SEPARADORA ===
