@@ -1116,7 +1116,7 @@ async function buildReportPdfDoc(
       if (sig.signerRole) {
         setColor(COLORS.textMuted);
         doc.setFontSize(7);
-        doc.setFont('helvetica', 'normal');
+        doc.setFont(font.family, font.style('normal'));
         doc.text(prepareText(sig.signerRole), infoX, infoY);
         infoY += 4;
       }
