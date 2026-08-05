@@ -50,8 +50,8 @@ export function OneClickSignatureCard({
   const useOneClick = hasSaved && !forceManual;
 
   const handleClickSign = async () => {
-    if (useOneClick) {
-      await onSign(identity.savedSignature!);
+    if (useOneClick && identity.savedSignature) {
+      await onSign(identity.savedSignature);
       return;
     }
     if (!manualSignature) return;
@@ -98,11 +98,11 @@ export function OneClickSignatureCard({
                 <Sparkles className="w-3.5 h-3.5 text-primary" />
                 Sua firma cadastrada será aplicada ao relatório
               </p>
-              <div className="w-full p-3 bg-white rounded-lg border-2 border-primary/30 flex items-center justify-center min-h-[88px]">
+              <div className="w-full h-28 overflow-hidden bg-white rounded-lg border-2 border-primary/30 flex items-center justify-center">
                 <SignatureImage
                   value={identity.savedSignature}
                   alt="Sua assinatura cadastrada"
-                  className="max-h-20"
+                  className="h-full w-full"
                 />
               </div>
             </div>
