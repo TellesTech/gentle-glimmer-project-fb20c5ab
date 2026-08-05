@@ -560,10 +560,10 @@ async function buildReportPdfDoc(
       const supervisorX = report.technicalResponsibleName ? margin + contentWidth / 2 : margin + 3;
       doc.setFontSize(7);
       setColor(COLORS.textMuted);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont(font.family, font.style('bold'));
       doc.text('Supervisor:', supervisorX, y);
       setColor(COLORS.text);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont(font.family, font.style('normal'));
       const supervisor = report.supervisorRole 
         ? `${prepareText(report.supervisorName)} - ${prepareText(report.supervisorRole)}`
         : prepareText(report.supervisorName);
