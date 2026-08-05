@@ -1125,7 +1125,7 @@ async function buildReportPdfDoc(
       if (sig.signedAt) {
         setColor(COLORS.textMuted);
         doc.setFontSize(7);
-        doc.setFont('helvetica', 'normal');
+        doc.setFont(font.family, font.style('normal'));
         const signedDate = format(new Date(sig.signedAt), 'dd/MM/yyyy HH:mm');
         doc.text(`Assinado em: ${signedDate}`, infoX, infoY);
         infoY += 4;
