@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 // Tracks user interaction so we don't overwrite an existing saved signature with null on mount/tab switches.
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,12 +21,12 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
   const [isProcessing, setIsProcessing] = useState(false);
 
   const generateTypedSignature = useCallback((name: string): string | null => {
-    if (!name.trim()) return null;
+    const normalizedName = name.trim();
+    if (!normalizedName) return null;
 
     const canvas = document.createElement('canvas');
-    // Increase canvas width for better resolution and long names
-    const width = 600;
-    const height = 150;
+    const width = 900;
+    const height = 240;
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
@@ -38,27 +38,43 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
 
     ctx.fillStyle = '#1a1a1a';
     
-    // Dynamic font size calculation to prevent clipping
-    let fontSize = 72;
-    const padding = 40; // Horizontal padding
-    const maxTextWidth = width - padding;
-    
+    // Cursive fonts commonly extend beyond measureText().width. Use the real
+    // glyph bounds and generous safe margins so flourishes are never clipped.
+    let fontSize = 112;
+    const horizontalPadding = 72;
+    const verticalPadding = 36;
+    const maxTextWidth = width - horizontalPadding * 2;
+    const maxTextHeight = height - verticalPadding * 2;
+
     ctx.font = `${fontSize}px "Great Vibes", "Dancing Script", cursive`;
-    let textWidth = ctx.measureText(name).width;
-    
-    // Reduce font size until it fits
-    while (textWidth > maxTextWidth && fontSize > 24) {
+    let metrics = ctx.measureText(normalizedName);
+    const getBounds = () => ({
+      width: Math.max(metrics.width, metrics.actualBoundingBoxRight + metrics.actualBoundingBoxLeft),
+      height: metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent,
+    });
+    let bounds = getBounds();
+
+    while ((bounds.width > maxTextWidth || bounds.height > maxTextHeight) && fontSize > 18) {
       fontSize -= 2;
       ctx.font = `${fontSize}px "Great Vibes", "Dancing Script", cursive`;
-      textWidth = ctx.measureText(name).width;
+      metrics = ctx.measureText(normalizedName);
+      bounds = getBounds();
     }
 
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(name, canvas.width / 2, canvas.height / 2);
+    // Position by visible glyph bounds rather than the typographic advance.
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    const x = (width - bounds.width) / 2 + metrics.actualBoundingBoxLeft;
+    const y = (height - bounds.height) / 2 + metrics.actualBoundingBoxAscent;
+    ctx.fillText(normalizedName, x, y);
 
     return canvas.toDataURL('image/png');
   }, []);
+
+  const typedSignaturePreview = useMemo(
+    () => generateTypedSignature(typedName),
+    [generateTypedSignature, typedName],
+  );
 
   useEffect(() => {
     // Don't clobber a saved signature if the user hasn't interacted yet.
@@ -192,16 +208,14 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
             />
             
             {typedName.trim() && (
-              <div className="w-full h-32 border-2 border-primary rounded-lg bg-white flex items-center justify-center overflow-hidden">
-                <p 
-                  className="text-4xl sm:text-5xl text-foreground whitespace-nowrap px-4 text-center"
-                  style={{ 
-                    fontFamily: '"Great Vibes", "Dancing Script", cursive',
-                    fontSize: typedName.length > 25 ? '1.5rem' : typedName.length > 15 ? '2.5rem' : '3.5rem'
-                  }}
-                >
-                  {typedName}
-                </p>
+              <div className="w-full h-32 border-2 border-primary rounded-lg bg-white flex items-center justify-center overflow-hidden px-3">
+                {typedSignaturePreview && (
+                  <img
+                    src={typedSignaturePreview}
+                    alt={`Prévia da assinatura de ${typedName.trim()}`}
+                    className="h-full w-full object-contain"
+                  />
+                )}
               </div>
             )}
             
