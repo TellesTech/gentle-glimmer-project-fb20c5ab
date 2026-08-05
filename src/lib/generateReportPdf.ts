@@ -727,7 +727,7 @@ async function buildReportPdfDoc(
     doc.setFont(font.family, font.style('normal'));
     doc.text(routineLines, margin + 6, boxY + 7);
     
-    y = boxY + boxHeight + 8;
+    y = boxY + boxHeight + 4;
   }
   
   // === DESVIOS / SEGURANÇA ===
