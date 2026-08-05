@@ -24,6 +24,46 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
     const normalizedName = name.trim();
     if (!normalizedName) return null;
 
+    // First render on a large transparent surface. We then inspect the pixels
+    // actually painted by the cursive font, avoiding unreliable italic glyph
+    // metrics and preserving every flourish.
+    const sourceCanvas = document.createElement('canvas');
+    sourceCanvas.width = 1800;
+    sourceCanvas.height = 480;
+    const sourceCtx = sourceCanvas.getContext('2d', { willReadFrequently: true });
+    if (!sourceCtx) return null;
+
+    let fontSize = 180;
+    sourceCtx.fillStyle = '#1a1a1a';
+    sourceCtx.textAlign = 'center';
+    sourceCtx.textBaseline = 'middle';
+    sourceCtx.font = `${fontSize}px "Great Vibes", "Dancing Script", cursive`;
+
+    while (sourceCtx.measureText(normalizedName).width > sourceCanvas.width - 320 && fontSize > 48) {
+      fontSize -= 4;
+      sourceCtx.font = `${fontSize}px "Great Vibes", "Dancing Script", cursive`;
+    }
+    sourceCtx.fillText(normalizedName, sourceCanvas.width / 2, sourceCanvas.height / 2);
+
+    const pixels = sourceCtx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
+    let minX = sourceCanvas.width;
+    let minY = sourceCanvas.height;
+    let maxX = -1;
+    let maxY = -1;
+
+    for (let y = 0; y < sourceCanvas.height; y += 1) {
+      for (let x = 0; x < sourceCanvas.width; x += 1) {
+        if (pixels.data[(y * sourceCanvas.width + x) * 4 + 3] > 8) {
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+        }
+      }
+    }
+
+    if (maxX < minX || maxY < minY) return null;
+
     const canvas = document.createElement('canvas');
     const width = 900;
     const height = 240;
@@ -36,37 +76,28 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle = '#1a1a1a';
-    
-    // Cursive fonts commonly extend beyond measureText().width. Use the real
-    // glyph bounds and generous safe margins so flourishes are never clipped.
-    let fontSize = 112;
-    const horizontalPadding = 72;
-    const verticalPadding = 36;
-    const maxTextWidth = width - horizontalPadding * 2;
-    const maxTextHeight = height - verticalPadding * 2;
-
-    ctx.font = `${fontSize}px "Great Vibes", "Dancing Script", cursive`;
-    let metrics = ctx.measureText(normalizedName);
-    const getBounds = () => ({
-      width: Math.max(metrics.width, metrics.actualBoundingBoxRight + metrics.actualBoundingBoxLeft),
-      height: metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent,
-    });
-    let bounds = getBounds();
-
-    while ((bounds.width > maxTextWidth || bounds.height > maxTextHeight) && fontSize > 18) {
-      fontSize -= 2;
-      ctx.font = `${fontSize}px "Great Vibes", "Dancing Script", cursive`;
-      metrics = ctx.measureText(normalizedName);
-      bounds = getBounds();
-    }
-
-    // Position by visible glyph bounds rather than the typographic advance.
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-    const x = (width - bounds.width) / 2 + metrics.actualBoundingBoxLeft;
-    const y = (height - bounds.height) / 2 + metrics.actualBoundingBoxAscent;
-    ctx.fillText(normalizedName, x, y);
+    const sourceWidth = maxX - minX + 1;
+    const sourceHeight = maxY - minY + 1;
+    const safeX = 72;
+    const safeY = 32;
+    const scale = Math.min(
+      (width - safeX * 2) / sourceWidth,
+      (height - safeY * 2) / sourceHeight,
+      1,
+    );
+    const drawWidth = sourceWidth * scale;
+    const drawHeight = sourceHeight * scale;
+    ctx.drawImage(
+      sourceCanvas,
+      minX,
+      minY,
+      sourceWidth,
+      sourceHeight,
+      (width - drawWidth) / 2,
+      (height - drawHeight) / 2,
+      drawWidth,
+      drawHeight,
+    );
 
     return canvas.toDataURL('image/png');
   }, []);
@@ -232,10 +263,10 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
             {uploadedImage ? (
               <div className="relative">
                 <div className="w-full h-40 border-2 border-primary rounded-lg bg-white flex items-center justify-center overflow-hidden">
-                  <img 
+                  <img
                     src={uploadedImage} 
                     alt="Assinatura enviada" 
-                    className="max-w-full max-h-full object-contain"
+                    className="max-w-full max-h-full object-contain p-3"
                   />
                 </div>
                 <Button
@@ -291,10 +322,10 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
       {initialSignature && !hasSignature && (
         <div className="p-3 bg-muted/30 rounded-lg border">
           <p className="text-xs text-muted-foreground mb-2">Assinatura salva anteriormente:</p>
-          <img 
+          <img
             src={initialSignature} 
             alt="Assinatura salva" 
-            className="h-12 object-contain bg-white rounded border"
+            className="h-16 w-full object-contain bg-white rounded border px-4 py-2"
           />
         </div>
       )}
