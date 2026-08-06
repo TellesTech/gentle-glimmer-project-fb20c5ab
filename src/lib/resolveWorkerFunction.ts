@@ -27,16 +27,17 @@ export function resolveWorkerFunction(
   if (userName) {
     const matched = matchProfileByName(userName, allProfiles);
     if (matched?.job_title) {
+      // Prioritize the normalized profile job title
       return normalizeFunction(matched.job_title) || matched.job_title;
     }
   }
 
-  // 3. Use existing function_role from attendance
-  if (functionRole && functionRole !== 'MEIO OFICIAL') {
+  // 3. Use existing function_role from attendance if it's already specific
+  if (functionRole && functionRole !== 'MEIO OFICIAL' && functionRole !== 'COLABORADOR') {
     return normalizeFunction(functionRole) || functionRole;
   }
 
-  return functionRole || 'MEIO OFICIAL';
+  return 'MEIO OFICIAL';
 }
 
 function matchProfileByName(partialName: string, profiles: ProfileEntry[]): ProfileEntry | null {
