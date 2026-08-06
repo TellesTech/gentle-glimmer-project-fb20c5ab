@@ -113,39 +113,16 @@ interface MonthFolder {
   projects: ProjectFolder[];
 }
 
-const INVALID_OM_VALUES = ['na', 'n/a', 'n.a', 'null', 'nao informado', 'não informado', '-', '--', 'sem om', '0'];
+import {
+  sanitizeOmNumber,
+  normalizeOmKeyNumber,
+  normalizeOmTitle,
+  omTitleTokens,
+  tokenSimilarity,
+  TITLE_MERGE_THRESHOLD,
+} from '@/lib/rdoActivityGroups';
 
-/** Retorna o número da OM limpo, ou null quando o valor for um placeholder ("NA", "N/A", "null"...). */
-export function sanitizeOmNumber(value: string | null | undefined): string | null {
-  const v = (value || '').trim();
-  if (!v) return null;
-  if (INVALID_OM_VALUES.includes(v.toLowerCase())) return null;
-  return v;
-}
-
-/** Normaliza o número da OM para uso como chave de agrupamento. */
-export function normalizeOmKeyNumber(value: string | null | undefined): string | null {
-  const raw = sanitizeOmNumber(value);
-  if (!raw) return null;
-  const cleaned = raw
-    .replace(/^\s*(om|o\.m\.?)\s*[:\-]?\s*/i, '')
-    .replace(/^\s*[a-z]\s+/i, '')
-    .replace(/[.\s]+$/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return cleaned || null;
-}
-
-/** Normaliza o título da OM (minúsculas, sem acentos, espaços colapsados). */
-export function normalizeOmTitle(value: string | null | undefined): string {
-  return (value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^\w\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+export { sanitizeOmNumber, normalizeOmKeyNumber, normalizeOmTitle };
 
 interface YearFolder {
   year: number;
@@ -153,33 +130,6 @@ interface YearFolder {
   count: number;
   months: MonthFolder[];
 }
-
-const TITLE_STOPWORDS = new Set([
-  'e', 'de', 'da', 'do', 'das', 'dos', 'no', 'na', 'nos', 'nas', 'em', 'a', 'o', 'as', 'os',
-  'com', 'para', 'por', 'um', 'uma', 'the', 's',
-]);
-
-/** Tokens significativos do título da OM (sem acento, sem stopwords, sem plural simples). */
-function omTitleTokens(value: string | null | undefined): Set<string> {
-  const norm = normalizeOmTitle(value);
-  // Se o título tiver números (ex: 22461261), eles são tokens fortíssimos
-  return new Set(
-    norm
-      .split(' ')
-      .map(t => t.replace(/s$/, ''))
-      .filter(t => t.length > 1 && !TITLE_STOPWORDS.has(t))
-  );
-}
-
-/** Similaridade de Jaccard entre dois conjuntos de tokens. */
-function tokenSimilarity(a: Set<string>, b: Set<string>): number {
-  if (a.size === 0 || b.size === 0) return 0;
-  let inter = 0;
-  a.forEach(t => { if (b.has(t)) inter++; });
-  return inter / (a.size + b.size - inter);
-}
-
-const TITLE_MERGE_THRESHOLD = 0.8;
 
 interface SiteFolder {
   id: string;

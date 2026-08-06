@@ -28,6 +28,7 @@ import { WorkforceDelaysTab } from '@/components/workforce/WorkforceDelaysTab';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
+import { buildActivityGroups, type ActivityGroup, type ActivityGroupInputReport } from '@/lib/rdoActivityGroups';
 
 interface WorkforceRecord {
   id: string;
@@ -77,7 +78,8 @@ export default function WorkforceDatabase() {
   const [delays, setDelays] = useState<DelayRecord[]>([]);
   const [sites, setSites] = useState<{ id: string; name: string; lastReportDate: string | null }[]>([]);
   const [selectedSite, setSelectedSite] = useState<string>('all');
-  const [projects, setProjects] = useState<{ id: string; name: string; site_id: string | null; searchString?: string }[]>([]);
+  const [activities, setActivities] = useState<ActivityGroup[]>([]);
+  const [siteProjects, setSiteProjects] = useState<{ id: string; site_id: string | null }[]>([]);
   const [selectedProject, setSelectedProject] = useState<string>('all');
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -93,7 +95,7 @@ export default function WorkforceDatabase() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => { loadSites(); loadProjects(); }, []);
+  useEffect(() => { loadSites(); loadActivities(); }, []);
   useEffect(() => { 
     console.log('WorkforceDatabase: Effect triggered by filters:', { startDate, endDate, selectedProject, selectedSite });
     loadRecords(); 
@@ -136,76 +138,57 @@ export default function WorkforceDatabase() {
     setSites(sitesData.map(s => ({ ...s, lastReportDate: lastBySite[s.id] || null })));
   };
 
-  const loadProjects = async () => {
-    // Buscar projetos com informações extras dos RDOs para melhor identificação (igual ao Reports.tsx)
-    const { data, error } = await supabase
-      .from('projects')
-      .select('id, name, site_id, sites(name, companies(name)), reports(location, maintenance_order_title)')
-      .order('name');
-    
-    if (error) {
-      console.error('WorkforceDatabase: Error loading projects:', error);
-      return;
+  /**
+   * Monta a lista de atividades exatamente como os cards de "Meus RDOs":
+   * a partir dos RDOs, agrupados por número/título de OM.
+   */
+  const loadActivities = async (): Promise<ActivityGroup[]> => {
+    const { data: projectRows } = await supabase.from('projects').select('id, site_id');
+    if (projectRows) setSiteProjects(projectRows as any);
+
+    const rows: any[] = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data: page, error } = await supabase
+        .from('reports')
+        .select('id, date, location, maintenance_order_number, maintenance_order_title, project_id, projects!inner(id, name, site_id, sites(name, companies(name)))')
+        .order('date', { ascending: false })
+        .range(from, from + pageSize - 1);
+      if (error) {
+        console.error('WorkforceDatabase: Error loading activity reports:', error);
+        break;
+      }
+      if (!page || page.length === 0) break;
+      rows.push(...page);
+      if (page.length < pageSize) break;
+      from += pageSize;
     }
 
-    if (data) {
-      console.log('WorkforceDatabase: Projects loaded:', data.length);
-      
-      const isGenericName = (name: string) => 
-        !name || name === '*' || name.startsWith('Atividade criada via') || name.trim().length <= 1;
+    const input: ActivityGroupInputReport[] = rows.map((r: any) => ({
+      id: r.id,
+      date: r.date,
+      location: r.location,
+      maintenance_order_number: r.maintenance_order_number,
+      maintenance_order_title: r.maintenance_order_title,
+      project_id: r.project_id,
+      project_name: r.projects?.name || null,
+      site_id: r.projects?.site_id || null,
+      site_name: r.projects?.sites?.name || null,
+      company_name: r.projects?.sites?.companies?.name || null,
+    }));
 
-      const enhancedProjects = data.map((p: any) => {
-        // Coletar todos os títulos de OM e localizações únicos de todos os relatórios do projeto
-        const reports = p.reports || [];
-        const allLocations = Array.from(new Set(reports.map((r: any) => r.location).filter(Boolean)));
-        const allOmTitles = Array.from(new Set(reports.map((r: any) => r.maintenance_order_title).filter(Boolean)));
-
-        // Tentar encontrar o relatório mais recente com OM e título para o displayName
-        // Isso espelha a lógica de exibição dos cards de RDO
-        const lastWithOM = reports.slice().reverse().find((r: any) => r.maintenance_order_title && r.location);
-        const lastAny = reports[reports.length - 1];
-        
-        let formattedName = '';
-        if (lastWithOM) {
-          formattedName = `OM ${lastWithOM.maintenance_order_title} — ${lastWithOM.location}`;
-        } else if (lastAny) {
-          if (lastAny.maintenance_order_title && lastAny.location) {
-            formattedName = `OM ${lastAny.maintenance_order_title} — ${lastAny.location}`;
-          } else if (lastAny.maintenance_order_title) {
-            formattedName = `OM ${lastAny.maintenance_order_title}`;
-          } else if (lastAny.location) {
-            formattedName = lastAny.location;
-          }
-        }
-
-        const displayName = isGenericName(p.name) 
-          ? (formattedName || p.name) 
-          : p.name;
-
-        const searchString = [
-          displayName,
-          p.name,
-          ...allLocations,
-          ...allOmTitles,
-          p.sites?.name || '',
-          p.sites?.companies?.name || ''
-        ].filter(Boolean).join(' | ').toLowerCase();
-
-        return {
-          id: p.id,
-          name: displayName,
-          site_id: p.site_id,
-          searchString
-        };
-      });
-      setProjects(enhancedProjects);
-    }
+    const groups = buildActivityGroups(input);
+    console.log('WorkforceDatabase: Activities built from RDOs:', groups.length);
+    setActivities(groups);
+    return groups;
   };
 
   const loadLastReportDate = async () => {
     let q = supabase.from('reports').select('date, projects!inner(id, site_id)').order('date', { ascending: false }).limit(1);
-    if (selectedProject !== 'all') {
-      q = q.eq('project_id', selectedProject);
+    const activity = activities.find(a => a.id === selectedProject);
+    if (activity) {
+      q = q.in('id', activity.reportIds);
     } else if (selectedSite !== 'all') {
       q = q.eq('projects.site_id', selectedSite);
     }
@@ -214,8 +197,18 @@ export default function WorkforceDatabase() {
   };
 
   const filteredProjects = selectedSite === 'all'
-    ? projects
-    : projects.filter(p => p.site_id === selectedSite);
+    ? activities
+    : activities.filter(a => a.siteIds.includes(selectedSite));
+
+  /** IDs de projeto da fábrica selecionada (inclui atividades sem RDO). */
+  const getSiteProjectIds = (site: string) => siteProjects.filter(p => p.site_id === site).map(p => p.id);
+
+  const selectedActivity = activities.find(a => a.id === selectedProject) || null;
+
+  /** Abas auxiliares ainda trabalham com um único project_id. */
+  const tabProjectId = selectedActivity && selectedActivity.projectIds.length === 1
+    ? selectedActivity.projectIds[0]
+    : 'all';
 
   const handleSiteChange = (value: string) => {
     console.log('WorkforceDatabase: Site changed to:', value);
@@ -226,60 +219,8 @@ export default function WorkforceDatabase() {
   const loadRecords = async () => {
     setLoading(true);
     try {
-      // Forçar atualização da lista de projetos para garantir que o filtro de site funcione com dados novos
-      const { data: latestProjects } = await supabase
-        .from('projects')
-        .select('id, name, site_id, sites(name, companies(name)), reports(location, maintenance_order_title)')
-        .order('name');
-      
-      let currentProjects = projects;
-      if (latestProjects) {
-        const isGenericName = (name: string) => 
-          !name || name === '*' || name.startsWith('Atividade criada via') || name.trim().length <= 1;
-
-        currentProjects = latestProjects.map((p: any) => {
-          const reports = p.reports || [];
-          const allLocations = Array.from(new Set(reports.map((r: any) => r.location).filter(Boolean)));
-          const allOmTitles = Array.from(new Set(reports.map((r: any) => r.maintenance_order_title).filter(Boolean)));
-
-          const lastWithOM = reports.slice().reverse().find((r: any) => r.maintenance_order_title && r.location);
-          const lastAny = reports[reports.length - 1];
-          
-          let formattedName = '';
-          if (lastWithOM) {
-            formattedName = `OM ${lastWithOM.maintenance_order_title} — ${lastWithOM.location}`;
-          } else if (lastAny) {
-            if (lastAny.maintenance_order_title && lastAny.location) {
-              formattedName = `OM ${lastAny.maintenance_order_title} — ${lastAny.location}`;
-            } else if (lastAny.maintenance_order_title) {
-              formattedName = `OM ${lastAny.maintenance_order_title}`;
-            } else if (lastAny.location) {
-              formattedName = lastAny.location;
-            }
-          }
-          
-          const displayName = isGenericName(p.name) ? (formattedName || p.name) : p.name;
-          
-          const searchString = [
-            displayName,
-            p.name,
-            ...allLocations,
-            ...allOmTitles,
-            p.sites?.name || '',
-            p.sites?.companies?.name || ''
-          ].filter(Boolean).join(' | ').toLowerCase();
-
-          return {
-            id: p.id,
-            name: displayName,
-            site_id: p.site_id,
-            searchString
-          };
-        });
-        setProjects(currentProjects);
-      }
-
       console.log('WorkforceDatabase: Loading records with filters:', { startDate, endDate, selectedSite, selectedProject });
+      const activity = activities.find(a => a.id === selectedProject) || null;
 
       // 1. Buscar dados automáticos dos RDOs (reports + report_attendance) com PAGINAÇÃO
       const attendanceData: any[] = [];
@@ -306,13 +247,11 @@ export default function WorkforceDatabase() {
           .order('id', { ascending: true })
           .range(from, from + pageSize - 1);
 
-        if (selectedProject !== 'all') {
-          rdoQuery = rdoQuery.eq('reports.project_id', selectedProject);
+        if (activity) {
+          rdoQuery = rdoQuery.in('report_id', activity.reportIds);
         } else if (selectedSite !== 'all') {
-          const siteProjectIds = currentProjects
-            .filter((p: any) => p.site_id === selectedSite)
-            .map((p: any) => p.id);
-          
+          const siteProjectIds = getSiteProjectIds(selectedSite);
+
           console.log(`WorkforceDatabase: Filtering by site ${selectedSite}, projects found:`, siteProjectIds);
           if (siteProjectIds.length > 0) {
             rdoQuery = rdoQuery.in('reports.project_id', siteProjectIds);
@@ -421,10 +360,10 @@ export default function WorkforceDatabase() {
           .order('date', { ascending: true })
           .order('id', { ascending: true })
           .range(mFrom, mFrom + mPageSize - 1);
-        if (selectedProject !== 'all') {
-          manualQuery = manualQuery.eq('project_id', selectedProject);
+        if (activity) {
+          manualQuery = manualQuery.in('project_id', activity.projectIds);
         } else if (selectedSite !== 'all') {
-          const siteProjectIds = currentProjects.filter((p: any) => p.site_id === selectedSite).map((p: any) => p.id);
+          const siteProjectIds = getSiteProjectIds(selectedSite);
           if (siteProjectIds.length > 0) {
             manualQuery = manualQuery.in('project_id', siteProjectIds);
           } else {
@@ -494,13 +433,11 @@ export default function WorkforceDatabase() {
         .order('date', { ascending: true })
         .order('id', { ascending: true });
 
-      if (selectedProject !== 'all') {
-        query = query.eq('project_id', selectedProject);
+      if (selectedActivity) {
+        query = query.in('id', selectedActivity.reportIds);
       } else if (selectedSite !== 'all') {
-        const siteProjectIds = projects
-          .filter(p => p.site_id === selectedSite)
-          .map(p => p.id);
-        
+        const siteProjectIds = getSiteProjectIds(selectedSite);
+
         console.log(`WorkforceDatabase: Filtering delays by site ${selectedSite}, projects found:`, siteProjectIds);
         if (siteProjectIds.length > 0) {
           query = query.in('project_id', siteProjectIds);
@@ -562,10 +499,10 @@ export default function WorkforceDatabase() {
         .range(mFrom, mFrom + pageSize - 1)
         .order('date', { ascending: true });
 
-      if (selectedProject !== 'all') {
-        query = query.eq('project_id', selectedProject);
+      if (selectedActivity) {
+        query = query.in('project_id', selectedActivity.projectIds);
       } else if (selectedSite !== 'all') {
-        const siteProjectIds = projects.filter(p => p.site_id === selectedSite).map(p => p.id);
+        const siteProjectIds = getSiteProjectIds(selectedSite);
         if (siteProjectIds.length > 0) {
           query = query.in('project_id', siteProjectIds);
         }
@@ -621,7 +558,7 @@ export default function WorkforceDatabase() {
       });
       if (rawData.length === 0) throw new Error('Nenhum dado encontrado');
       const { data, error } = await supabase.functions.invoke('process-workforce-data', {
-        body: { action: 'import-spreadsheet', rawData, project_id: selectedProject !== 'all' ? selectedProject : null },
+        body: { action: 'import-spreadsheet', rawData, project_id: selectedActivity?.projectIds[0] ?? null },
       });
       if (error) throw error;
       toast({ title: 'Importação concluída', description: data.message });
@@ -636,7 +573,7 @@ export default function WorkforceDatabase() {
 
   const clearRecords = async () => {
     let query = supabase.from('workforce_database').delete().gte('date', startDate).lte('date', endDate);
-    if (selectedProject !== 'all') query = query.eq('project_id', selectedProject);
+    if (selectedActivity) query = query.in('project_id', selectedActivity.projectIds);
     const { error } = await query;
     if (!error) { setRecords([]); toast({ title: 'Registros removidos' }); }
   };
@@ -662,13 +599,11 @@ export default function WorkforceDatabase() {
           .order('id', { ascending: true })
           .range(from, from + pageSize - 1);
 
-        if (selectedProject !== 'all') {
-          q = q.eq('reports.project_id', selectedProject);
+        if (selectedActivity) {
+          q = q.in('report_id', selectedActivity.reportIds);
         } else if (selectedSite !== 'all') {
-          const siteProjectIds = projects
-            .filter(p => p.site_id === selectedSite)
-            .map(p => p.id);
-          
+          const siteProjectIds = getSiteProjectIds(selectedSite);
+
           if (siteProjectIds.length === 0) break;
           q = q.in('reports.project_id', siteProjectIds);
         }
@@ -752,13 +687,11 @@ export default function WorkforceDatabase() {
         .select('id, date, project_id, operational_deviation_hours, operational_deviation_details, operational_deviation_reason, climatic_deviation_hours, climatic_deviation_details, climatic_deviation_reason, amt_deviation_hours, amt_deviation_details, amt_deviation_reason, projects!inner(id, name, site_id, sites!inner(company_id))')
         .gte('date', startDate)
         .lte('date', endDate);
-      if (selectedProject !== 'all') {
-        reportsQ = reportsQ.eq('project_id', selectedProject);
+      if (selectedActivity) {
+        reportsQ = reportsQ.in('id', selectedActivity.reportIds);
       } else if (selectedSite !== 'all') {
-        const siteProjectIds = projects
-          .filter(p => p.site_id === selectedSite)
-          .map(p => p.id);
-        
+        const siteProjectIds = getSiteProjectIds(selectedSite);
+
         if (siteProjectIds.length > 0) reportsQ = reportsQ.in('project_id', siteProjectIds);
       }
       const { data: reportRows, error: rErr } = await reportsQ;
@@ -1163,19 +1096,21 @@ export default function WorkforceDatabase() {
                     <span className="truncate">
                       {selectedProject === 'all' 
                         ? "Todos os projetos" 
-                        : projects.find((p) => p.id === selectedProject)?.name || "Selecionar projeto..."}
+                        : selectedActivity?.name || "Selecionar projeto..."}
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                   <Command filter={(value, search) => {
-                    if (value.toLowerCase().includes(search.toLowerCase())) return 1;
-                    return 0;
+                    const term = stripAccents(search).toLowerCase().trim();
+                    if (!term) return 1;
+                    const haystack = stripAccents(value).toLowerCase();
+                    return term.split(/\s+/).every(t => haystack.includes(t)) ? 1 : 0;
                   }}>
                     <CommandInput placeholder="Buscar projeto..." />
                     <CommandList>
-                      <CommandEmpty>Nenhum projeto encontrado.</CommandEmpty>
+                      <CommandEmpty>Nenhuma atividade encontrada.</CommandEmpty>
                       <CommandGroup>
                         <CommandItem
                           value="all"
@@ -1189,12 +1124,12 @@ export default function WorkforceDatabase() {
                               selectedProject === 'all' ? "opacity-100" : "opacity-0"
                             )}
                           />
-                          Todos os projetos
+                          Todas as atividades
                         </CommandItem>
                         {filteredProjects.map((p) => (
                           <CommandItem
                             key={p.id}
-                            value={p.searchString || p.name}
+                            value={`${p.id} ${p.searchString || p.name}`}
                             onSelect={() => {
                               setSelectedProject(p.id);
                             }}
@@ -1207,11 +1142,11 @@ export default function WorkforceDatabase() {
                             />
                             <div className="flex flex-col min-w-0 overflow-hidden">
                               <span className="truncate">{p.name}</span>
-                              {selectedSite === 'all' && p.searchString?.split('|')[1] && (
-                                <span className="text-[10px] text-muted-foreground truncate italic">
-                                  {p.searchString.split('|')[1].trim()}
-                                </span>
-                              )}
+                              <span className="text-[10px] text-muted-foreground truncate italic">
+                                {[selectedSite === 'all' ? p.siteName : null, `${p.count} RDO(s)`]
+                                  .filter(Boolean)
+                                  .join(' · ')}
+                              </span>
                             </div>
                           </CommandItem>
                         ))}
@@ -1527,7 +1462,15 @@ export default function WorkforceDatabase() {
 
         {/* Atrasos */}
         <TabsContent value="atrasos">
-          <WorkforceDelaysTab startDate={startDate} endDate={endDate} projectId={selectedProject} companyId={profile?.company_id || null} projects={projects} />
+          <WorkforceDelaysTab
+            startDate={startDate}
+            endDate={endDate}
+            projectId={tabProjectId}
+            companyId={profile?.company_id || null}
+            projects={activities
+              .filter(a => a.projectIds.length > 0)
+              .map(a => ({ id: a.projectIds[0], name: a.name }))}
+          />
         </TabsContent>
 
         {/* Relatórios */}
@@ -1542,7 +1485,7 @@ export default function WorkforceDatabase() {
             delays={delays}
             startDate={startDate}
             endDate={endDate}
-            projectId={selectedProject}
+            projectId={tabProjectId}
             onNavigateToRecord={({ workerName, date }) => {
               // Adjust date range if needed
               if (date < startDate || date > endDate) {
