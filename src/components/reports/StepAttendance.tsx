@@ -321,7 +321,7 @@ export function StepAttendance({ data, onChange, teamMembers, allProfiles = [], 
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[min(400px,calc(100vw-32px))] p-0" align="start">
-                <Command shouldFilter={false}>
+                <Command shouldFilter={false} className="overflow-visible">
                   <CommandInput 
                     placeholder="Buscar por nome..." 
                     value={searchValue}

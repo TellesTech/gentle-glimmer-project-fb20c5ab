@@ -203,11 +203,16 @@ export default function ReportForm() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, name, job_title')
+        .select('id, name, job_title, company_id')
         .eq('is_active', true)
         .order('name');
       if (error) throw error;
-      return (data || []).map(p => ({ id: p.id, name: p.name, jobTitle: p.job_title || '' }));
+      return (data || []).map(p => ({ 
+        id: p.id, 
+        name: p.name, 
+        jobTitle: p.job_title || '',
+        companyId: p.company_id 
+      }));
     },
   });
 
