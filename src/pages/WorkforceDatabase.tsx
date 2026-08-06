@@ -486,7 +486,11 @@ export default function WorkforceDatabase() {
       if (error || !page || page.length === 0) break;
 
       for (const report of page) {
-        const projectName = (report as any).projects?.name || 'N/A';
+        const projectName =
+          activityNameByReport.get((report as any).id) ||
+          activityNameForProject((report as any).project_id) ||
+          (report as any).projects?.name ||
+          'N/A';
         
         // Extract all deviation types from this report
         for (const dt of deviationTypes) {
@@ -550,6 +554,8 @@ export default function WorkforceDatabase() {
       if (error || !page || page.length === 0) break;
 
       for (const delay of page) {
+        const resolvedActivity = activityNameForProject((delay as any).project_id);
+        if (selectedActivity && resolvedActivity && resolvedActivity !== selectedActivity.name) continue;
         // Convert decimal hours to HH:MM
         const h = Math.floor(delay.delay_hours);
         const m = Math.round((delay.delay_hours - h) * 60);
@@ -557,7 +563,7 @@ export default function WorkforceDatabase() {
 
         allDelayRecords.push({
           id: delay.id,
-          activity_name: delay.activity_name,
+          activity_name: resolvedActivity || delay.activity_name,
           date: delay.date,
           reason: delay.delay_type || 'Outro',
           description: delay.description || '',
