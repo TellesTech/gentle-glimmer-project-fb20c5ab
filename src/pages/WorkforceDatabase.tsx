@@ -234,6 +234,8 @@ export default function WorkforceDatabase() {
         const first = group[0] as any;
         const report = first.reports as any;
         const projectName = report?.projects?.name || 'Sem projeto';
+        
+        // Use exact match first, then intelligent matching
         const functionRole = resolveWorkerFunction(
           first.user_name, first.user_id, null, profilesById, allProfiles
         );
