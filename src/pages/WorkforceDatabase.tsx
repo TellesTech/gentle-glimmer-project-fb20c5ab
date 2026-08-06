@@ -1161,9 +1161,9 @@ export default function WorkforceDatabase() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
             <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportExcel} />
-            <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={importing} className="w-full sm:w-auto whitespace-nowrap">
+            <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={importing} className="w-full min-w-0 sm:w-auto whitespace-nowrap">
               {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
               {importing ? 'Importando...' : 'Importar Planilha'}
             </Button>
@@ -1172,7 +1172,7 @@ export default function WorkforceDatabase() {
                 variant="default"
                 onClick={() => setShowSyncConfirm(true)}
                 disabled={syncing}
-                className="w-full sm:w-auto whitespace-nowrap"
+                className="w-full min-w-0 sm:w-auto whitespace-nowrap"
                 title="Materializa os RDOs do período filtrado em workforce_database/workforce_delays"
               >
                 {syncing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
