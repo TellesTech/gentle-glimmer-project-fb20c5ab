@@ -205,6 +205,30 @@ export default function WorkforceDatabase() {
 
   const selectedActivity = activities.find(a => a.id === selectedProject) || null;
 
+  /** Mapas de rótulo de atividade (mesmo texto dos cards "Meus RDOs"). */
+  const activityNameByReport = new Map<string, string>();
+  const projectActivityNames = new Map<string, Set<string>>();
+  for (const a of activities) {
+    for (const rid of a.reportIds) activityNameByReport.set(rid, a.name);
+    for (const pid of a.projectIds) {
+      if (!projectActivityNames.has(pid)) projectActivityNames.set(pid, new Set());
+      projectActivityNames.get(pid)!.add(a.name);
+    }
+  }
+  /** Rótulo do projeto apenas quando ele pertence a uma única atividade. */
+  const activityNameForProject = (pid: string | null | undefined): string | null => {
+    if (!pid) return null;
+    const names = projectActivityNames.get(pid);
+    if (names && names.size === 1) return Array.from(names)[0];
+    return null;
+  };
+
+  const selectedSiteName = selectedSite === 'all'
+    ? 'Todas as fábricas'
+    : (sites.find(s => s.id === selectedSite)?.name || 'Fábrica');
+  const selectedActivityLabel = selectedActivity ? selectedActivity.name : 'Todas as atividades';
+  const slugify = (v: string) => stripAccents(v).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 40);
+
   /** Abas auxiliares ainda trabalham com um único project_id. */
   const tabProjectId = selectedActivity && selectedActivity.projectIds.length === 1
     ? selectedActivity.projectIds[0]
@@ -303,7 +327,11 @@ export default function WorkforceDatabase() {
       for (const [, group] of attByKey) {
         const first = group[0] as any;
         const report = first.reports as any;
-        const projectName = report?.projects?.name || 'Sem projeto';
+        const projectName =
+          activityNameByReport.get(report?.id) ||
+          activityNameForProject(report?.project_id) ||
+          report?.projects?.name ||
+          'Sem projeto';
         
         // Use exact match first, then intelligent matching
         const functionRole = resolveWorkerFunction(
@@ -383,10 +411,20 @@ export default function WorkforceDatabase() {
         mFrom += mPageSize;
       }
 
-      const manualRecords: WorkforceRecord[] = (manualData || []).map((r: any) => ({
+      let manualRecords: WorkforceRecord[] = (manualData || []).map((r: any) => ({
         ...r,
+        activity_name: activityNameForProject(r.project_id) || r.activity_name,
         source: 'manual' as const,
       }));
+
+      // Quando há atividade selecionada, garantir que registros manuais de outras OMs
+      // do mesmo projeto não entrem na tabela nem na exportação.
+      if (activity) {
+        manualRecords = manualRecords.filter(r => {
+          const resolved = activityNameForProject((r as any).project_id);
+          return !resolved || resolved === activity.name;
+        });
+      }
 
       // 5. Deduplicar: RDO tem prioridade sobre manual
       const rdoKeys = new Set(
