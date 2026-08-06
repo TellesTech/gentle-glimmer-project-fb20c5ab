@@ -801,7 +801,14 @@ export default function ReportForm() {
             data={formData}
             onChange={updateFormData}
             teamMembers={teamMembersForStep}
-            allProfiles={allProfiles.filter(p => !p.siteId || p.siteId === currentSiteId)}
+            allProfiles={allProfiles.filter(p => {
+              if (!currentSiteId) return true;
+              const pSiteIds = (p as any).siteIds || [];
+              if (pSiteIds.length > 0) {
+                return pSiteIds.includes(currentSiteId);
+              }
+              return true;
+            })}
             defaultArrivalTime={formData.startTime || '07:00'}
             defaultDepartureTime={formData.endTime || '17:00'}
           />
