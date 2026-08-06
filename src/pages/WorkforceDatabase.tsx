@@ -169,6 +169,8 @@ export default function WorkforceDatabase() {
     setLoading(true);
     try {
       console.log('WorkforceDatabase: Loading records with filters:', { startDate, endDate, selectedSite, selectedProject });
+      const currentProjects = projects.length > 0 ? projects : (await supabase.from('projects').select('id, name, site_id').order('name')).data || [];
+
       // 1. Buscar dados automáticos dos RDOs (reports + report_attendance) com PAGINAÇÃO
       const attendanceData: any[] = [];
       let from = 0;
