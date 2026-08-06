@@ -778,10 +778,10 @@ export default function ReportForm() {
         const currentProjectForBasic = projects.find(p => p.id === formData.projectId);
         const currentSiteIdForBasic = currentProjectForBasic?.site_id;
         const siteFilteredProfiles = allProfiles.filter(p => {
-          if (!currentSiteIdForParse) return true;
+          if (!currentSiteIdForBasic) return true;
           const pSiteIds = (p as any).siteIds || [];
           if (pSiteIds.length > 0) {
-            return pSiteIds.includes(currentSiteIdForParse);
+            return pSiteIds.includes(currentSiteIdForBasic);
           }
           return true;
         });
