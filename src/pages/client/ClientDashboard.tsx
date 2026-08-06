@@ -367,6 +367,22 @@ export default function ClientDashboard() {
   // Photo count
   const reportIds = useMemo(() => (reportsData || []).map(r => r.report_id).filter(Boolean), [reportsData]);
 
+  // RDOs já assinados pela equipe WEES (report_signatures) → status "parcial"
+  // enquanto o cliente não assina.
+  const { data: weesSignedIds } = useQuery({
+    queryKey: ['client-internal-signatures', reportIds],
+    queryFn: async () => {
+      if (!reportIds.length) return new Set<string>();
+      const { data } = await supabase
+        .from('report_signatures')
+        .select('report_id, signature_data')
+        .in('report_id', reportIds);
+      return new Set<string>((data || []).filter((s: any) => !!s.signature_data).map((s: any) => s.report_id));
+    },
+    enabled: reportIds.length > 0,
+    staleTime: 30000,
+  });
+
   const { data: photosCount } = useQuery({
     queryKey: ['client-photos-count', reportIds],
     queryFn: async () => {
