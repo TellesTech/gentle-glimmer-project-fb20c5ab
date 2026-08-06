@@ -8,6 +8,8 @@ import {
   MoreVertical, Pencil, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useActivityNames } from '@/hooks/useActivityNames';
+import { RenameActivityDialog, type RenameActivityTarget } from '@/components/reports/RenameActivityDialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
