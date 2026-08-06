@@ -52,7 +52,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
+import { cn, stripAccents } from '@/lib/utils';
 import { 
   format, 
   startOfMonth, 
@@ -637,13 +637,13 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
 
   // Filter projects for search or folder
   const filteredProjects = useMemo(() => {
-    const searchTerm = activitySearch.toLowerCase().trim();
+    const searchTerm = stripAccents(activitySearch.toLowerCase().trim());
     
     // When searching, filter directly
     if (searchTerm) {
       return projects.filter(p => 
-        p.name.toLowerCase().includes(searchTerm) || 
-        (p.code && p.code.toLowerCase().includes(searchTerm))
+        stripAccents(p.name.toLowerCase()).includes(searchTerm) || 
+        (p.code && stripAccents(p.code.toLowerCase()).includes(searchTerm))
       );
     }
     

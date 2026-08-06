@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
+import { cn, stripAccents } from '@/lib/utils';
 import type { ReportFormData } from '@/pages/ReportForm';
 import type { User, Attendance } from '@/types';
 
@@ -127,9 +127,11 @@ export function StepAttendance({ data, onChange, teamMembers, allProfiles = [], 
 
   // Filter by search
   const filteredProfiles = searchValue
-    ? availableProfiles.filter(p => 
-        p.name.toLowerCase().includes(searchValue.toLowerCase())
-      )
+    ? availableProfiles.filter(p => {
+        const searchNormalized = stripAccents(searchValue.toLowerCase());
+        const nameNormalized = stripAccents(p.name.toLowerCase());
+        return nameNormalized.includes(searchNormalized);
+      })
     : availableProfiles;
 
   const togglePresence = (memberId: string) => {
