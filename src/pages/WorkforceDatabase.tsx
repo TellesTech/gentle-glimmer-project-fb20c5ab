@@ -1057,7 +1057,7 @@ export default function WorkforceDatabase() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
             <div className="space-y-1.5"><Label>Data Início</Label><Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Data Fim</Label><Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
             <div className="min-w-0 space-y-1.5">
@@ -1082,7 +1082,10 @@ export default function WorkforceDatabase() {
               </Select>
             </div>
             <div className="min-w-0 space-y-1.5">
-              <Label>Atividade / Projeto (Busque por OM, Título, Fábrica ou Empresa)</Label>
+              <Label className="block">
+                Atividade / Projeto
+                <span className="block text-[10px] font-normal text-muted-foreground">Busque por OM, título, fábrica ou empresa</span>
+              </Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -1156,25 +1159,26 @@ export default function WorkforceDatabase() {
                 </PopoverContent>
               </Popover>
             </div>
-            <div className="flex gap-2">
-              <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportExcel} />
-              <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={importing} className="flex-1">
-                {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-                {importing ? 'Importando...' : 'Importar Planilha'}
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
+            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportExcel} />
+            <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={importing} className="w-full sm:w-auto whitespace-nowrap">
+              {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+              {importing ? 'Importando...' : 'Importar Planilha'}
+            </Button>
+            {(role === 'admin' || role === 'super_admin') && (
+              <Button
+                variant="default"
+                onClick={() => setShowSyncConfirm(true)}
+                disabled={syncing}
+                className="w-full sm:w-auto whitespace-nowrap"
+                title="Materializa os RDOs do período filtrado em workforce_database/workforce_delays"
+              >
+                {syncing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                {syncing ? 'Sincronizando...' : 'Sincronizar com RDOs'}
               </Button>
-              {(role === 'admin' || role === 'super_admin') && (
-                <Button
-                  variant="default"
-                  onClick={() => setShowSyncConfirm(true)}
-                  disabled={syncing}
-                  className="flex-1"
-                  title="Materializa os RDOs do período filtrado em workforce_database/workforce_delays"
-                >
-                  {syncing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                  {syncing ? 'Sincronizando...' : 'Sincronizar com RDOs'}
-                </Button>
-              )}
-            </div>
+            )}
           </div>
 
           {/* Atalhos rápidos de período */}
