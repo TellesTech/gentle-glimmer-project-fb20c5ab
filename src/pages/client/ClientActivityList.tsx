@@ -40,9 +40,13 @@ export default function ClientActivityList() {
   const isInternalUser = role === 'admin' || role === 'super_admin' || role === 'collaborator';
   const isAdminView = isInternalUser && !clientProfile;
 
+  const urlSiteId = searchParams.get('site_id');
+  const urlYear = searchParams.get('year');
+  const urlMonth = searchParams.get('month');
+
   // Project info (name)
   const { data: activityInfo } = useQuery({
-    queryKey: ['client-activity-info', projectId, clientProfile?.id, isAdminView],
+    queryKey: ['client-activity-info', projectId, clientProfile?.id, isAdminView, urlSiteId, urlYear, urlMonth],
     enabled: !!projectId && (!!clientProfile?.id || isAdminView),
     queryFn: async () => {
       if (!user?.id) return null;
@@ -59,6 +63,12 @@ export default function ClientActivityList() {
           ...((paa || []) as any[]).map((r) => r.site_id),
           ...((srs || []) as any[]).map((r) => r.site_id),
         ].filter(Boolean)));
+        // O dashboard escopa pela unidade da URL — replicamos aqui para gerar
+        // exatamente os mesmos grupos de atividade.
+        if (urlSiteId) {
+          siteIds = role === 'super_admin' || siteIds.includes(urlSiteId) ? [urlSiteId] : [];
+          if (!siteIds.length) return null;
+        }
       } else {
         // Para cliente, usamos a RPC existente
         const { data: siteRows } = await (supabase as any).rpc('portal_user_site_ids', {
@@ -86,7 +96,17 @@ export default function ClientActivityList() {
       const { data: allReports } = await query;
       if (!allReports) return null;
 
-      const inputReports: ActivityGroupInputReport[] = allReports.map(r => ({
+      // O dashboard agrupa MÊS A MÊS; para obter os mesmos ids de grupo,
+      // restringimos ao mesmo período antes de agrupar.
+      const scoped = (urlYear && urlMonth)
+        ? allReports.filter((r: any) => {
+            if (!r.date) return false;
+            const d = new Date(`${r.date}T00:00:00`);
+            return d.getFullYear() === Number(urlYear) && d.getMonth() === Number(urlMonth);
+          })
+        : allReports;
+
+      const inputReports: ActivityGroupInputReport[] = scoped.map(r => ({
         id: r.id,
         date: r.date,
         location: r.location,
@@ -97,7 +117,20 @@ export default function ClientActivityList() {
       }));
 
       const groups = buildActivityGroups(inputReports);
-      const group = groups.find(g => g.id === projectId);
+      let group = groups.find(g => g.id === projectId);
+      if (!group && scoped.length !== allReports.length) {
+        // Fallback: link sem período ou período divergente — agrupa tudo.
+        const allGroups = buildActivityGroups(allReports.map(r => ({
+          id: r.id,
+          date: r.date,
+          location: r.location,
+          maintenance_order_number: r.maintenance_order_number,
+          maintenance_order_title: r.maintenance_order_title,
+          project_id: r.project?.id || '',
+          project_name: r.project?.name || '',
+        })));
+        group = allGroups.find(g => g.id === projectId);
+      }
       
       if (group) return { name: group.name, reportIds: group.reportIds };
 
@@ -234,9 +267,6 @@ export default function ClientActivityList() {
           <Card>
             <CardContent className="text-center py-16 text-muted-foreground text-sm">
               <p>Nenhum RDO desta atividade está disponível para você.</p>
-              {activityInfo?.reportIds && activityInfo.reportIds.length > 0 && (
-                <p className="mt-2 text-xs opacity-50">IDs de relatórios vinculados: {activityInfo.reportIds.length}</p>
-              )}
             </CardContent>
           </Card>
         ) : (
