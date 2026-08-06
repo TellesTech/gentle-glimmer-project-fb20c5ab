@@ -77,7 +77,7 @@ export default function WorkforceDatabase() {
   const [delays, setDelays] = useState<DelayRecord[]>([]);
   const [sites, setSites] = useState<{ id: string; name: string; lastReportDate: string | null }[]>([]);
   const [selectedSite, setSelectedSite] = useState<string>('all');
-  const [projects, setProjects] = useState<{ id: string; name: string; site_id: string | null }[]>([]);
+  const [projects, setProjects] = useState<{ id: string; name: string; site_id: string | null; searchString?: string }[]>([]);
   const [selectedProject, setSelectedProject] = useState<string>('all');
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
