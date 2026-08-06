@@ -642,6 +642,16 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     },
   });
 
+  // Nomes personalizados das pastas de atividade (compartilhados com o portal do cliente)
+  const cabinetSiteIds = useMemo(() => (allSites || []).map((s: any) => s.id).filter(Boolean), [allSites]);
+  const {
+    namesBySite: activityNamesBySite,
+    rename: renameActivity,
+    resetName: resetActivityName,
+    isSaving: renamingActivity,
+  } = useActivityNames(cabinetSiteIds);
+  const [renameTarget, setRenameTarget] = useState<RenameActivityTarget | null>(null);
+
   // Fetch completed AND draft reports with company hierarchy
   const REPORT_SELECT = `
             id,
