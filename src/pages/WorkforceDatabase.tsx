@@ -159,7 +159,7 @@ export default function WorkforceDatabase() {
   const loadRecords = async () => {
     if (!projects || projects.length === 0) {
       console.log('WorkforceDatabase: Waiting for projects to load...');
-      return;
+      await loadProjects();
     }
     setLoading(true);
     try {
