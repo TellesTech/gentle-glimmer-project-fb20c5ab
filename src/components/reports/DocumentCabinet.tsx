@@ -1055,6 +1055,9 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
               } else if (pf.count > 0) {
                 pf.name = `${pf.sourceProjects[0]?.name || 'Atividade'} — Sem OM`;
               }
+              // Nome personalizado (renomeado aqui ou no portal do cliente)
+              const custom = activityNamesBySite.get(`${site.id}::${pf.id}`);
+              if (custom) pf.name = custom;
               pf.reports.sort((a, b) => (a.date < b.date ? 1 : -1));
             });
             month.projects.sort((a, b) => {
@@ -1073,7 +1076,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
       if (a.totalCount === 0 && b.totalCount > 0) return 1;
       return a.name.localeCompare(b.name);
     });
-  }, [reports, allCompanies, allSites, allProjects]);
+  }, [reports, allCompanies, allSites, allProjects, activityNamesBySite]);
 
   const selectedCompany = companyFolders.find(c => c.id === openCompanyId);
   const selectedSiteFolder = selectedCompany?.sites.find(s => s.id === openSiteId);
