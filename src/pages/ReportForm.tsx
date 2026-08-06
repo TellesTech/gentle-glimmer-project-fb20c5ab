@@ -787,12 +787,15 @@ export default function ReportForm() {
       case 5:
         return <StepDeviations data={formData} onChange={updateFormData} />;
       case 6:
+        const currentProject = projects.find(p => p.id === formData.projectId);
+        const currentSiteId = currentProject?.site_id;
+        
         return (
           <StepAttendance
             data={formData}
             onChange={updateFormData}
             teamMembers={teamMembersForStep}
-            allProfiles={allProfiles}
+            allProfiles={allProfiles.filter(p => !p.siteId || p.siteId === currentSiteId)}
             defaultArrivalTime={formData.startTime || '07:00'}
             defaultDepartureTime={formData.endTime || '17:00'}
           />
