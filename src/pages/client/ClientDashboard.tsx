@@ -1046,6 +1046,23 @@ export default function ClientDashboard() {
                         }}
                       >
                         <div className="relative w-24 h-20 sm:w-32 sm:h-24 transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
+                          {/* Renomear pasta de atividade */}
+                          <button
+                            type="button"
+                            title="Renomear pasta"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRenameTarget({
+                                groupKey: a.id,
+                                siteId: a.siteId,
+                                currentName: a.name,
+                                hasCustomName: a.hasCustomName,
+                              });
+                            }}
+                            className="absolute -top-2 -right-2 z-30 rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-primary hover:border-primary transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
                           {/* Folder Rear Part */}
                           <div className={cn(
                             "absolute inset-x-0 bottom-0 top-3 rounded-lg shadow-sm",
