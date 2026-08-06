@@ -207,7 +207,12 @@ export default function ReportForm() {
         .eq('is_active', true)
         .order('name');
       if (error) throw error;
-      return (data || []).map(p => ({ id: p.id, name: p.name, jobTitle: p.job_title || '' }));
+      return (data || []).map(p => ({ 
+        id: p.id, 
+        name: p.name, 
+        jobTitle: p.job_title || '',
+        companyId: p.company_id 
+      }));
     },
   });
 
