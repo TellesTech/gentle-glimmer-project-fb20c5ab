@@ -577,7 +577,7 @@ export default function ClientDashboard() {
           project_name: r.report!.project!.name,
         }));
 
-        const groups = buildActivityGroups(inputReports);
+        const groups = buildActivityGroups(inputReports, activityNames);
 
         const activities = groups.map(group => {
           const groupReports = reports.filter(r => group.reportIds.includes(r.report_id));
@@ -591,6 +591,8 @@ export default function ClientDashboard() {
           return {
             id: group.id,
             name: group.name,
+            siteId: (groupReports.find(r => (r.report as any)?.project?.site_id)?.report as any)?.project?.site_id ?? null,
+            hasCustomName: activityNames.has(group.id),
             total: group.count,
             pending: pending,
             signed: signed,
