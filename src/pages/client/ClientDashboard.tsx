@@ -40,8 +40,9 @@ import {
 import { EyeOff } from 'lucide-react';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { format, parseISO, subDays, startOfDay, endOfDay, isWithinInterval, differenceInDays, getYear, getMonth } from 'date-fns';
+import { format, parseISO, subDays, startOfDay, endOfDay, isWithinInterval, differenceInDays, getYear, getMonth, isSameMonth, isSameYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { buildActivityGroups, type ActivityGroupInputReport } from '@/lib/rdoActivityGroups';
 
 import { cn } from '@/lib/utils';
 import JSZip from 'jszip';
@@ -205,7 +206,10 @@ export default function ClientDashboard() {
 
       const { data, error } = await supabase
         .from('reports')
-        .select(`id, date, shift, status, rdo_number, project:projects (id, name, company:companies (id, name))`)
+        .select(`
+          id, date, shift, status, rdo_number, location, maintenance_order_number, maintenance_order_title,
+          project:projects (id, name, company:companies (id, name))
+        `)
         .in('project_id', pIds)
         .in('status', ['sent', 'signed', 'finalized'])
         .order('date', { ascending: false });
@@ -272,7 +276,10 @@ export default function ClientDashboard() {
 
       const { data: reports, error } = await supabase
         .from('reports')
-        .select(`id, date, shift, status, rdo_number, project:projects (id, name, company:companies (id, name))`)
+        .select(`
+          id, date, shift, status, rdo_number, location, maintenance_order_number, maintenance_order_title,
+          project:projects (id, name, company:companies (id, name))
+        `)
         .in('project_id', projectIds)
         .in('status', ['sent', 'signed', 'finalized'])
         .order('date', { ascending: false });

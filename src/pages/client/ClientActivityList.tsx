@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, getYear, getMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ChevronRight, CheckCircle2, Clock, Wrench } from 'lucide-react';
+import { buildActivityGroups, type ActivityGroupInputReport } from '@/lib/rdoActivityGroups';
 
 import { ClientLayout } from '@/components/client/ClientLayout';
 import { PageBackHeader } from '@/components/client/PageBackHeader';
@@ -40,42 +41,63 @@ export default function ClientActivityList() {
   const isAdminView = isInternalUser && !clientProfile;
 
   // Project info (name)
-  const { data: project } = useQuery({
-    queryKey: ['client-activity-project', projectId],
-    enabled: !!projectId,
+  const { data: activityInfo } = useQuery({
+    queryKey: ['client-activity-info', projectId, clientProfile?.id, isAdminView],
+    enabled: !!projectId && (!!clientProfile?.id || isAdminView),
     queryFn: async () => {
-      const { data } = await supabase.from('projects').select('id, name').eq('id', projectId!).maybeSingle();
-      return data;
+      // 1) Get all reports that could be in this group
+      const { data: siteRows } = await (supabase as any).rpc('portal_user_site_ids', {
+        _user_id: (supabase as any).auth?.user?.id || null, // fallback logic
+      });
+      const siteIds: string[] = (siteRows || [])
+        .map((s: any) => (typeof s === 'string' ? s : s?.portal_user_site_ids))
+        .filter(Boolean);
+      
+      let query = supabase
+        .from('reports')
+        .select('id, date, maintenance_order_number, maintenance_order_title, location, project:projects(id, name)')
+        .in('status', ['sent', 'signed', 'finalized']);
+      
+      if (siteIds.length > 0) {
+        const { data: projRows } = await supabase.from('projects').select('id').in('site_id', siteIds);
+        const pIds = (projRows || []).map(p => p.id);
+        if (pIds.length > 0) query = query.in('project_id', pIds);
+      }
+
+      const { data: allReports } = await query;
+      if (!allReports) return null;
+
+      const inputReports: ActivityGroupInputReport[] = allReports.map(r => ({
+        id: r.id,
+        date: r.date,
+        location: r.location,
+        maintenance_order_number: r.maintenance_order_number,
+        maintenance_order_title: r.maintenance_order_title,
+        project_id: r.project?.id || '',
+        project_name: r.project?.name || '',
+      }));
+
+      const groups = buildActivityGroups(inputReports);
+      const group = groups.find(g => g.id === projectId);
+      
+      if (group) return { name: group.name, reportIds: group.reportIds };
+
+      // Fallback: maybe it's a direct project UUID (legacy link)
+      const { data: proj } = await supabase.from('projects').select('id, name').eq('id', projectId!).maybeSingle();
+      if (proj) {
+        const { data: rds } = await supabase.from('reports').select('id').eq('project_id', proj.id).in('status', ['sent', 'signed', 'finalized']);
+        return { name: proj.name, reportIds: (rds || []).map(r => r.id) };
+      }
+
+      return null;
     },
   });
 
   const { data: reports = [], isLoading } = useQuery({
-    queryKey: ['client-activity-reports', projectId, clientProfile?.id, isAdminView],
-    enabled: !!projectId && (!!clientProfile?.id || isAdminView),
+    queryKey: ['client-activity-reports', projectId, clientProfile?.id, isAdminView, activityInfo?.reportIds],
+    enabled: !!projectId && (!!clientProfile?.id || isAdminView) && !!activityInfo,
     queryFn: async (): Promise<ActivityReport[]> => {
-      // 1) Resolve which report IDs the user is allowed to see for this project.
-      let reportIds: string[] = [];
-
-      if (clientProfile) {
-        // Visibilidade automática por unidade: RDOs enviados para assinatura e assinados.
-        // A RLS já bloqueia obras de outras unidades e meses ocultados.
-        const { data: projReports } = await supabase
-          .from('reports')
-          .select('id')
-          .eq('project_id', projectId!)
-          .in('status', ['sent', 'signed', 'finalized']);
-        reportIds = (projReports || []).map((r: any) => r.id);
-      } else if (isAdminView) {
-        // Admin/colaborador no portal segue o mesmo escopo do cliente:
-        // RDOs enviados para assinatura e assinados.
-        const { data: projReports } = await supabase
-          .from('reports')
-          .select('id')
-          .eq('project_id', projectId!)
-          .in('status', ['sent', 'signed', 'finalized']);
-        reportIds = (projReports || []).map((r: any) => r.id);
-      }
-
+      const reportIds = activityInfo?.reportIds || [];
       if (!reportIds.length) return [];
 
       // 2) Fetch report data + approver counts
@@ -164,7 +186,7 @@ export default function ClientActivityList() {
         <PageBackHeader
           onBack={() => navigate(`/client/dashboard?${searchParams.toString()}`)}
           icon={<Wrench className="h-5 w-5" />}
-          title={project?.name || 'Atividade'}
+          title={activityInfo?.name || 'Atividade'}
           className="mb-0"
         />
 
