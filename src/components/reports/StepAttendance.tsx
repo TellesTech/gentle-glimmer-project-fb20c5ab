@@ -317,7 +317,7 @@ export function StepAttendance({ data, onChange, teamMembers, allProfiles = [], 
                 >
                   <span className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
-                    Buscar colaboradores ({availableProfiles.length} disponíveis)
+                    Buscar colaboradores nesta unidade ({availableProfiles.length} disponíveis)
                   </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>

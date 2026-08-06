@@ -437,12 +437,9 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
   
   // Filter profiles based on current site (calculated after allProfiles is defined)
   const filteredSiteProfiles = allProfiles.filter(p => {
-    if (!projectMeta?.site_id) return true;
+    if (!projectMeta?.site_id) return false;
     const pSiteIds = (p as any).siteIds || [];
-    if (pSiteIds.length > 0) {
-      return pSiteIds.includes(projectMeta.site_id);
-    }
-    return true;
+    return pSiteIds.includes(projectMeta.site_id);
   });
 
   // Match profile by partial name (first name, contains, exact)

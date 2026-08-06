@@ -814,12 +814,9 @@ export default function ReportForm() {
             onChange={updateFormData}
             teamMembers={teamMembersForStep}
             allProfiles={allProfiles.filter(p => {
-              if (!currentSiteId) return true;
+              if (!currentSiteId) return false;
               const pSiteIds = (p as any).siteIds || [];
-              if (pSiteIds.length > 0) {
-                return pSiteIds.includes(currentSiteId);
-              }
-              return true;
+              return pSiteIds.includes(currentSiteId);
             })}
             defaultArrivalTime={formData.startTime || '07:00'}
             defaultDepartureTime={formData.endTime || '17:00'}
