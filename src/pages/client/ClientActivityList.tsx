@@ -1,10 +1,12 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format, parseISO, getYear, getMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronRight, CheckCircle2, Clock, Wrench } from 'lucide-react';
+import { ChevronRight, CheckCircle2, Clock, Wrench, Pencil } from 'lucide-react';
 import { buildActivityGroups, type ActivityGroupInputReport } from '@/lib/rdoActivityGroups';
+import { useActivityNames } from '@/hooks/useActivityNames';
+import { RenameActivityDialog, type RenameActivityTarget } from '@/components/reports/RenameActivityDialog';
 
 import { ClientLayout } from '@/components/client/ClientLayout';
 import { PageBackHeader } from '@/components/client/PageBackHeader';
@@ -81,7 +83,7 @@ export default function ClientActivityList() {
       
       let query = supabase
         .from('reports')
-        .select('id, date, maintenance_order_number, maintenance_order_title, location, project:projects(id, name)')
+        .select('id, date, maintenance_order_number, maintenance_order_title, location, project:projects(id, name, site_id)')
         .in('status', ['sent', 'signed', 'finalized']);
       
       if (siteIds.length > 0) {
@@ -132,13 +134,20 @@ export default function ClientActivityList() {
         group = allGroups.find(g => g.id === projectId);
       }
       
-      if (group) return { name: group.name, reportIds: group.reportIds };
+      if (group) {
+        const groupSiteId =
+          (scoped.find((r: any) => group!.reportIds.includes(r.id))?.project as any)?.site_id ??
+          (allReports.find((r: any) => group!.reportIds.includes(r.id))?.project as any)?.site_id ??
+          urlSiteId ??
+          null;
+        return { name: group.name, reportIds: group.reportIds, siteId: groupSiteId as string | null };
+      }
 
       // Fallback: maybe it's a direct project UUID (legacy link)
-      const { data: proj } = await supabase.from('projects').select('id, name').eq('id', projectId!).maybeSingle();
+      const { data: proj } = await supabase.from('projects').select('id, name, site_id').eq('id', projectId!).maybeSingle();
       if (proj) {
         const { data: rds } = await supabase.from('reports').select('id').eq('project_id', proj.id).in('status', ['sent', 'signed', 'finalized']);
-        return { name: proj.name, reportIds: (rds || []).map(r => r.id) };
+        return { name: proj.name, reportIds: (rds || []).map(r => r.id), siteId: (proj as any).site_id ?? null };
       }
 
       return null;
