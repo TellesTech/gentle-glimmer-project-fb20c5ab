@@ -137,19 +137,40 @@ export default function WorkforceDatabase() {
   };
 
   const loadProjects = async () => {
-    const { data } = await supabase
+    // Buscar projetos com informações extras dos RDOs para melhor identificação (igual ao Reports.tsx)
+    const { data, error } = await supabase
       .from('projects')
-      .select('id, name, site_id, sites(name, companies(name))')
+      .select('id, name, site_id, sites(name, companies(name)), reports(location, maintenance_order_title)')
       .order('name');
     
+    if (error) {
+      console.error('WorkforceDatabase: Error loading projects:', error);
+      return;
+    }
+
     if (data) {
       console.log('WorkforceDatabase: Projects loaded:', data.length);
-      const enhancedProjects = data.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        site_id: p.site_id,
-        searchString: `${p.name} | ${p.sites?.name || ''} | ${p.sites?.companies?.name || ''}`.toLowerCase()
-      }));
+      
+      const isGenericName = (name: string) => 
+        !name || name === '*' || name.startsWith('Atividade criada via') || name.trim().length <= 1;
+
+      const enhancedProjects = data.map((p: any) => {
+        const latestReport = p.reports?.[0];
+        const latestLocation = latestReport?.location;
+        const latestOmTitle = latestReport?.maintenance_order_title;
+        
+        // Se o nome do projeto for genérico, tenta usar a localização ou título da OM do último relatório
+        const displayName = isGenericName(p.name) 
+          ? (latestLocation || latestOmTitle || p.name) 
+          : p.name;
+
+        return {
+          id: p.id,
+          name: displayName,
+          site_id: p.site_id,
+          searchString: `${displayName} | ${p.name} | ${latestLocation || ''} | ${latestOmTitle || ''} | ${p.sites?.name || ''} | ${p.sites?.companies?.name || ''}`.toLowerCase()
+        };
+      });
       setProjects(enhancedProjects);
     }
   };
@@ -181,17 +202,27 @@ export default function WorkforceDatabase() {
       // Forçar atualização da lista de projetos para garantir que o filtro de site funcione com dados novos
       const { data: latestProjects } = await supabase
         .from('projects')
-        .select('id, name, site_id, sites(name, companies(name))')
+        .select('id, name, site_id, sites(name, companies(name)), reports(location, maintenance_order_title)')
         .order('name');
       
       let currentProjects = projects;
       if (latestProjects) {
-        currentProjects = latestProjects.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          site_id: p.site_id,
-          searchString: `${p.name} | ${p.sites?.name || ''} | ${p.sites?.companies?.name || ''}`.toLowerCase()
-        }));
+        const isGenericName = (name: string) => 
+          !name || name === '*' || name.startsWith('Atividade criada via') || name.trim().length <= 1;
+
+        currentProjects = latestProjects.map((p: any) => {
+          const latestReport = p.reports?.[0];
+          const latestLocation = latestReport?.location;
+          const latestOmTitle = latestReport?.maintenance_order_title;
+          const displayName = isGenericName(p.name) ? (latestLocation || latestOmTitle || p.name) : p.name;
+          
+          return {
+            id: p.id,
+            name: displayName,
+            site_id: p.site_id,
+            searchString: `${displayName} | ${p.name} | ${latestLocation || ''} | ${latestOmTitle || ''} | ${p.sites?.name || ''} | ${p.sites?.companies?.name || ''}`.toLowerCase()
+          };
+        });
         setProjects(currentProjects);
       }
 
