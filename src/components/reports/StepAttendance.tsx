@@ -127,10 +127,11 @@ export function StepAttendance({ data, onChange, teamMembers, allProfiles = [], 
 
   // Filter by search
   const filteredProfiles = searchValue
-    ? availableProfiles.filter(p => {
+    ? allProfiles.filter(p => {
         const searchNormalized = stripAccents(searchValue.toLowerCase());
         const nameNormalized = stripAccents(p.name.toLowerCase());
-        return nameNormalized.includes(searchNormalized);
+        const alreadyInAttendance = attendanceUserIds.has(p.id);
+        return nameNormalized.includes(searchNormalized) && !alreadyInAttendance;
       })
     : availableProfiles;
 
@@ -169,6 +170,7 @@ export function StepAttendance({ data, onChange, teamMembers, allProfiles = [], 
       departureTime: defaultDepartureTime,
       functionRole: profile.jobTitle || 'Convencional',
     };
+    console.log(`[StepAttendance] Adicionando colaborador: ${profile.name} (${profile.jobTitle || 'Sem função'})`);
     onChange({ attendance: [...data.attendance, newAttendance] });
   };
 

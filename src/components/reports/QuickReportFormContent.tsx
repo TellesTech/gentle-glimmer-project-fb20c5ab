@@ -610,11 +610,19 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
     );
     
     if (!alreadyExists && profile.name) {
+      console.log(`[QuickReportFormContent] Adicionando colaborador: ${profile.name} (${profile.jobTitle || 'Sem função'})`);
       setFormData(prev => ({
         ...prev,
         attendance: [
           ...prev.attendance,
-          { userId: profile.id, userName: profile.name!, present: true, arrivalTime: prev.startTime || '07:00', departureTime: prev.endTime || '17:00', functionRole: profile.jobTitle || 'Convencional' }
+          { 
+            userId: profile.id, 
+            userName: profile.name!, 
+            present: true, 
+            arrivalTime: prev.startTime || '07:00', 
+            departureTime: prev.endTime || '17:00', 
+            functionRole: profile.jobTitle || 'Convencional' 
+          }
         ]
       }));
     }
