@@ -7,7 +7,7 @@ import { ptBR } from 'date-fns/locale';
     Loader2, Sun, Sunset, Moon, Users, CheckCircle2, Circle,
     AlertTriangle, AlertCircle, Camera, Building2, PenLine, Check,
     MessageSquare, ClipboardList, FileText, XCircle, X,
-    MapPin, Clock, Globe, Timer, CalendarDays, Sparkles, RefreshCw, Download
+    MapPin, Clock, Globe, Timer, CalendarDays, Sparkles, RefreshCw, Download, History
   } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +25,7 @@ import { useClientAuth } from '@/contexts/ClientAuthContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { PhotoGallery } from '@/components/reports/PhotoGallery';
 import { SignatureTimeline } from '@/components/client/SignatureTimeline';
+import { ApprovalTimeline } from '@/components/reports/ApprovalTimeline';
 import { useReportSignaturesRealtime } from '@/hooks/useReportSignaturesRealtime';
 import { getReportPdfBlob } from '@/lib/clientReportDownload';
 import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
@@ -195,6 +196,32 @@ export default function ClientReportView() {
     },
     enabled: !!queryId,
     retry: false,
+  });
+
+  // Query for report history
+  const { data: historyData, isLoading: isHistoryLoading } = useQuery({
+    queryKey: ['report-history', resolvedReportId],
+    queryFn: async () => {
+      if (!resolvedReportId) return [];
+
+      const { data, error } = await supabase
+        .from('report_history')
+        .select(`
+          id,
+          action,
+          action_at,
+          details,
+          old_values,
+          new_values,
+          actor:profiles!action_by(id, name, avatar_url)
+        `)
+        .eq('report_id', resolvedReportId)
+        .order('action_at', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!resolvedReportId,
   });
 
   // WEES internal user is logged in (admin/super_admin/collaborator) and not a client
@@ -956,6 +983,22 @@ export default function ClientReportView() {
           </CardHeader>
           <CardContent>
             <SignatureTimeline reportId={report.id} />
+          </CardContent>
+        </Card>
+        
+        {/* History Timeline Card */}
+        <Card className="border-l-4 border-l-muted-foreground/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <History className="w-5 h-5 text-muted-foreground" />
+              Histórico do RDO
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ApprovalTimeline 
+              history={historyData}
+              isLoading={isHistoryLoading}
+            />
           </CardContent>
         </Card>
 

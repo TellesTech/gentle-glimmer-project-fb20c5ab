@@ -2269,6 +2269,54 @@ export type Database = {
           },
         ]
       }
+      report_history: {
+        Row: {
+          action: string
+          action_at: string
+          action_by: string | null
+          details: Json | null
+          id: string
+          new_values: Json | null
+          old_values: Json | null
+          report_id: string
+        }
+        Insert: {
+          action: string
+          action_at?: string
+          action_by?: string | null
+          details?: Json | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          report_id: string
+        }
+        Update: {
+          action?: string
+          action_at?: string
+          action_by?: string | null
+          details?: Json | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          report_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_history_action_by_fkey"
+            columns: ["action_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_history_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_photos: {
         Row: {
           created_at: string | null
