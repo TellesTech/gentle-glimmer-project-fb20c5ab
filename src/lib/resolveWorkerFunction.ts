@@ -1,4 +1,5 @@
 import { normalizeFunction } from '@/lib/jobFunctions';
+import { stripAccents } from '@/lib/utils';
 
 export interface ProfileEntry {
   id: string;
@@ -39,23 +40,23 @@ export function resolveWorkerFunction(
 }
 
 function matchProfileByName(partialName: string, profiles: ProfileEntry[]): ProfileEntry | null {
-  const needle = partialName.trim().toUpperCase();
+  const needle = stripAccents(partialName.trim().toUpperCase());
   if (!needle) return null;
 
-  // Exact match (after trim)
-  const exact = profiles.find(p => p.name.trim().toUpperCase() === needle);
+  // Exact match (after trim and accent stripping)
+  const exact = profiles.find(p => stripAccents(p.name.trim().toUpperCase()) === needle);
   if (exact) return exact;
 
   // Multi-word exact match (handle potential variations in spacing)
   const normalizedNeedle = needle.replace(/\s+/g, ' ');
-  const normalizedExact = profiles.find(p => p.name.trim().toUpperCase().replace(/\s+/g, ' ') === normalizedNeedle);
+  const normalizedExact = profiles.find(p => stripAccents(p.name.trim().toUpperCase()).replace(/\s+/g, ' ') === normalizedNeedle);
   if (normalizedExact) return normalizedExact;
 
   // First name + Second name match (more specific than just first name)
   const needleParts = normalizedNeedle.split(/\s+/);
   if (needleParts.length >= 2) {
     const twoNameMatch = profiles.find(p => {
-      const pParts = p.name.trim().toUpperCase().split(/\s+/);
+      const pParts = stripAccents(p.name.trim().toUpperCase()).split(/\s+/);
       return pParts[0] === needleParts[0] && pParts[1] === needleParts[1];
     });
     if (twoNameMatch) return twoNameMatch;
@@ -64,7 +65,7 @@ function matchProfileByName(partialName: string, profiles: ProfileEntry[]): Prof
   // First name match (only if needle is a single word to avoid false positives)
   if (needleParts.length === 1) {
     const firstNameMatch = profiles.find(p => {
-      const firstName = p.name.trim().toUpperCase().split(/\s+/)[0];
+      const firstName = stripAccents(p.name.trim().toUpperCase()).split(/\s+/)[0];
       return firstName === needle;
     });
     if (firstNameMatch) return firstNameMatch;
@@ -72,7 +73,7 @@ function matchProfileByName(partialName: string, profiles: ProfileEntry[]): Prof
 
   // Partial / contains match (as last resort)
   const containsMatch = profiles.find(p => {
-    const pName = p.name.trim().toUpperCase();
+    const pName = stripAccents(p.name.trim().toUpperCase());
     return pName.includes(needle) || needle.includes(pName);
   });
   if (containsMatch) return containsMatch;

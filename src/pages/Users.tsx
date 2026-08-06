@@ -22,7 +22,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/loose-client';
-import { cn } from '@/lib/utils';
+import { cn, stripAccents } from '@/lib/utils';
 import type { UserRole } from '@/types';
 
 const translateAuthError = (msg: string): string => {
@@ -151,8 +151,12 @@ export default function UsersPage() {
   }, [canManageUsers]);
 
   const filtered = users.filter(u => {
-    const matchesSearch = u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          (u.job_title?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
+    const searchNormalized = stripAccents(searchTerm.toLowerCase());
+    const nameNormalized = stripAccents(u.name.toLowerCase());
+    const jobNormalized = stripAccents((u.job_title || "").toLowerCase());
+
+    const matchesSearch = nameNormalized.includes(searchNormalized) || 
+                          jobNormalized.includes(searchNormalized);
     const matchesRole = roleFilter === 'all' || u.role === roleFilter;
     const matchesState = stateFilter === 'all' || u.state === stateFilter;
     const isActive = u.is_active !== false;

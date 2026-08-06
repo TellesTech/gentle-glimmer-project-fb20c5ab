@@ -37,6 +37,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminSiteAccess } from '@/hooks/useAdminSiteAccess';
+import { stripAccents } from '@/lib/utils';
 import { toast } from 'sonner';
 import { 
   exportReportsBatch, 
@@ -201,11 +202,11 @@ export default function Reports() {
       if (showArchived !== isArchived) return false;
 
       // Search filter
-      const searchLower = searchTerm.toLowerCase();
+      const searchLower = stripAccents(searchTerm.toLowerCase());
       const matchesSearch = 
-        (report.location?.toLowerCase() || '').includes(searchLower) ||
-        (report.project?.name?.toLowerCase() || '').includes(searchLower) ||
-        (report.team?.name?.toLowerCase() || '').includes(searchLower);
+        stripAccents(report.location?.toLowerCase() || '').includes(searchLower) ||
+        stripAccents(report.project?.name?.toLowerCase() || '').includes(searchLower) ||
+        stripAccents(report.team?.name?.toLowerCase() || '').includes(searchLower);
 
       // Status filter
       const matchesStatus = statusFilter === 'all' || report.status === statusFilter;

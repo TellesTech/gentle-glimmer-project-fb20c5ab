@@ -18,6 +18,7 @@ import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import { normalizeFunction, JOB_FUNCTIONS, getBaseFunction } from '@/lib/jobFunctions';
 import { resolveWorkerFunction, ProfileEntry } from '@/lib/resolveWorkerFunction';
+import { stripAccents } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { WorkforceDashboardTab } from '@/components/workforce/WorkforceDashboardTab';
@@ -223,7 +224,7 @@ export default function WorkforceDatabase() {
       for (const att of (attendanceData || [])) {
         const report = (att as any).reports as any;
         const date = report?.date || '';
-        const name = ((att as any).user_name || 'Sem nome').trim().toUpperCase();
+        const name = stripAccents(((att as any).user_name || 'Sem nome').trim().toUpperCase());
         const key = `${name}|${date}`;
         if (!attByKey.has(key)) attByKey.set(key, []);
         attByKey.get(key)!.push(att);
