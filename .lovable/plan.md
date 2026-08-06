@@ -1,23 +1,24 @@
-# Plan: Generate a Professional PRD for Presentation
+# Plan: Update and Polish PRD for Client Presentation
 
-The user wants a professional Product Requirements Document (PRD) of the RDO system features to present to a client. A comprehensive PRD already exists at `/mnt/documents/PRD_WEES_DiarioDeObraPro.md`, but I should verify if any updates are needed or if a more "presentation-ready" version is required.
+The user wants a professional PRD of the RDO system features for a client presentation. I will update the existing PRD at `/mnt/documents/PRD_WEES_DiarioDeObraPro.md` to ensure it is up-to-date with all the latest features (like the accent-insensitive search, the enhanced client portal access, and resizable UI elements) and formatted professionally for presentation.
 
 ## Proposed Changes
 
-### 1. Document Review and Refinement
-- Review the existing PRD at `/mnt/documents/PRD_WEES_DiarioDeObraPro.md`.
-- Ensure it covers all key modules:
-    - **Portal do Cliente**: Authentication (PIN/Magic Link), Dashboard, RDO View, Digital Signature.
-    - **RDO Management**: Creation Wizard, AI Assistance, Media/Photo attachments, PDF Generation.
-    - **Workforce (HH)**: Database, automatic linking, audit reports.
-    - **Admin/Super Admin**: Multi-tenant management, analytics, system settings.
-    - **AI Assistant (Wesley)**: Conversational interface for data insights.
-- Add or polish sections specifically for "Client Presentation" (e.g., benefits, ease of use, security/compliance).
+### 1. Document Update
+- Update **Section 5.2 (Portal do Cliente)** to include details about the Magic Link and PIN-based first access flow.
+- Update **Section 5.3.14 (Workforce Database)** to mention the accent-insensitive name matching and automated linking to employee profiles.
+- Update **Section 5.3.6 (Report Detail)** to highlight the standardized "Back" buttons and the "Client Preview Mode" for admins.
+- Add a new section or subsection for **"Últimas Inovações & User Experience"** to highlight:
+    - Resizable properties panel in the report editor.
+    - Improved signature containment (preventing clipping on cursive signatures).
+    - Color-coded activity legends for better status visualization.
 
-### 2. Export / Formatting
-- Ensure the document is well-structured with clear headings, tables, and lists.
-- Since it's a markdown file, it can be easily shared or converted to PDF/Slide deck.
+### 2. Formatting for Presentation
+- Ensure the language is professional and focused on business value (e.g., "Redução de erros", "Transparência com o cliente", "Eficiência operacional").
+- Check that all tables are aligned and technical terms are consistent.
+- Ensure the document is self-contained and ready for a client to read.
 
 ## Verification Plan
-- **Content Check**: Verify that all recent features (accent-insensitive search, resizable sidebars, custom back buttons) are reflected or summarized in the "Latest Updates" or "Features" section of the PRD.
-- **Visual Check**: Read the final file to ensure no "body" placeholders or AI-internal instructions leaked into the text.
+- **Content Accuracy**: Compare the updated PRD text against the latest implemented features.
+- **Visual Integrity**: Verify that the document structure (Markdown) is clean and renders properly.
+- **Language**: Ensure all "body" placeholders or internal notes are removed.
