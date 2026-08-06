@@ -158,8 +158,13 @@ export default function WorkforceDatabase() {
 
   const loadRecords = async () => {
     if (!projects || projects.length === 0) {
-      console.log('WorkforceDatabase: Waiting for projects to load...');
-      await loadProjects();
+      const { data } = await supabase.from('projects').select('id, name, site_id').order('name');
+      if (data) {
+        setProjects(data);
+      } else {
+        setLoading(false);
+        return;
+      }
     }
     setLoading(true);
     try {
