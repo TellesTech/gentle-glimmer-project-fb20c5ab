@@ -1,52 +1,41 @@
-# Integração Canva no Construtor de Relatórios de Serviço
+# Renomear pastas e editar RDO no portal do cliente (sincronizado com a área WEES)
 
-## Ponto importante antes de começar
+Hoje o nome da pasta de atividade é sempre calculado a partir dos dados dos RDOs (`OM <número> — <título>`), sem possibilidade de renomear. E no portal do cliente o RDO é somente leitura.
 
-O conector Canva que existe hoje neste projeto é um **conector de chat (MCP)**: ele funciona para mim durante a construção, mas o app publicado **não consegue chamá-lo em tempo de execução**. Não existe conector Canva na lista de conectores de app do Lovable (verifiquei a lista completa).
+## O que será feito
 
-Para o app usar o Canva de verdade, a integração precisa ser feita com a **Canva Connect API** usando uma conta única WEES:
-- É necessário criar um app em `canva.com/developers` (conta WEES), com Client ID e Client Secret.
-- Escopos necessários: `design:content:read`, `design:content:write`, `design:meta:read`, `asset:write`, `brandtemplate:meta:read`, `brandtemplate:content:read`.
-- O token OAuth da conta WEES fica guardado no backend e é renovado automaticamente (refresh token).
+### 1. Renomear pasta de atividade
+- Botão de renomear (ícone de lápis) em cada pasta de atividade:
+  - Portal do cliente (grade de atividades do mês)
+  - Área WEES ("Meus RDOs" / armário de documentos)
+- O nome personalizado é salvo uma única vez e vale para os dois lados: renomeou no portal, muda na WEES, e vice-versa.
+- Opção "Restaurar nome automático" volta ao nome calculado pela OM.
+- Disponível para usuários do portal do cliente e para a equipe WEES.
 
-Sobre "substituir o editor atual": o Canva **não permite embutir o editor dentro de outro site**. O que dá para fazer é o fluxo "abrir no Canva" — o relatório vira um design Canva e o usuário edita numa aba do Canva, trazendo o resultado (PDF/imagens) de volta para o sistema. Este plano segue esse caminho e mantém o editor interno como opção.
-
-## O que será construído
-
-### 1. Base da conexão (conta única WEES)
-- Tabela `canva_connection` (token, refresh token, expiração, conta) — acesso apenas para super admin via RLS.
-- Edge functions:
-  - `canva-oauth-start` — gera a URL de autorização (PKCE).
-  - `canva-oauth-callback` — troca o código pelo token e salva.
-  - `_shared/canvaClient.ts` — obtém token válido, renova quando expirado e faz as chamadas à API.
-- Tela em Configurações: "Integração Canva" (conectar / status / desconectar), visível só para super admin.
-
-### 2. Exportar relatório para o Canva
-- Botão **"Abrir no Canva"** no `ServiceReportBuilder` (card) e no `ServiceReportEditor` (barra superior).
-- Fluxo: gera o PDF do relatório com o gerador atual → sobe para o Storage com URL temporária assinada → edge function `canva-export-report` chama o import da Canva Connect API → retorna o `design_id` e o link de edição.
-- O `design_id` e a URL ficam gravados no relatório (`canva_design_id`, `canva_edit_url`, `canva_synced_at`) para reabrir sempre o mesmo design.
-- Conteúdo enviado: tudo o que já vai no PDF (capa, unidade/empresa, data, títulos, seções de texto, fotos com legendas, rodapé/assinaturas).
-
-### 3. Criar a partir de um template Canva (autofill)
-- No diálogo de novo relatório, opção "Usar template do Canva".
-- Lista os brand templates da conta WEES e faz o autofill com os campos do relatório (título, unidade, empresa, data, resumo, imagens principais).
-- O design criado fica vinculado ao relatório.
-
-### 4. Importar de volta / usar design existente
-- Botão **"Sincronizar do Canva"**: exporta o design (PDF e PNG por página) e guarda no Storage, substituindo o PDF final do relatório.
-- Opção de colar a URL de um design Canva existente para vincular a um relatório.
-- Depois de sincronizar, o download do relatório usa a versão Canva.
-
-## Ordem de entrega
-1. Conexão OAuth + tela de status em Configurações.
-2. Exportar para o Canva + botão de abrir/editar.
-3. Sincronizar de volta (PDF/imagens).
-4. Criação a partir de brand template (autofill).
+### 2. Edição rápida do RDO na página de assinatura
+- Na página do RDO dentro do portal, botão **"Editar"** abre um painel com os campos:
+  - Data
+  - Local
+  - Número da OM e título da OM
+  - Observações/comentários
+- Ao salvar, os dados são gravados no próprio RDO — portanto aparecem imediatamente na área WEES (lista, cards, calendário, PDF) e vice-versa: o que a WEES editar aparece no portal.
+- RDO já assinado também pode ser editado; toda alteração fica registrada no histórico do RDO (quem alterou, quando e o que mudou).
+- Como o nome da pasta vem da OM, alterar o número/título da OM reorganiza a pasta automaticamente — o aviso disso aparece na hora de salvar.
 
 ## Detalhes técnicos
-- Migração: tabela `canva_connection` (com GRANTs e RLS de super admin) e colunas `canva_design_id`, `canva_edit_url`, `canva_synced_at` em `service_reports`.
-- Segredos: `CANVA_CLIENT_ID` e `CANVA_CLIENT_SECRET` (solicitados via formulário seguro após a aprovação do plano).
-- Redirect URI do OAuth: endpoint da edge function `canva-oauth-callback` — precisa ser cadastrado no app Canva.
-- Novas edge functions: `canva-oauth-start`, `canva-oauth-callback`, `canva-export-report`, `canva-import-design`, `canva-templates`.
-- Frontend: `src/lib/canva.ts` (chamadas), botões em `ServiceReportBuilder.tsx` e `ServiceReportEditor.tsx`, aba de integração em `Settings.tsx`.
-- Os jobs de export/import do Canva são assíncronos: as functions fazem polling do job até concluir.
+
+### Banco
+- Nova tabela `public.rdo_activity_names`: `site_id`, `group_key` (chave do grupo: `om:<numero>` / `title:<titulo normalizado>` / `project:<id>`), `custom_name`, `created_by`, timestamps, com índice único em (`site_id`, `group_key`).
+  - GRANTs para `authenticated` e `service_role`; RLS: leitura e escrita para quem tem acesso à unidade (`user_has_site_access`) ou acesso pelo portal (`portal_user_site_ids`).
+- Política de UPDATE em `public.reports` para usuários do portal, restrita às unidades a que têm acesso (`portal_user_site_ids`), permitindo apenas alterar os campos de edição rápida. O trigger `log_report_changes` já registra o histórico; será ampliado para incluir `date` e os campos de OM.
+
+### Frontend
+- `src/lib/rdoActivityGroups.ts`: `buildActivityGroups` passa a aceitar um mapa opcional de nomes personalizados e aplica o override no `name` (mantendo `searchString` com o nome original + o novo).
+- Novo hook `src/hooks/useActivityNames.ts`: lê e grava os nomes personalizados por unidade (React Query, com invalidação nos dois contextos).
+- `src/pages/client/ClientDashboard.tsx` e `src/components/reports/DocumentCabinet.tsx`: botão de renomear + diálogo, usando o mesmo hook e a mesma chave de grupo (o armário passa a usar a chave do `buildActivityGroups`, alinhando com o portal).
+- `src/pages/ClientReportView.tsx`: botão "Editar" e diálogo de edição rápida com validação (zod), salvando em `reports` e invalidando as consultas do portal e da área WEES.
+
+## Verificação
+1. Renomear uma pasta no portal e conferir o novo nome em "Meus RDOs" (e o inverso).
+2. Editar data/local/OM/observações de um RDO assinado pelo portal e conferir na área WEES e no histórico do RDO.
+3. Confirmar que "Restaurar nome automático" volta ao padrão `OM <número> — <título>`.
