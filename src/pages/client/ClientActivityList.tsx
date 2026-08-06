@@ -159,10 +159,18 @@ export default function ClientActivityList() {
         .in('id', reportIds)
         .order('date', { ascending: false });
 
-      const [{ data: ccApr }, { data: ccApr2 }] = await Promise.all([
+      const [{ data: ccApr }, { data: ccApr2 }, { data: sigRows }] = await Promise.all([
         supabase.from('report_client_approvers').select('report_id, status').in('report_id', reportIds),
         supabase.from('report_company_approvers').select('report_id, status').in('report_id', reportIds),
+        supabase.from('report_signatures').select('report_id, signature_data').in('report_id', reportIds),
       ]);
+
+      // Assinaturas internas (equipe WEES) — ficam em report_signatures.
+      const internalSigned = new Map<string, number>();
+      (sigRows || []).forEach((s: any) => {
+        if (!s.signature_data) return;
+        internalSigned.set(s.report_id, (internalSigned.get(s.report_id) || 0) + 1);
+      });
 
       const counts = new Map<string, { total: number; signed: number }>();
       [...(ccApr || []), ...(ccApr2 || [])].forEach((a: any) => {
@@ -178,10 +186,11 @@ export default function ClientActivityList() {
         .map((r: any) => {
           const c = counts.get(r.id) || { total: 0, signed: 0 };
           const externallySigned = r.status === 'signed' || r.status === 'finalized';
+          const weesSigned = internalSigned.get(r.id) || 0;
 
           let approverStatus: string = 'pending';
-          let signedCount = c.signed;
-          let totalApprovers = c.total;
+          let signedCount = c.signed + weesSigned;
+          let totalApprovers = c.total + weesSigned;
 
           if (externallySigned) {
             approverStatus = 'completed';
@@ -193,7 +202,8 @@ export default function ClientActivityList() {
             }
           } else if (c.total > 0 && c.signed === c.total) {
             approverStatus = 'completed';
-          } else if (c.signed > 0) {
+          } else if (c.signed > 0 || weesSigned > 0) {
+            // WEES já assinou, mas o cliente ainda não → assinatura parcial.
             approverStatus = 'partial';
           }
 

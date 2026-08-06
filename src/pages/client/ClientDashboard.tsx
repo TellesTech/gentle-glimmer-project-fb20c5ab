@@ -367,6 +367,22 @@ export default function ClientDashboard() {
   // Photo count
   const reportIds = useMemo(() => (reportsData || []).map(r => r.report_id).filter(Boolean), [reportsData]);
 
+  // RDOs já assinados pela equipe WEES (report_signatures) → status "parcial"
+  // enquanto o cliente não assina.
+  const { data: weesSignedIds } = useQuery({
+    queryKey: ['client-internal-signatures', reportIds],
+    queryFn: async () => {
+      if (!reportIds.length) return new Set<string>();
+      const { data } = await supabase
+        .from('report_signatures')
+        .select('report_id, signature_data')
+        .in('report_id', reportIds);
+      return new Set<string>((data || []).filter((s: any) => !!s.signature_data).map((s: any) => s.report_id));
+    },
+    enabled: reportIds.length > 0,
+    staleTime: 30000,
+  });
+
   const { data: photosCount } = useQuery({
     queryKey: ['client-photos-count', reportIds],
     queryFn: async () => {
@@ -564,6 +580,10 @@ export default function ClientDashboard() {
           const groupReports = reports.filter(r => group.reportIds.includes(r.report_id));
           const signed = groupReports.filter(r => r.status === 'approved').length;
           const pending = groupReports.length - signed;
+          // RDOs ainda não assinados pelo cliente, mas já assinados pela WEES.
+          const partial = groupReports.filter(
+            r => r.status !== 'approved' && weesSignedIds?.has(r.report_id)
+          ).length;
           
           return {
             id: group.id,
@@ -571,6 +591,7 @@ export default function ClientDashboard() {
             total: group.count,
             pending: pending,
             signed: signed,
+            partial,
             lastDate: group.lastDate || null,
             reports: groupReports.map(r => ({
               id: r.report_id,
@@ -584,6 +605,9 @@ export default function ClientDashboard() {
 
         const total = reports.length;
         const signed = reports.filter(r => r.status === 'approved').length;
+        const partial = reports.filter(
+          r => r.status !== 'approved' && weesSignedIds?.has(r.report_id)
+        ).length;
 
         return {
           id: `${year}-${month}`,
@@ -593,6 +617,7 @@ export default function ClientDashboard() {
           totalReports: total,
           pendingReports: total - signed,
           signedReports: signed,
+          partialReports: partial,
           activities,
         };
       })
@@ -600,7 +625,7 @@ export default function ClientDashboard() {
         if (a.year !== b.year) return b.year - a.year;
         return b.month - a.month;
       });
-  }, [visibleReports]);
+  }, [visibleReports, weesSignedIds]);
 
   // Super admin vê tudo (com selo "Oculto"); demais usuários não veem pastas ocultas.
   const visibleMonthFolders = useMemo(
@@ -983,7 +1008,9 @@ export default function ClientDashboard() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 sm:gap-10 pt-1 pb-4">
                   {visibleMonthFolders.find(m => m.id === selectedMonthId)?.activities.map((a) => {
-                    const status = a.pending === 0 ? 'completed' : a.signed > 0 ? 'partial' : 'pending';
+                    const status = a.pending === 0
+                      ? 'completed'
+                      : (a.signed > 0 || a.partial > 0) ? 'partial' : 'pending';
                     
                     return (
                       <div
