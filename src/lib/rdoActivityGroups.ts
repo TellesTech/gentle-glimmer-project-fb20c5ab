@@ -107,7 +107,10 @@ interface InternalGroup extends ActivityGroup {
 }
 
 /** Constrói os grupos de atividade (cards) a partir de uma lista de RDOs. */
-export function buildActivityGroups(reports: ActivityGroupInputReport[]): ActivityGroup[] {
+export function buildActivityGroups(
+  reports: ActivityGroupInputReport[],
+  customNames?: Map<string, string> | Record<string, string>,
+): ActivityGroup[] {
   const byKey = new Map<string, InternalGroup>();
 
   reports.forEach((report) => {
@@ -231,5 +234,18 @@ export function buildActivityGroups(reports: ActivityGroupInputReport[]): Activi
       if (da !== db) return db.localeCompare(da);
       return b.count - a.count;
     })
-    .map(({ titleCounts, locations, omNumbers, omTitles, projectNames, ...rest }) => rest);
+    .map(({ titleCounts, locations, omNumbers, omTitles, projectNames, ...rest }) => {
+      const custom = customNames
+        ? (customNames instanceof Map ? customNames.get(rest.id) : customNames[rest.id])
+        : undefined;
+      if (custom && custom.trim()) {
+        const autoName = rest.name;
+        return {
+          ...rest,
+          name: custom.trim(),
+          searchString: `${rest.searchString} | ${custom.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()} | ${autoName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()}`,
+        };
+      }
+      return rest;
+    });
 }
