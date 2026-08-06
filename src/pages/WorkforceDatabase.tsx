@@ -855,8 +855,13 @@ export default function WorkforceDatabase() {
     const wb = new ExcelJS.Workbook();
     const headerStyle: Partial<ExcelJS.Style> = { font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A2332' } }, alignment: { horizontal: 'center', vertical: 'middle' }, border: { bottom: { style: 'thin' } } };
     const ws = wb.addWorksheet('Base de Dados');
+    const periodLabel = `${format(new Date(startDate + 'T12:00:00'), 'dd/MM/yyyy')} a ${format(new Date(endDate + 'T12:00:00'), 'dd/MM/yyyy')}`;
+    const filtersLabel = `Fábrica: ${selectedSiteName}  |  Atividade: ${selectedActivityLabel}  |  Período: ${periodLabel}  |  Registros: ${records.length}`;
     ws.columns = [{ header: 'ATIVIDADE', key: 'activity', width: 30 }, { header: 'DIA', key: 'date', width: 12 }, { header: 'NOME', key: 'name', width: 25 }, { header: 'FUNÇÃO', key: 'role', width: 20 }, { header: 'INÍCIO', key: 'start', width: 18 }, { header: 'FIM', key: 'end', width: 16 }, { header: 'HN', key: 'hn', width: 8 }, { header: 'COM', key: 'com', width: 8 }, { header: 'HH-75%', key: 'h75', width: 8 }, { header: 'HH-100%', key: 'h100', width: 10 }, { header: 'ADN', key: 'adn', width: 8 }];
-    ws.getRow(1).eachCell(cell => { Object.assign(cell, { style: headerStyle }); });
+    ws.spliceRows(1, 0, [filtersLabel]);
+    ws.mergeCells(1, 1, 1, 11);
+    ws.getCell('A1').font = { bold: true, size: 10 };
+    ws.getRow(2).eachCell(cell => { Object.assign(cell, { style: headerStyle }); });
     records.forEach(r => {
       const fnValid = r.function_role || 'MEIO OFICIAL';
       ws.addRow({ activity: r.activity_name?.toUpperCase(), date: format(new Date(r.date + 'T12:00:00'), 'dd/MM/yyyy'), name: r.worker_name, role: fnValid, start: r.start_time || '', end: r.end_time || '', hn: formatHHMM(r.normal_hours), com: formatHHMM(r.compensation_hours), h75: formatHHMM(r.overtime_75), h100: formatHHMM(r.overtime_100), adn: formatHHMM(r.night_bonus) });
@@ -865,7 +870,10 @@ export default function WorkforceDatabase() {
     totalRow.font = { bold: true };
     const wsResumo = wb.addWorksheet('Resumo por Função');
     wsResumo.columns = [{ header: 'FUNÇÃO', key: 'role', width: 25 }, { header: 'QTD', key: 'count', width: 8 }, { header: 'HN', key: 'hn', width: 12 }, { header: 'COM', key: 'com', width: 12 }, { header: 'HH-75%', key: 'h75', width: 12 }, { header: 'HH-100%', key: 'h100', width: 12 }, { header: 'ADN', key: 'adn', width: 12 }];
-    wsResumo.getRow(1).eachCell(cell => { Object.assign(cell, { style: headerStyle }); });
+    wsResumo.spliceRows(1, 0, [filtersLabel]);
+    wsResumo.mergeCells(1, 1, 1, 7);
+    wsResumo.getCell('A1').font = { bold: true, size: 10 };
+    wsResumo.getRow(2).eachCell(cell => { Object.assign(cell, { style: headerStyle }); });
     Object.entries(byRole).sort(([a], [b]) => a.localeCompare(b)).forEach(([roleName, data]) => { wsResumo.addRow({ role: roleName, count: data.workers.size, hn: formatHHMMSS(data.hn), com: formatHHMMSS(data.com), h75: formatHHMMSS(data.h75), h100: formatHHMMSS(data.h100), adn: formatHHMMSS(data.adn) }); });
     const totalResumo = wsResumo.addRow({ role: 'TOTAL GERAL', count: totalUniqueWorkers, hn: formatHHMMSS(totals.hn), com: formatHHMMSS(totals.com), h75: formatHHMMSS(totals.h75), h100: formatHHMMSS(totals.h100), adn: formatHHMMSS(totals.adn) });
     totalResumo.font = { bold: true };
@@ -878,7 +886,10 @@ export default function WorkforceDatabase() {
         { header: 'DESCRIÇÃO', key: 'description', width: 50 },
         { header: 'TEMPO', key: 'hours', width: 12 }
       ];
-      wsAtrasos.getRow(1).eachCell(cell => { Object.assign(cell, { style: headerStyle }); });
+      wsAtrasos.spliceRows(1, 0, [filtersLabel]);
+      wsAtrasos.mergeCells(1, 1, 1, 5);
+      wsAtrasos.getCell('A1').font = { bold: true, size: 10 };
+      wsAtrasos.getRow(2).eachCell(cell => { Object.assign(cell, { style: headerStyle }); });
       
       delays.forEach(d => {
         wsAtrasos.addRow({
@@ -910,7 +921,8 @@ export default function WorkforceDatabase() {
     const buffer = await wb.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `base_dados_hh_${startDate}_${endDate}.xlsx`; a.click();
+    const scope = [slugify(selectedSiteName), selectedActivity ? slugify(selectedActivity.name) : ''].filter(Boolean).join('_');
+    const a = document.createElement('a'); a.href = url; a.download = `base_dados_hh_${scope ? scope + '_' : ''}${startDate}_${endDate}.xlsx`; a.click();
     URL.revokeObjectURL(url);
   };
 
