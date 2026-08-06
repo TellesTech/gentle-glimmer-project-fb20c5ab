@@ -294,7 +294,17 @@ export default function WorkforceDatabase() {
           .order('date', { ascending: true })
           .order('id', { ascending: true })
           .range(mFrom, mFrom + mPageSize - 1);
-        if (selectedProject !== 'all') manualQuery = manualQuery.eq('project_id', selectedProject);
+        if (selectedProject !== 'all') {
+          manualQuery = manualQuery.eq('project_id', selectedProject);
+        } else if (selectedSite !== 'all') {
+          const siteProjectIds = projects.filter(p => p.site_id === selectedSite).map(p => p.id);
+          if (siteProjectIds.length > 0) {
+            manualQuery = manualQuery.in('project_id', siteProjectIds);
+          } else {
+            // Se o site não tem projetos, não deve haver registros manuais para esse site
+            manualQuery = manualQuery.is('project_id', null); 
+          }
+        }
 
         const { data: mPage, error: mErr } = await manualQuery;
         if (mErr) {
