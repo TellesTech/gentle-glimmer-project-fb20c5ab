@@ -1015,7 +1015,6 @@ export default function ClientDashboard() {
                           >
                             {a.name}
                           </p>
-                          </p>
                           <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">
                             {a.total} RDO(s)
                           </p>
