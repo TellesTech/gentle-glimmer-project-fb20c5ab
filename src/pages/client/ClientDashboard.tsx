@@ -644,7 +644,7 @@ export default function ClientDashboard() {
         if (a.year !== b.year) return b.year - a.year;
         return b.month - a.month;
       });
-  }, [visibleReports, weesSignedIds]);
+  }, [visibleReports, weesSignedIds, activityNames]);
 
   // Super admin vê tudo (com selo "Oculto"); demais usuários não veem pastas ocultas.
   const visibleMonthFolders = useMemo(
