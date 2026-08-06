@@ -306,6 +306,16 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
   // Collaborator selector states
   const [collaboratorPopoverOpen, setCollaboratorPopoverOpen] = useState(false);
   const [collaboratorSearch, setCollaboratorSearch] = useState('');
+
+  // Filter profiles based on current site
+  const filteredSiteProfiles = allProfiles.filter(p => {
+    if (!projectMeta?.site_id) return true;
+    const pSiteIds = (p as any).siteIds || [];
+    if (pSiteIds.length > 0) {
+      return pSiteIds.includes(projectMeta.site_id);
+    }
+    return true;
+  });
   
   // Calcular efetivo real baseado na attendance
   const actualWorkforce = formData.attendance.filter(a => a.present).length;
@@ -1423,7 +1433,9 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
                     <CommandList>
                       <CommandEmpty>Nenhum colaborador encontrado</CommandEmpty>
                       <CommandGroup>
-                        {filteredProfiles.map(profile => (
+                        {filteredSiteProfiles
+                          .filter(p => !collaboratorSearch || p.name?.toLowerCase().includes(collaboratorSearch.toLowerCase()))
+                          .map(profile => (
                           <CommandItem
                             key={profile.id}
                             value={profile.name || ''}
@@ -1438,9 +1450,9 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
                   </Command>
                 </PopoverContent>
               </Popover>
-              {allProfiles.length > 0 && (
+              {filteredSiteProfiles.length > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {allProfiles.length} colaboradores ativos no sistema
+                  {filteredSiteProfiles.length} colaboradores disponíveis nesta unidade
                 </p>
               )}
             </div>
