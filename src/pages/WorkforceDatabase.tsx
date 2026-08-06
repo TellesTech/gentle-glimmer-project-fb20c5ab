@@ -1039,7 +1039,7 @@ export default function WorkforceDatabase() {
               </Select>
             </div>
             <div className="min-w-0 space-y-1.5">
-              <Label>Atividade / Projeto</Label>
+              <Label>Atividade / Projeto (Busque por OM, Título, Fábrica ou Empresa)</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -1240,7 +1240,7 @@ export default function WorkforceDatabase() {
               ) : records.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <Database className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                  <p className="font-medium">Nenhum registro encontrado</p>
+                  <p className="font-medium">Nenhum registro encontrado na Base de Dados</p>
                   <p className="text-sm">Os dados são preenchidos automaticamente a partir dos RDOs</p>
                 </div>
               ) : (
