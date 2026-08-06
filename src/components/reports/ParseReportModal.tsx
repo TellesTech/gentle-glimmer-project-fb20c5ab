@@ -167,10 +167,17 @@ const matchCollaborator = (parsedName: string, profiles: ProfileBasic[]): Profil
 
   const norm = (p: ProfileBasic) => stripFunctionTokens(normalizeName(p.name || ''));
 
-  // 1. Match exato pelo nome completo
+  // 1. Match exato pelo nome completo (mais agressivo com stripAccents já no normalizeName)
   const exactMatches = profiles.filter((p) => p.name && norm(p) === normalized);
   if (exactMatches.length === 1) return exactMatches[0];
-  if (exactMatches.length > 1) return null;
+  
+  // 1.1 Match exato ignorando ordens de nome (ex: "Silva Christiano" -> "Christiano Silva")
+  const normalizedParts = normalized.split(' ').sort().join(' ');
+  const exactUnorderedMatches = profiles.filter((p) => {
+    const pNorm = norm(p);
+    return pNorm.split(' ').sort().join(' ') === normalizedParts;
+  });
+  if (exactUnorderedMatches.length === 1) return exactUnorderedMatches[0];
 
   // 2. Primeiro + segundo nome (cobre "Antonio Mardem" -> "Antonio Marden da Silva")
   if (secondName) {
@@ -178,18 +185,21 @@ const matchCollaborator = (parsedName: string, profiles: ProfileBasic[]): Profil
       if (!p.name) return false;
       const np = norm(p).split(' ');
       if (np.length < 2) return false;
+      
       // primeiro nome igual; sobrenome com tolerância de 2 (cobre Mardem/Marden)
-      if (np[0] !== firstName) return false;
+      const pFirst = np[0];
+      if (pFirst !== firstName && damerauLevenshtein(firstName, pFirst) > 1) return false;
+      
       return np.slice(1).some((tok) => damerauLevenshtein(secondName, tok) <= 2);
     });
     if (twoMatches.length === 1) return twoMatches[0];
-    if (twoMatches.length > 1) return null;
   }
 
   // 3. Fuzzy do primeiro nome (cobre Bernado/Bernardo, Wilian/Willian)
   const maxDist = Math.max(1, Math.floor(firstName.length * 0.25));
   let bestDist = Number.POSITIVE_INFINITY;
   let candidates: ProfileBasic[] = [];
+  
   for (const p of profiles) {
     if (!p.name) continue;
     const pFull = norm(p);
@@ -215,18 +225,20 @@ const matchCollaborator = (parsedName: string, profiles: ProfileBasic[]): Profil
       ) continue;
     }
 
-    if (dist < bestDist) { bestDist = dist; candidates = [p]; }
-    else if (dist === bestDist) candidates.push(p);
+    if (dist < bestDist) { 
+      bestDist = dist; 
+      candidates = [p]; 
+    } else if (dist === bestDist) {
+      candidates.push(p);
+    }
   }
 
   // Fallback: token contido em qualquer posição do nome do perfil
-  // Útil para "Erivan" -> "Francisco Erivan Alves Barros Filho"
-  // ou "Maranhão" como apelido de uma pessoa cadastrada.
   const tokenFallback = (): ProfileBasic | null => {
     const tokenMatches = profiles.filter((p) => {
       if (!p.name) return false;
       const tokens = norm(p).split(' ');
-      return tokens.some((tok) => tok.length >= 3 && damerauLevenshtein(firstName, tok) <= 1);
+      return tokens.some((tok) => tok.length >= 3 && (tok.includes(firstName) || firstName.includes(tok) || damerauLevenshtein(firstName, tok) <= 1));
     });
     if (tokenMatches.length === 1) return tokenMatches[0];
     return null;
@@ -243,19 +255,12 @@ const matchCollaborator = (parsedName: string, profiles: ProfileBasic[]): Profil
       if (np.length < 2) return false;
       return np.slice(1).some((tok) => damerauLevenshtein(secondName, tok) <= 2);
     });
-    if (validated.length === 0) return tokenFallback();
-    candidates = validated;
+    if (validated.length === 1) return validated[0];
   }
 
   if (candidates.length === 1) return candidates[0];
 
-  // Última tentativa: token em qualquer posição
-  if (parts.length === 1) {
-    const fb = tokenFallback();
-    if (fb) return fb;
-  }
-
-  return null;
+  return tokenFallback();
 };
 
 const FIELD_LABELS: Record<string, string> = {

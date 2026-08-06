@@ -203,7 +203,7 @@ export default function ReportForm() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, name, job_title')
+        .select('id, name, job_title, company_id')
         .eq('is_active', true)
         .order('name');
       if (error) throw error;
