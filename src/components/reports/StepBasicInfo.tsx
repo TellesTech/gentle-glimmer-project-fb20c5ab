@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, AlertTriangle, TrendingUp, TrendingDown, Users, Factory, MapPin, FileText, User, Briefcase, Building2, BarChart3, Check, ChevronsUpDown } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
