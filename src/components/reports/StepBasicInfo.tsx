@@ -43,9 +43,17 @@ interface StepBasicInfoProps {
   teams: Team[];
   projects: Project[];
   eligibleSupervisors?: EligibleSupervisor[];
+  allProfiles?: any[];
 }
 
-export function StepBasicInfo({ data, onChange, teams, projects, eligibleSupervisors = [] }: StepBasicInfoProps) {
+export function StepBasicInfo({ 
+  data, 
+  onChange, 
+  teams, 
+  projects, 
+  eligibleSupervisors = [],
+  allProfiles = []
+}: StepBasicInfoProps) {
   const [supervisorPopoverOpen, setSupervisorPopoverOpen] = useState(false);
   const filteredTeams = teams.filter(t => t.projectId === data.projectId);
   

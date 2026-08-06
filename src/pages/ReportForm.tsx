@@ -775,6 +775,17 @@ export default function ReportForm() {
   const renderStep = () => {
     switch (currentStep) {
       case 1:
+        const currentProjectForBasic = projects.find(p => p.id === formData.projectId);
+        const currentSiteIdForBasic = currentProjectForBasic?.site_id;
+        const siteFilteredProfiles = allProfiles.filter(p => {
+          if (!currentSiteIdForParse) return true;
+          const pSiteIds = (p as any).siteIds || [];
+          if (pSiteIds.length > 0) {
+            return pSiteIds.includes(currentSiteIdForParse);
+          }
+          return true;
+        });
+
         return (
           <StepBasicInfo
             data={formData}
@@ -782,6 +793,7 @@ export default function ReportForm() {
             teams={teamsForStep}
             projects={projectsForStep}
             eligibleSupervisors={eligibleSupervisors}
+            allProfiles={siteFilteredProfiles}
           />
         );
       case 2:
