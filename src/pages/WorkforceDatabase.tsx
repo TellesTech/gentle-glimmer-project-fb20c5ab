@@ -261,7 +261,7 @@ export default function WorkforceDatabase() {
           return !latest || a.departure_time > latest ? a.departure_time : latest;
         }, null as string | null);
 
-        rdoRecords.push({
+        const rdoEntry: WorkforceRecord = {
           id: `rdo-${first.id}`,
           activity_name: projectName,
           date: report?.date || '',
