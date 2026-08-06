@@ -269,7 +269,7 @@ export default function ClientActivityList() {
           icon={<Wrench className="h-5 w-5" />}
           title={displayName}
           className="mb-0"
-          action={
+          actions={
             <Button
               type="button"
               variant="ghost"
