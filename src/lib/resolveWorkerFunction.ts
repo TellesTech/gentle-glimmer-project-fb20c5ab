@@ -20,7 +20,7 @@ export function resolveWorkerFunction(
 ): string {
   // 1. Direct user_id lookup
   if (userId && profilesById[userId]) {
-    return normalizeFunction(profilesById[userId]) || profilesById[userId];
+    return profilesById[userId];
   }
 
   // 2. Intelligent name matching
@@ -28,13 +28,13 @@ export function resolveWorkerFunction(
     const matched = matchProfileByName(userName, allProfiles);
     if (matched?.job_title) {
       // Prioritize the normalized profile job title
-      return normalizeFunction(matched.job_title) || matched.job_title;
+      return matched.job_title;
     }
   }
 
   // 3. Use existing function_role from attendance if it's already specific
   if (functionRole && functionRole !== 'MEIO OFICIAL' && functionRole !== 'COLABORADOR') {
-    return normalizeFunction(functionRole) || functionRole;
+    return functionRole;
   }
 
   return 'MEIO OFICIAL';

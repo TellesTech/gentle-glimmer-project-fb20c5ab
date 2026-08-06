@@ -1175,7 +1175,7 @@ export default function WorkforceDatabase() {
                           </TableCell>
                           <TableCell className="text-sm whitespace-nowrap">{format(new Date(r.date + 'T12:00:00'), 'dd/MM/yyyy')}</TableCell>
                           <TableCell className="text-sm font-medium">{isRdo ? r.worker_name : renderEditableCell(r, 'worker_name', r.worker_name)}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{isRdo ? normalizeFunction(r.function_role) : renderEditableCell(r, 'function_role', normalizeFunction(r.function_role))}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{isRdo ? r.function_role : renderEditableCell(r, 'function_role', r.function_role)}</TableCell>
                           <TableCell className="text-sm text-center">{isRdo ? (r.start_time || '') : renderEditableCell(r, 'start_time', r.start_time || '')}</TableCell>
                           <TableCell className="text-sm text-center">{isRdo ? (r.end_time || '') : renderEditableCell(r, 'end_time', r.end_time || '')}</TableCell>
                           <TableCell className="text-sm text-center font-medium">{isRdo ? formatHHMM(r.normal_hours) : renderEditableCell(r, 'normal_hours', formatHHMM(r.normal_hours))}</TableCell>
