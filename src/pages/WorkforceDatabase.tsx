@@ -178,9 +178,22 @@ export default function WorkforceDatabase() {
   const loadRecords = async () => {
     setLoading(true);
     try {
-      const { data: latestProjects } = await supabase.from('projects').select('id, name, site_id').order('name');
-      const currentProjects = latestProjects || projects;
-      if (latestProjects) setProjects(latestProjects);
+      // Forçar atualização da lista de projetos para garantir que o filtro de site funcione com dados novos
+      const { data: latestProjects } = await supabase
+        .from('projects')
+        .select('id, name, site_id, sites(name, companies(name))')
+        .order('name');
+      
+      let currentProjects = projects;
+      if (latestProjects) {
+        currentProjects = latestProjects.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          site_id: p.site_id,
+          searchString: `${p.name} | ${p.sites?.name || ''} | ${p.sites?.companies?.name || ''}`.toLowerCase()
+        }));
+        setProjects(currentProjects);
+      }
 
       console.log('WorkforceDatabase: Loading records with filters:', { startDate, endDate, selectedSite, selectedProject });
 
@@ -212,7 +225,10 @@ export default function WorkforceDatabase() {
         if (selectedProject !== 'all') {
           rdoQuery = rdoQuery.eq('reports.project_id', selectedProject);
         } else if (selectedSite !== 'all') {
-          const siteProjectIds = currentProjects.filter((p: any) => p.site_id === selectedSite).map((p: any) => p.id);
+          const siteProjectIds = currentProjects
+            .filter((p: any) => p.site_id === selectedSite)
+            .map((p: any) => p.id);
+          
           console.log(`WorkforceDatabase: Filtering by site ${selectedSite}, projects found:`, siteProjectIds);
           if (siteProjectIds.length > 0) {
             rdoQuery = rdoQuery.in('reports.project_id', siteProjectIds);
