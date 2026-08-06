@@ -137,10 +137,20 @@ export default function WorkforceDatabase() {
   };
 
   const loadProjects = async () => {
-    const { data } = await supabase.from('projects').select('id, name, site_id').order('name');
+    const { data } = await supabase
+      .from('projects')
+      .select('id, name, site_id, sites(name, companies(name))')
+      .order('name');
+    
     if (data) {
       console.log('WorkforceDatabase: Projects loaded:', data.length);
-      setProjects(data);
+      const enhancedProjects = data.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        site_id: p.site_id,
+        searchString: `${p.name} | ${p.sites?.name || ''} | ${p.sites?.companies?.name || ''}`.toLowerCase()
+      }));
+      setProjects(enhancedProjects);
     }
   };
 
