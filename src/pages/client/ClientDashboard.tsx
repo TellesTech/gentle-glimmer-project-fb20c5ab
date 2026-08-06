@@ -68,6 +68,9 @@ interface PendingReport {
     shift: string;
     status: string;
     rdo_number?: number | null;
+    location?: string | null;
+    maintenance_order_number?: string | null;
+    maintenance_order_title?: string | null;
     project: {
       id: string;
       name: string;
@@ -224,7 +227,13 @@ export default function ClientDashboard() {
           id: r.id, report_id: r.id,
           status: mappedStatus,
           created_at: r.date, approved_at: mappedStatus === 'approved' ? r.date : null,
-          report: { id: r.id, date: r.date, shift: r.shift, status: r.status, rdo_number: r.rdo_number, project: r.project },
+          report: {
+            id: r.id, date: r.date, shift: r.shift, status: r.status, rdo_number: r.rdo_number,
+            location: r.location ?? null,
+            maintenance_order_number: r.maintenance_order_number ?? null,
+            maintenance_order_title: r.maintenance_order_title ?? null,
+            project: r.project,
+          },
         };
       }) as PendingReport[];
     },
@@ -305,6 +314,9 @@ export default function ClientDashboard() {
               shift: r.shift,
               status: r.status,
               rdo_number: r.rdo_number,
+              location: r.location ?? null,
+              maintenance_order_number: r.maintenance_order_number ?? null,
+              maintenance_order_title: r.maintenance_order_title ?? null,
               project: r.project,
             },
           };
