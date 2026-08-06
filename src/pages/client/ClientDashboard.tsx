@@ -211,7 +211,7 @@ export default function ClientDashboard() {
         .from('reports')
         .select(`
           id, date, shift, status, rdo_number, location, maintenance_order_number, maintenance_order_title,
-          project:projects (id, name, company:companies (id, name))
+          project:projects (id, name, site_id, company:companies (id, name))
         `)
         .in('project_id', pIds)
         .in('status', ['sent', 'signed', 'finalized'])
@@ -287,7 +287,7 @@ export default function ClientDashboard() {
         .from('reports')
         .select(`
           id, date, shift, status, rdo_number, location, maintenance_order_number, maintenance_order_title,
-          project:projects (id, name, company:companies (id, name))
+          project:projects (id, name, site_id, company:companies (id, name))
         `)
         .in('project_id', projectIds)
         .in('status', ['sent', 'signed', 'finalized'])
