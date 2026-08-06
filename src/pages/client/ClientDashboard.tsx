@@ -564,7 +564,8 @@ export default function ClientDashboard() {
               id: r.report_id,
               date: r.report!.date,
               status: r.status,
-              rdoNumber: r.report?.rdo_number ?? null
+              rdo_number: r.report?.rdo_number ?? null,
+              activityName: group.name
             })),
           };
         }).sort((a, b) => (b.lastDate || '').localeCompare(a.lastDate || ''));
