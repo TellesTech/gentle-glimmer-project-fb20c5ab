@@ -7,7 +7,7 @@ import { ptBR } from 'date-fns/locale';
     Loader2, Sun, Sunset, Moon, Users, CheckCircle2, Circle,
     AlertTriangle, AlertCircle, Camera, Building2, PenLine, Check,
     MessageSquare, ClipboardList, FileText, XCircle, X,
-    MapPin, Clock, Globe, Timer, CalendarDays, Sparkles, RefreshCw, Download, History
+    MapPin, Clock, Globe, Timer, CalendarDays, Sparkles, RefreshCw, Download, History, Pencil
   } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,6 +32,7 @@ import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
 import { getEdgeFunctionErrorMessage } from '@/lib/edgeFunctionError';
 import { WeesActionsBar } from '@/components/signatures/WeesActionsBar';
 import { useClientPreviewMode } from '@/hooks/useClientPreviewMode';
+import { EditReportInfoDialog, type ReportInfoValues } from '@/components/reports/EditReportInfoDialog';
 import type { Shift, DeviationType, ImpactLevel } from '@/types';
 
 const SHIFT_CONFIG: Record<Shift, { label: string; icon: typeof Sun; color: string }> = {
@@ -86,6 +87,8 @@ export default function ClientReportView() {
   const [localProfile, setLocalProfile] = useState<ClientProfile | null>(null);
   const [isReverifying, setIsReverifying] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [editInfoOpen, setEditInfoOpen] = useState(false);
+  const [savingInfo, setSavingInfo] = useState(false);
 
   const handleReverifyAttendance = async () => {
     const report: any = (data as any)?.report || data;
@@ -559,11 +562,51 @@ export default function ClientReportView() {
         {/* General Info Card */}
         <Card>
           <CardHeader className="bg-muted/30 border-b pb-4">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-primary" />
-              Informações Gerais
-            </CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-primary" />
+                Informações Gerais
+              </CardTitle>
+              <Button variant="outline" size="sm" onClick={() => setEditInfoOpen(true)}>
+                <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                Editar
+              </Button>
+            </div>
           </CardHeader>
+          <EditReportInfoDialog
+            open={editInfoOpen}
+            onOpenChange={setEditInfoOpen}
+            isSaving={savingInfo}
+            initial={{
+              date: report.date ?? '',
+              location: report.location ?? '',
+              maintenance_order_number: report.maintenance_order_number ?? '',
+              maintenance_order_title: report.maintenance_order_title ?? '',
+            }}
+            onSave={async (values: ReportInfoValues) => {
+              setSavingInfo(true);
+              try {
+                const { error } = await supabase
+                  .from('reports')
+                  .update({
+                    date: values.date,
+                    location: values.location.trim() || null,
+                    maintenance_order_number: values.maintenance_order_number.trim() || null,
+                    maintenance_order_title: values.maintenance_order_title.trim() || null,
+                  })
+                  .eq('id', resolvedReportId);
+                if (error) throw error;
+                toast.success('RDO atualizado');
+                setEditInfoOpen(false);
+                queryClient.invalidateQueries({ queryKey: ['client-report', queryId] });
+                queryClient.invalidateQueries({ queryKey: ['report-history', resolvedReportId] });
+              } catch (e: any) {
+                toast.error(e?.message || 'Não foi possível atualizar o RDO');
+              } finally {
+                setSavingInfo(false);
+              }
+            }}
+          />
           <CardContent className="p-3 sm:p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <div className="space-y-1 min-w-0">

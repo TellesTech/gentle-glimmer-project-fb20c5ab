@@ -43,6 +43,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format, parseISO, subDays, startOfDay, endOfDay, isWithinInterval, differenceInDays, getYear, getMonth, isSameMonth, isSameYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { buildActivityGroups, type ActivityGroupInputReport } from '@/lib/rdoActivityGroups';
+import { useActivityNames } from '@/hooks/useActivityNames';
+import { RenameActivityDialog, type RenameActivityTarget } from '@/components/reports/RenameActivityDialog';
+import { Pencil } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import JSZip from 'jszip';
@@ -211,7 +214,7 @@ export default function ClientDashboard() {
         .from('reports')
         .select(`
           id, date, shift, status, rdo_number, location, maintenance_order_number, maintenance_order_title,
-          project:projects (id, name, company:companies (id, name))
+          project:projects (id, name, site_id, company:companies (id, name))
         `)
         .in('project_id', pIds)
         .in('status', ['sent', 'signed', 'finalized'])
@@ -287,7 +290,7 @@ export default function ClientDashboard() {
         .from('reports')
         .select(`
           id, date, shift, status, rdo_number, location, maintenance_order_number, maintenance_order_title,
-          project:projects (id, name, company:companies (id, name))
+          project:projects (id, name, site_id, company:companies (id, name))
         `)
         .in('project_id', projectIds)
         .in('status', ['sent', 'signed', 'finalized'])
@@ -543,6 +546,20 @@ export default function ClientDashboard() {
     }
   };
   
+  // Unidades presentes nos RDOs visíveis (para nomes personalizados de pastas)
+  const reportSiteIds = useMemo(() => {
+    const s = new Set<string>();
+    visibleReports.forEach(r => {
+      const sid = (r.report as any)?.project?.site_id;
+      if (sid) s.add(sid);
+    });
+    return Array.from(s);
+  }, [visibleReports]);
+
+  const { names: activityNames, rename: renameActivity, resetName: resetActivityName, isSaving: renamingActivity } =
+    useActivityNames(reportSiteIds);
+  const [renameTarget, setRenameTarget] = useState<RenameActivityTarget | null>(null);
+
   const monthFolders = useMemo(() => {
     const all = visibleReports;
     if (!all.length) return [];
@@ -574,7 +591,7 @@ export default function ClientDashboard() {
           project_name: r.report!.project!.name,
         }));
 
-        const groups = buildActivityGroups(inputReports);
+        const groups = buildActivityGroups(inputReports, activityNames);
 
         const activities = groups.map(group => {
           const groupReports = reports.filter(r => group.reportIds.includes(r.report_id));
@@ -588,6 +605,8 @@ export default function ClientDashboard() {
           return {
             id: group.id,
             name: group.name,
+            siteId: (groupReports.find(r => (r.report as any)?.project?.site_id)?.report as any)?.project?.site_id ?? null,
+            hasCustomName: activityNames.has(group.id),
             total: group.count,
             pending: pending,
             signed: signed,
@@ -625,7 +644,7 @@ export default function ClientDashboard() {
         if (a.year !== b.year) return b.year - a.year;
         return b.month - a.month;
       });
-  }, [visibleReports, weesSignedIds]);
+  }, [visibleReports, weesSignedIds, activityNames]);
 
   // Super admin vê tudo (com selo "Oculto"); demais usuários não veem pastas ocultas.
   const visibleMonthFolders = useMemo(
@@ -1027,6 +1046,23 @@ export default function ClientDashboard() {
                         }}
                       >
                         <div className="relative w-24 h-20 sm:w-32 sm:h-24 transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
+                          {/* Renomear pasta de atividade */}
+                          <button
+                            type="button"
+                            title="Renomear pasta"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRenameTarget({
+                                groupKey: a.id,
+                                siteId: a.siteId,
+                                currentName: a.name,
+                                hasCustomName: a.hasCustomName,
+                              });
+                            }}
+                            className="absolute -top-2 -right-2 z-30 rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-primary hover:border-primary transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
                           {/* Folder Rear Part */}
                           <div className={cn(
                             "absolute inset-x-0 bottom-0 top-3 rounded-lg shadow-sm",
@@ -1078,6 +1114,22 @@ export default function ClientDashboard() {
 
         {/* Empty state removed as per user request */}
       </div>
+
+      <RenameActivityDialog
+        target={renameTarget}
+        isSaving={renamingActivity}
+        onOpenChange={(open) => { if (!open) setRenameTarget(null); }}
+        onSave={async (name) => {
+          if (!renameTarget?.siteId) return;
+          await renameActivity({ siteId: renameTarget.siteId, groupKey: renameTarget.groupKey, name });
+          setRenameTarget(null);
+        }}
+        onReset={async () => {
+          if (!renameTarget?.siteId) return;
+          await resetActivityName({ siteId: renameTarget.siteId, groupKey: renameTarget.groupKey });
+          setRenameTarget(null);
+        }}
+      />
     </ClientLayout>
   );
 }

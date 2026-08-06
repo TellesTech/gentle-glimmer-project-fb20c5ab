@@ -1482,6 +1482,44 @@ export type Database = {
           },
         ]
       }
+      rdo_activity_names: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          custom_name: string
+          group_key: string
+          id: string
+          site_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          custom_name: string
+          group_key: string
+          id?: string
+          site_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          custom_name?: string
+          group_key?: string
+          id?: string
+          site_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rdo_activity_names_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rdo_companies: {
         Row: {
           address: string | null

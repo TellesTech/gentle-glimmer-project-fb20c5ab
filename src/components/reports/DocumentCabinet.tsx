@@ -8,6 +8,8 @@ import {
   MoreVertical, Pencil, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useActivityNames } from '@/hooks/useActivityNames';
+import { RenameActivityDialog, type RenameActivityTarget } from '@/components/reports/RenameActivityDialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -642,6 +644,16 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     },
   });
 
+  // Nomes personalizados das pastas de atividade (compartilhados com o portal do cliente)
+  const cabinetSiteIds = useMemo(() => (allSites || []).map((s: any) => s.id).filter(Boolean), [allSites]);
+  const {
+    namesBySite: activityNamesBySite,
+    rename: renameActivity,
+    resetName: resetActivityName,
+    isSaving: renamingActivity,
+  } = useActivityNames(cabinetSiteIds);
+  const [renameTarget, setRenameTarget] = useState<RenameActivityTarget | null>(null);
+
   // Fetch completed AND draft reports with company hierarchy
   const REPORT_SELECT = `
             id,
@@ -1043,6 +1055,9 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
               } else if (pf.count > 0) {
                 pf.name = `${pf.sourceProjects[0]?.name || 'Atividade'} — Sem OM`;
               }
+              // Nome personalizado (renomeado aqui ou no portal do cliente)
+              const custom = activityNamesBySite.get(`${site.id}::${pf.id}`);
+              if (custom) pf.name = custom;
               pf.reports.sort((a, b) => (a.date < b.date ? 1 : -1));
             });
             month.projects.sort((a, b) => {
@@ -1061,7 +1076,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
       if (a.totalCount === 0 && b.totalCount > 0) return 1;
       return a.name.localeCompare(b.name);
     });
-  }, [reports, allCompanies, allSites, allProjects]);
+  }, [reports, allCompanies, allSites, allProjects, activityNamesBySite]);
 
   const selectedCompany = companyFolders.find(c => c.id === openCompanyId);
   const selectedSiteFolder = selectedCompany?.sites.find(s => s.id === openSiteId);
@@ -1177,6 +1192,21 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
 
   const dialogs = (
     <>
+      <RenameActivityDialog
+        target={renameTarget}
+        onOpenChange={(open) => { if (!open) setRenameTarget(null); }}
+        isSaving={renamingActivity}
+        onSave={async (name) => {
+          if (!renameTarget?.siteId) return;
+          await renameActivity({ siteId: renameTarget.siteId, groupKey: renameTarget.groupKey, name });
+          setRenameTarget(null);
+        }}
+        onReset={async () => {
+          if (!renameTarget?.siteId) return;
+          await resetActivityName({ siteId: renameTarget.siteId, groupKey: renameTarget.groupKey });
+          setRenameTarget(null);
+        }}
+      />
       <BatchDownloadOptionsDialog
         open={downloadDialogOpen}
         onOpenChange={setDownloadDialogOpen}
@@ -1495,8 +1525,24 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                 onClick={() => setOpenProjectId(projectFolder.id)}
               >
                 {/* Actions */}
-                {isSuperAdmin && (
-                  <div className="absolute top-2 right-2 z-10">
+                <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+                  <button
+                    type="button"
+                    title="Renomear pasta"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRenameTarget({
+                        groupKey: projectFolder.id,
+                        siteId: openSiteId,
+                        currentName: projectFolder.name,
+                        hasCustomName: activityNamesBySite.has(`${openSiteId}::${projectFolder.id}`),
+                      });
+                    }}
+                    className="rounded-md p-1.5 text-muted-foreground hover:text-primary hover:bg-muted transition-colors"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  {isSuperAdmin && (
                     <CardActions
                       id={projectFolder.sourceProjects[0]?.id || projectFolder.id}
                       type="reportGroup"
@@ -1511,8 +1557,8 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                         );
                       }}
                     />
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {/* Header: icon + name + chevron */}
                 <div className="flex items-center gap-2 mb-2">
