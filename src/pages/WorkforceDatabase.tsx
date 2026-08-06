@@ -311,7 +311,7 @@ export default function WorkforceDatabase() {
         if (selectedProject !== 'all') {
           manualQuery = manualQuery.eq('project_id', selectedProject);
         } else if (selectedSite !== 'all') {
-          const siteProjectIds = projects.filter(p => p.site_id === selectedSite).map(p => p.id);
+          const siteProjectIds = currentProjects.filter((p: any) => p.site_id === selectedSite).map((p: any) => p.id);
           if (siteProjectIds.length > 0) {
             manualQuery = manualQuery.in('project_id', siteProjectIds);
           } else {
