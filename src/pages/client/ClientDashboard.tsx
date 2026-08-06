@@ -516,58 +516,78 @@ export default function ClientDashboard() {
   };
   
   const monthFolders = useMemo(() => {
-    const monthsMap = new Map<string, {
-      id: string;
-      year: number;
-      month: number;
-      monthName: string;
-      activities: Map<string, { id: string; name: string; total: number; pending: number; signed: number; lastDate: string | null; reports: ActivityReport[] }>;
-    }>();
+    const all = visibleReports;
+    if (!all.length) return [];
 
-    (reportsData || []).forEach(r => {
-      const proj = r.report?.project;
-      const dateStr = r.report?.date;
-      if (!proj?.id || !dateStr) return;
+    const monthMap = new Map<string, { year: number; month: number; reports: PendingReport[] }>();
 
-      const dateObj = parseISO(dateStr);
-      const year = getYear(dateObj);
-      const month = getMonth(dateObj);
-      const monthKey = `${year}-${month}`;
+    all.forEach(r => {
+      if (!r.report?.date) return;
+      const d = parseISO(r.report.date);
+      const year = getYear(d);
+      const month = getMonth(d);
+      const key = `${year}-${month}`;
+      if (!monthMap.has(key)) {
+        monthMap.set(key, { year, month, reports: [] });
+      }
+      monthMap.get(key)!.reports.push(r);
+    });
 
-      if (!monthsMap.has(monthKey)) {
-        monthsMap.set(monthKey, {
-          id: monthKey,
+    return Array.from(monthMap.values())
+      .map(({ year, month, reports }) => {
+        // Build activity groups for THIS month using the shared logic
+        const inputReports: ActivityGroupInputReport[] = reports.map(r => ({
+          id: r.report!.id,
+          date: r.report!.date,
+          location: (r.report as any).location,
+          maintenance_order_number: (r.report as any).maintenance_order_number,
+          maintenance_order_title: (r.report as any).maintenance_order_title,
+          project_id: r.report!.project!.id,
+          project_name: r.report!.project!.name,
+        }));
+
+        const groups = buildActivityGroups(inputReports);
+
+        const activities = groups.map(group => {
+          const groupReports = reports.filter(r => group.reportIds.includes(r.report_id));
+          const signed = groupReports.filter(r => r.status === 'approved').length;
+          const pending = groupReports.length - signed;
+          
+          return {
+            id: group.id,
+            name: group.name,
+            total: group.count,
+            pending: pending,
+            signed: signed,
+            lastDate: group.lastDate || null,
+            reports: groupReports.map(r => ({
+              id: r.report_id,
+              date: r.report!.date,
+              status: r.status,
+              rdoNumber: r.report?.rdo_number ?? null
+            })),
+          };
+        }).sort((a, b) => (b.lastDate || '').localeCompare(a.lastDate || ''));
+
+        const total = reports.length;
+        const signed = reports.filter(r => r.status === 'approved').length;
+
+        return {
+          id: `${year}-${month}`,
           year,
           month,
           monthName: monthNames[month],
-          activities: new Map()
-        });
-      }
-
-      const monthEntry = monthsMap.get(monthKey)!;
-      const activityMap = monthEntry.activities;
-      
-      const cur = activityMap.get(proj.id) || { id: proj.id, name: proj.name, total: 0, pending: 0, signed: 0, lastDate: null, reports: [] };
-      cur.total += 1;
-      if (r.status === 'approved') cur.signed += 1;
-      else cur.pending += 1;
-      
-      if (!cur.lastDate || dateStr > cur.lastDate) cur.lastDate = dateStr;
-      cur.reports.push({ id: r.report_id, date: dateStr, status: r.status, rdoNumber: r.report?.rdo_number ?? null });
-      activityMap.set(proj.id, cur);
-    });
-
-    // Convert maps to sorted arrays
-    return Array.from(monthsMap.values())
-      .map(m => ({
-        ...m,
-        activities: Array.from(m.activities.values()).sort((a, b) => (b.lastDate || '').localeCompare(a.lastDate || ''))
-      }))
+          totalReports: total,
+          pendingReports: total - signed,
+          signedReports: signed,
+          activities,
+        };
+      })
       .sort((a, b) => {
         if (a.year !== b.year) return b.year - a.year;
         return b.month - a.month;
       });
-  }, [reportsData]);
+  }, [visibleReports]);
 
   // Super admin vê tudo (com selo "Oculto"); demais usuários não veem pastas ocultas.
   const visibleMonthFolders = useMemo(
