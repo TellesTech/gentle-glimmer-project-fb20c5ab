@@ -7,7 +7,7 @@ import { ptBR } from 'date-fns/locale';
     Loader2, Sun, Sunset, Moon, Users, CheckCircle2, Circle,
     AlertTriangle, AlertCircle, Camera, Building2, PenLine, Check,
     MessageSquare, ClipboardList, FileText, XCircle, X,
-    MapPin, Clock, Globe, Timer, CalendarDays, Sparkles, RefreshCw, Download, History
+    MapPin, Clock, Globe, Timer, CalendarDays, Sparkles, RefreshCw, Download, History, Pencil
   } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,6 +32,7 @@ import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
 import { getEdgeFunctionErrorMessage } from '@/lib/edgeFunctionError';
 import { WeesActionsBar } from '@/components/signatures/WeesActionsBar';
 import { useClientPreviewMode } from '@/hooks/useClientPreviewMode';
+import { EditReportInfoDialog, type ReportInfoValues } from '@/components/reports/EditReportInfoDialog';
 import type { Shift, DeviationType, ImpactLevel } from '@/types';
 
 const SHIFT_CONFIG: Record<Shift, { label: string; icon: typeof Sun; color: string }> = {
@@ -86,6 +87,8 @@ export default function ClientReportView() {
   const [localProfile, setLocalProfile] = useState<ClientProfile | null>(null);
   const [isReverifying, setIsReverifying] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [editInfoOpen, setEditInfoOpen] = useState(false);
+  const [savingInfo, setSavingInfo] = useState(false);
 
   const handleReverifyAttendance = async () => {
     const report: any = (data as any)?.report || data;
