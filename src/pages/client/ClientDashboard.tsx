@@ -43,6 +43,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format, parseISO, subDays, startOfDay, endOfDay, isWithinInterval, differenceInDays, getYear, getMonth, isSameMonth, isSameYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { buildActivityGroups, type ActivityGroupInputReport } from '@/lib/rdoActivityGroups';
+import { useActivityNames } from '@/hooks/useActivityNames';
+import { RenameActivityDialog, type RenameActivityTarget } from '@/components/reports/RenameActivityDialog';
+import { Pencil } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import JSZip from 'jszip';
