@@ -1,10 +1,13 @@
-# Plan: Improve Activity Search in Workforce Database
+# Plan: Improve Activity Search and Naming in Workforce Database
 
-The user reported that searching for "Suzano" in the activities filter of the Workforce Database doesn't find specific activities (like "OM 22461261 — Transportadora 09") even though they are related to Suzano. This happens because the activity names don't always contain the company name "Suzano", and the search currently only looks at the activity name.
+The user wants to fix two issues:
+1. **Searchability**: Searching for "Suzano" in the activities filter of the Workforce Database doesn't find specific activities (like "OM 22461261 — Transportadora 09") because the search only looks at the activity name.
+2. **Naming**: The page/concept should be referred to as "Base de Dados" (Database) instead of "Banco de Colaboradores" (Collaborator Bank).
 
 ## Proposed Changes
 
 ### 1. Workforce Database Page (`src/pages/WorkforceDatabase.tsx`)
+- **Update Page Header/Title**: Change references from "Banco de Colaboradores" (or similar) to "Base de Dados".
 - **Update Data Fetching**: Modify `loadProjects` to fetch site and company names along with project data.
 - **Enhance Searchability**: 
     - Update the `CommandItem`'s `value` in the project filter `Combobox` to include the project name, site name, and company name. This ensures that typing "Suzano" will match all activities belonging to any Suzano site.
@@ -14,6 +17,7 @@ The user reported that searching for "Suzano" in the activities filter of the Wo
 ### 2. Validation
 - Verify that searching for "Suzano" now returns all activities associated with Suzano sites.
 - Verify that selecting a specific site correctly restricts the activity list to only that site's projects.
+- Confirm that the page title and labels now reflect "Base de Dados".
 
 ## Technical Details
 - Use `supabase.from('projects').select('id, name, site_id, sites(name, companies(name))')` for data loading.
