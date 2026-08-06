@@ -107,7 +107,7 @@ export default function WorkforceDatabase() {
     while (hasMore) {
       const { data: lastReports, error } = await supabase
         .from('reports')
-        .select('date, projects!inner(site_id)')
+        .select('date, projects!inner(id, site_id)')
         .order('date', { ascending: false })
         .range(from, from + pageSize - 1);
 
@@ -137,7 +137,7 @@ export default function WorkforceDatabase() {
   };
 
   const loadLastReportDate = async () => {
-    let q = supabase.from('reports').select('date, projects!inner(site_id)').order('date', { ascending: false }).limit(1);
+    let q = supabase.from('reports').select('date, projects!inner(id, site_id)').order('date', { ascending: false }).limit(1);
     if (selectedProject !== 'all') {
       q = q.eq('project_id', selectedProject);
     } else if (selectedSite !== 'all') {
