@@ -610,11 +610,19 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
     );
     
     if (!alreadyExists && profile.name) {
+      console.log(`[QuickReportFormContent] Adicionando colaborador: ${profile.name} (${profile.jobTitle || 'Sem função'})`);
       setFormData(prev => ({
         ...prev,
         attendance: [
           ...prev.attendance,
-          { userId: profile.id, userName: profile.name!, present: true, arrivalTime: prev.startTime || '07:00', departureTime: prev.endTime || '17:00', functionRole: profile.jobTitle || 'Convencional' }
+          { 
+            userId: profile.id, 
+            userName: profile.name!, 
+            present: true, 
+            arrivalTime: prev.startTime || '07:00', 
+            departureTime: prev.endTime || '17:00', 
+            functionRole: profile.jobTitle || 'Convencional' 
+          }
         ]
       }));
     }
@@ -658,8 +666,13 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
   );
 
   // Filter by search term
-  const filteredProfiles = availableProfiles
-    .filter(p => p.name?.toLowerCase().includes(collaboratorSearch.toLowerCase()))
+  const filteredProfiles = allProfiles
+    .filter(p => {
+      const isAlreadyAdded = formData.attendance.some(
+        a => a.userId === p.id || a.userName.toLowerCase() === (p.name || '').toLowerCase()
+      );
+      return !isAlreadyAdded && p.name?.toLowerCase().includes(collaboratorSearch.toLowerCase());
+    })
     .slice(0, 50);
 
   const handleDeviationChange = (index: number, field: string, value: string) => {
@@ -1415,9 +1428,9 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
                   </Command>
                 </PopoverContent>
               </Popover>
-              {availableProfiles.length > 0 && (
+              {allProfiles.length > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {availableProfiles.length} colaboradores disponíveis
+                  {allProfiles.length} colaboradores ativos no sistema
                 </p>
               )}
             </div>
