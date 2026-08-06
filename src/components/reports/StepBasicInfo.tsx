@@ -68,6 +68,13 @@ export function StepBasicInfo({
 
   return (
     <div className="space-y-6">
+      {allProfiles && allProfiles.length > 0 && (
+        <div className="flex items-center gap-2 px-1 mb-2">
+          <Badge variant="secondary" className="text-[10px] px-2 py-0 h-5 font-normal opacity-70">
+            {allProfiles.length} colaboradores na unidade
+          </Badge>
+        </div>
+      )}
       {/* EFETIVO E PORCENTAGENS - Card Unificado e Destacado */}
       <Card className="border-l-4 border-l-primary bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 shadow-md">
         <CardHeader className="pb-2">
