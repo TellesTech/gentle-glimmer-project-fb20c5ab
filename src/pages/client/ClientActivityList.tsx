@@ -267,9 +267,6 @@ export default function ClientActivityList() {
           <Card>
             <CardContent className="text-center py-16 text-muted-foreground text-sm">
               <p>Nenhum RDO desta atividade está disponível para você.</p>
-              {activityInfo?.reportIds && activityInfo.reportIds.length > 0 && (
-                <p className="mt-2 text-xs opacity-50">IDs de relatórios vinculados: {activityInfo.reportIds.length}</p>
-              )}
             </CardContent>
           </Card>
         ) : (
