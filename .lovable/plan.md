@@ -1,24 +1,26 @@
-# Plan: Corrigir Vínculo de Função e Filtro de Colaboradores no RDO
+# Plano: Corrigir Vínculo de Função e Filtro de Colaboradores no RDO (Revisado)
 
-O usuário relatou dois problemas na criação de RDO:
-1. A função (job title) dos colaboradores não está sendo carregada corretamente ao adicioná-los (ex: Sergio dos Santos).
-2. A busca de colaboradores no formulário parece estar restrita a quem já está vinculado à unidade/projeto, dificultando a adição de novos membros da base geral.
+O usuário relatou que na criação de RDO:
+1. A função (ex: "PINTOR ESCALADOR N1") não está sendo carregada corretamente ao adicionar o colaborador.
+2. A busca de colaboradores no formulário de RDO está restrita a quem já faz parte do time ou unidade, impedindo a seleção de outros colaboradores da base.
 
 ## Alterações Propostas
 
-### 1. Componentes de Formulário (`StepAttendance.tsx` e `QuickReportFormContent.tsx`)
-- **Problema de Função:** No `QuickReportFormContent.tsx`, ao adicionar um colaborador via busca (`addCollaborator`), a função está sendo definida como "Convencional" por padrão se não houver match exato ou se o campo `jobTitle` não for passado corretamente. No `StepAttendance.tsx`, a lógica de inicialização e atualização também pode estar perdendo o `jobTitle`.
-- **Problema de Filtro:** Aumentar a abrangência da busca para garantir que colaboradores ativos de outras unidades (que o usuário tenha permissão de ver) apareçam, removendo filtros restritivos que possam estar limitando os resultados apenas ao projeto atual na interface de busca.
+### 1. Garantir Vínculo de Função (Job Title)
+- **Componentes:** `StepAttendance.tsx` e `QuickReportFormContent.tsx`.
+- **Ação:** No `QuickReportFormContent.tsx`, a função `addCollaborator` será ajustada para garantir que o `jobTitle` vindo do objeto `profile` seja atribuído corretamente ao campo `functionRole` no estado de attendance.
+- **Ação:** No `StepAttendance.tsx`, assegurar que a inicialização de colaboradores adicionais via busca também preserve o `jobTitle`.
 
-### 2. Sincronização de Perfis
-- Garantir que o `jobTitle` (função) seja sempre extraído da tabela `profiles` e preservado no estado `attendance` do formulário.
-- Adicionar logs de depuração (opcional/temporário) ou melhorar a lógica de `useEffect` que reconcilia os nomes e funções dos perfis carregados.
+### 2. Abrir a Busca para Todos os Colaboradores
+- **Problema Identificado:** No `QuickReportFormContent.tsx`, a busca `allProfiles` já parece buscar todos os perfis ativos, mas a interface e o estado `availableProfiles` podem estar filtrando de forma agressiva ou a query pode estar sendo limitada por RLS (Row Level Security).
+- **Ação:** Revisar a query de `all-profiles-quick` no `QuickReportFormContent.tsx` e `all-profiles-attendance` no `ReportForm.tsx` para garantir que não haja filtros ocultos por empresa/unidade que impeçam a visualização de colaboradores que deveriam estar disponíveis para alocação.
+- **Ação:** No frontend, remover qualquer lógica que filtre `availableProfiles` apenas para membros do projeto atual, permitindo a busca global.
 
 ## Arquivos a serem modificados
-- `src/components/reports/StepAttendance.tsx`: Melhorar `addCollaborator` e a filtragem.
-- `src/components/reports/QuickReportFormContent.tsx`: Ajustar `addCollaborator` para garantir que o `jobTitle` seja passado e exibido corretamente.
+- `src/components/reports/QuickReportFormContent.tsx`: Ajustar `addCollaborator` e query de busca.
+- `src/components/reports/StepAttendance.tsx`: Ajustar `addCollaborator` e query de busca.
+- `src/pages/ReportForm.tsx`: Ajustar a query de perfis globais.
 
 ## Verificação
-- Testar a busca por "Sergio" e "Douglas" (mencionados pelo usuário) no formulário.
-- Confirmar se a função "PINTOR ESCALADOR N1" ou similar aparece automaticamente.
-- Verificar se colaboradores que não pertencem ao time atual aparecem na busca global do modal.
+- Testar a busca por "Sergio" e "Douglas" e verificar se a função correta é preenchida automaticamente.
+- Validar se colaboradores de outras unidades aparecem na lista de busca.
