@@ -77,7 +77,7 @@ export default function WorkforceDatabase() {
   const [delays, setDelays] = useState<DelayRecord[]>([]);
   const [sites, setSites] = useState<{ id: string; name: string; lastReportDate: string | null }[]>([]);
   const [selectedSite, setSelectedSite] = useState<string>('all');
-  const [projects, setProjects] = useState<{ id: string; name: string; site_id: string | null }[]>([]);
+  const [projects, setProjects] = useState<{ id: string; name: string; site_id: string | null; searchString?: string }[]>([]);
   const [selectedProject, setSelectedProject] = useState<string>('all');
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -137,10 +137,20 @@ export default function WorkforceDatabase() {
   };
 
   const loadProjects = async () => {
-    const { data } = await supabase.from('projects').select('id, name, site_id').order('name');
+    const { data } = await supabase
+      .from('projects')
+      .select('id, name, site_id, sites(name, companies(name))')
+      .order('name');
+    
     if (data) {
       console.log('WorkforceDatabase: Projects loaded:', data.length);
-      setProjects(data);
+      const enhancedProjects = data.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        site_id: p.site_id,
+        searchString: `${p.name} | ${p.sites?.name || ''} | ${p.sites?.companies?.name || ''}`.toLowerCase()
+      }));
+      setProjects(enhancedProjects);
     }
   };
 
@@ -757,7 +767,7 @@ export default function WorkforceDatabase() {
   const exportExcel = async () => {
     const wb = new ExcelJS.Workbook();
     const headerStyle: Partial<ExcelJS.Style> = { font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A2332' } }, alignment: { horizontal: 'center', vertical: 'middle' }, border: { bottom: { style: 'thin' } } };
-    const ws = wb.addWorksheet('Base de Dados HH');
+    const ws = wb.addWorksheet('Base de Dados');
     ws.columns = [{ header: 'ATIVIDADE', key: 'activity', width: 30 }, { header: 'DIA', key: 'date', width: 12 }, { header: 'NOME', key: 'name', width: 25 }, { header: 'FUNÇÃO', key: 'role', width: 20 }, { header: 'INÍCIO', key: 'start', width: 18 }, { header: 'FIM', key: 'end', width: 16 }, { header: 'HN', key: 'hn', width: 8 }, { header: 'COM', key: 'com', width: 8 }, { header: 'HH-75%', key: 'h75', width: 8 }, { header: 'HH-100%', key: 'h100', width: 10 }, { header: 'ADN', key: 'adn', width: 8 }];
     ws.getRow(1).eachCell(cell => { Object.assign(cell, { style: headerStyle }); });
     records.forEach(r => {
@@ -995,7 +1005,7 @@ export default function WorkforceDatabase() {
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Database className="w-6 h-6 text-primary" />
-            Base de Dados HH
+            Base de Dados
           </h1>
           <p className="text-muted-foreground text-sm">Homem-Hora — Dados automáticos dos RDOs</p>
         </div>
@@ -1029,7 +1039,7 @@ export default function WorkforceDatabase() {
               </Select>
             </div>
             <div className="min-w-0 space-y-1.5">
-              <Label>Atividade / Projeto</Label>
+              <Label>Atividade / Projeto (Busque por OM, Título, Fábrica ou Empresa)</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -1071,7 +1081,7 @@ export default function WorkforceDatabase() {
                         {filteredProjects.map((p) => (
                           <CommandItem
                             key={p.id}
-                            value={p.name}
+                            value={p.searchString || p.name}
                             onSelect={() => {
                               setSelectedProject(p.id);
                             }}
@@ -1082,7 +1092,14 @@ export default function WorkforceDatabase() {
                                 selectedProject === p.id ? "opacity-100" : "opacity-0"
                               )}
                             />
-                            {p.name}
+                            <div className="flex flex-col min-w-0 overflow-hidden">
+                              <span className="truncate">{p.name}</span>
+                              {selectedSite === 'all' && p.searchString?.split('|')[1] && (
+                                <span className="text-[10px] text-muted-foreground truncate italic">
+                                  {p.searchString.split('|')[1].trim()}
+                                </span>
+                              )}
+                            </div>
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -1223,7 +1240,7 @@ export default function WorkforceDatabase() {
               ) : records.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <Database className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                  <p className="font-medium">Nenhum registro encontrado</p>
+                  <p className="font-medium">Nenhum registro encontrado na Base de Dados</p>
                   <p className="text-sm">Os dados são preenchidos automaticamente a partir dos RDOs</p>
                 </div>
               ) : (
