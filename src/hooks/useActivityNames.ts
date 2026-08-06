@@ -11,23 +11,26 @@ export function useActivityNames(siteIds: string[] | undefined) {
   const queryClient = useQueryClient();
   const ids = (siteIds || []).filter(Boolean).slice().sort();
 
-  const { data: names } = useQuery({
+  const { data: result } = useQuery({
     queryKey: ['rdo-activity-names', ids],
     queryFn: async () => {
       const map = new Map<string, string>();
-      if (!ids.length) return map;
+      const bySite = new Map<string, string>();
+      if (!ids.length) return { map, bySite };
       const { data, error } = await (supabase as any)
         .from('rdo_activity_names')
         .select('site_id, group_key, custom_name')
         .in('site_id', ids);
       if (error) {
         console.warn('useActivityNames:', error.message);
-        return map;
+        return { map, bySite };
       }
       (data || []).forEach((row: any) => {
-        if (row.group_key && row.custom_name) map.set(row.group_key, row.custom_name);
+        if (!row.group_key || !row.custom_name) return;
+        map.set(row.group_key, row.custom_name);
+        bySite.set(`${row.site_id}::${row.group_key}`, row.custom_name);
       });
-      return map;
+      return { map, bySite };
     },
     enabled: ids.length > 0,
     staleTime: 30000,
@@ -81,7 +84,8 @@ export function useActivityNames(siteIds: string[] | undefined) {
   });
 
   return {
-    names: names ?? new Map<string, string>(),
+    names: result?.map ?? new Map<string, string>(),
+    namesBySite: result?.bySite ?? new Map<string, string>(),
     rename: rename.mutateAsync,
     resetName: resetName.mutateAsync,
     isSaving: rename.isPending || resetName.isPending,
