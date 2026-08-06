@@ -157,6 +157,10 @@ export default function WorkforceDatabase() {
   };
 
   const loadRecords = async () => {
+    if (!projects || projects.length === 0) {
+      console.log('WorkforceDatabase: Waiting for projects to load...');
+      return;
+    }
     setLoading(true);
     try {
       console.log('WorkforceDatabase: Loading records with filters:', { startDate, endDate, selectedSite, selectedProject });
