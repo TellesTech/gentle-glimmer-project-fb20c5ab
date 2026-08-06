@@ -205,6 +205,30 @@ export default function WorkforceDatabase() {
 
   const selectedActivity = activities.find(a => a.id === selectedProject) || null;
 
+  /** Mapas de rótulo de atividade (mesmo texto dos cards "Meus RDOs"). */
+  const activityNameByReport = new Map<string, string>();
+  const projectActivityNames = new Map<string, Set<string>>();
+  for (const a of activities) {
+    for (const rid of a.reportIds) activityNameByReport.set(rid, a.name);
+    for (const pid of a.projectIds) {
+      if (!projectActivityNames.has(pid)) projectActivityNames.set(pid, new Set());
+      projectActivityNames.get(pid)!.add(a.name);
+    }
+  }
+  /** Rótulo do projeto apenas quando ele pertence a uma única atividade. */
+  const activityNameForProject = (pid: string | null | undefined): string | null => {
+    if (!pid) return null;
+    const names = projectActivityNames.get(pid);
+    if (names && names.size === 1) return Array.from(names)[0];
+    return null;
+  };
+
+  const selectedSiteName = selectedSite === 'all'
+    ? 'Todas as fábricas'
+    : (sites.find(s => s.id === selectedSite)?.name || 'Fábrica');
+  const selectedActivityLabel = selectedActivity ? selectedActivity.name : 'Todas as atividades';
+  const slugify = (v: string) => stripAccents(v).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 40);
+
   /** Abas auxiliares ainda trabalham com um único project_id. */
   const tabProjectId = selectedActivity && selectedActivity.projectIds.length === 1
     ? selectedActivity.projectIds[0]
@@ -303,7 +327,11 @@ export default function WorkforceDatabase() {
       for (const [, group] of attByKey) {
         const first = group[0] as any;
         const report = first.reports as any;
-        const projectName = report?.projects?.name || 'Sem projeto';
+        const projectName =
+          activityNameByReport.get(report?.id) ||
+          activityNameForProject(report?.project_id) ||
+          report?.projects?.name ||
+          'Sem projeto';
         
         // Use exact match first, then intelligent matching
         const functionRole = resolveWorkerFunction(
@@ -383,10 +411,20 @@ export default function WorkforceDatabase() {
         mFrom += mPageSize;
       }
 
-      const manualRecords: WorkforceRecord[] = (manualData || []).map((r: any) => ({
+      let manualRecords: WorkforceRecord[] = (manualData || []).map((r: any) => ({
         ...r,
+        activity_name: activityNameForProject(r.project_id) || r.activity_name,
         source: 'manual' as const,
       }));
+
+      // Quando há atividade selecionada, garantir que registros manuais de outras OMs
+      // do mesmo projeto não entrem na tabela nem na exportação.
+      if (activity) {
+        manualRecords = manualRecords.filter(r => {
+          const resolved = activityNameForProject((r as any).project_id);
+          return !resolved || resolved === activity.name;
+        });
+      }
 
       // 5. Deduplicar: RDO tem prioridade sobre manual
       const rdoKeys = new Set(
@@ -448,7 +486,11 @@ export default function WorkforceDatabase() {
       if (error || !page || page.length === 0) break;
 
       for (const report of page) {
-        const projectName = (report as any).projects?.name || 'N/A';
+        const projectName =
+          activityNameByReport.get((report as any).id) ||
+          activityNameForProject((report as any).project_id) ||
+          (report as any).projects?.name ||
+          'N/A';
         
         // Extract all deviation types from this report
         for (const dt of deviationTypes) {
@@ -512,6 +554,8 @@ export default function WorkforceDatabase() {
       if (error || !page || page.length === 0) break;
 
       for (const delay of page) {
+        const resolvedActivity = activityNameForProject((delay as any).project_id);
+        if (selectedActivity && resolvedActivity && resolvedActivity !== selectedActivity.name) continue;
         // Convert decimal hours to HH:MM
         const h = Math.floor(delay.delay_hours);
         const m = Math.round((delay.delay_hours - h) * 60);
@@ -519,7 +563,7 @@ export default function WorkforceDatabase() {
 
         allDelayRecords.push({
           id: delay.id,
-          activity_name: delay.activity_name,
+          activity_name: resolvedActivity || delay.activity_name,
           date: delay.date,
           reason: delay.delay_type || 'Outro',
           description: delay.description || '',
@@ -811,8 +855,13 @@ export default function WorkforceDatabase() {
     const wb = new ExcelJS.Workbook();
     const headerStyle: Partial<ExcelJS.Style> = { font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A2332' } }, alignment: { horizontal: 'center', vertical: 'middle' }, border: { bottom: { style: 'thin' } } };
     const ws = wb.addWorksheet('Base de Dados');
+    const periodLabel = `${format(new Date(startDate + 'T12:00:00'), 'dd/MM/yyyy')} a ${format(new Date(endDate + 'T12:00:00'), 'dd/MM/yyyy')}`;
+    const filtersLabel = `Fábrica: ${selectedSiteName}  |  Atividade: ${selectedActivityLabel}  |  Período: ${periodLabel}  |  Registros: ${records.length}`;
     ws.columns = [{ header: 'ATIVIDADE', key: 'activity', width: 30 }, { header: 'DIA', key: 'date', width: 12 }, { header: 'NOME', key: 'name', width: 25 }, { header: 'FUNÇÃO', key: 'role', width: 20 }, { header: 'INÍCIO', key: 'start', width: 18 }, { header: 'FIM', key: 'end', width: 16 }, { header: 'HN', key: 'hn', width: 8 }, { header: 'COM', key: 'com', width: 8 }, { header: 'HH-75%', key: 'h75', width: 8 }, { header: 'HH-100%', key: 'h100', width: 10 }, { header: 'ADN', key: 'adn', width: 8 }];
-    ws.getRow(1).eachCell(cell => { Object.assign(cell, { style: headerStyle }); });
+    ws.spliceRows(1, 0, [filtersLabel]);
+    ws.mergeCells(1, 1, 1, 11);
+    ws.getCell('A1').font = { bold: true, size: 10 };
+    ws.getRow(2).eachCell(cell => { Object.assign(cell, { style: headerStyle }); });
     records.forEach(r => {
       const fnValid = r.function_role || 'MEIO OFICIAL';
       ws.addRow({ activity: r.activity_name?.toUpperCase(), date: format(new Date(r.date + 'T12:00:00'), 'dd/MM/yyyy'), name: r.worker_name, role: fnValid, start: r.start_time || '', end: r.end_time || '', hn: formatHHMM(r.normal_hours), com: formatHHMM(r.compensation_hours), h75: formatHHMM(r.overtime_75), h100: formatHHMM(r.overtime_100), adn: formatHHMM(r.night_bonus) });
@@ -821,7 +870,10 @@ export default function WorkforceDatabase() {
     totalRow.font = { bold: true };
     const wsResumo = wb.addWorksheet('Resumo por Função');
     wsResumo.columns = [{ header: 'FUNÇÃO', key: 'role', width: 25 }, { header: 'QTD', key: 'count', width: 8 }, { header: 'HN', key: 'hn', width: 12 }, { header: 'COM', key: 'com', width: 12 }, { header: 'HH-75%', key: 'h75', width: 12 }, { header: 'HH-100%', key: 'h100', width: 12 }, { header: 'ADN', key: 'adn', width: 12 }];
-    wsResumo.getRow(1).eachCell(cell => { Object.assign(cell, { style: headerStyle }); });
+    wsResumo.spliceRows(1, 0, [filtersLabel]);
+    wsResumo.mergeCells(1, 1, 1, 7);
+    wsResumo.getCell('A1').font = { bold: true, size: 10 };
+    wsResumo.getRow(2).eachCell(cell => { Object.assign(cell, { style: headerStyle }); });
     Object.entries(byRole).sort(([a], [b]) => a.localeCompare(b)).forEach(([roleName, data]) => { wsResumo.addRow({ role: roleName, count: data.workers.size, hn: formatHHMMSS(data.hn), com: formatHHMMSS(data.com), h75: formatHHMMSS(data.h75), h100: formatHHMMSS(data.h100), adn: formatHHMMSS(data.adn) }); });
     const totalResumo = wsResumo.addRow({ role: 'TOTAL GERAL', count: totalUniqueWorkers, hn: formatHHMMSS(totals.hn), com: formatHHMMSS(totals.com), h75: formatHHMMSS(totals.h75), h100: formatHHMMSS(totals.h100), adn: formatHHMMSS(totals.adn) });
     totalResumo.font = { bold: true };
@@ -834,7 +886,10 @@ export default function WorkforceDatabase() {
         { header: 'DESCRIÇÃO', key: 'description', width: 50 },
         { header: 'TEMPO', key: 'hours', width: 12 }
       ];
-      wsAtrasos.getRow(1).eachCell(cell => { Object.assign(cell, { style: headerStyle }); });
+      wsAtrasos.spliceRows(1, 0, [filtersLabel]);
+      wsAtrasos.mergeCells(1, 1, 1, 5);
+      wsAtrasos.getCell('A1').font = { bold: true, size: 10 };
+      wsAtrasos.getRow(2).eachCell(cell => { Object.assign(cell, { style: headerStyle }); });
       
       delays.forEach(d => {
         wsAtrasos.addRow({
@@ -866,7 +921,8 @@ export default function WorkforceDatabase() {
     const buffer = await wb.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `base_dados_hh_${startDate}_${endDate}.xlsx`; a.click();
+    const scope = [slugify(selectedSiteName), selectedActivity ? slugify(selectedActivity.name) : ''].filter(Boolean).join('_');
+    const a = document.createElement('a'); a.href = url; a.download = `base_dados_hh_${scope ? scope + '_' : ''}${startDate}_${endDate}.xlsx`; a.click();
     URL.revokeObjectURL(url);
   };
 
@@ -929,6 +985,9 @@ export default function WorkforceDatabase() {
     const cols = ['ATIVIDADE', 'DIA', 'NOME', 'FUNÇÃO', 'INÍCIO', 'FIM', 'HN', 'COM', 'HH-75%', 'HH-100%', 'ADN'];
     const colWidths = [50, 22, 40, 30, 16, 16, 14, 14, 16, 18, 14];
     let y = headerH + 5; const startX = 10;
+    doc.setTextColor(60, 60, 60); doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
+    doc.text(`Fábrica: ${selectedSiteName}  |  Atividade: ${selectedActivityLabel}  |  Registros: ${records.length}`, startX, y + 2);
+    y += 6;
     const drawTableHeader = () => {
       doc.setFillColor(...accentRgb); doc.rect(startX, y, colWidths.reduce((a, b) => a + b, 0), 7, 'F');
       doc.setTextColor(255, 255, 255); doc.setFontSize(7); doc.setFont('helvetica', 'bold');
@@ -1035,7 +1094,8 @@ export default function WorkforceDatabase() {
       doc.text('TOTAL DE HORAS PERDIDAS NO PERÍODO', delayStartX + 100, y + 5, { align: 'right' });
       doc.text(totalStr, delayStartX + delayWidths.reduce((a, b) => a + b, 0) - 15, y + 5, { align: 'center' });
     }
-    doc.save(`base_dados_hh_${startDate}_${endDate}.pdf`);
+    const pdfScope = [slugify(selectedSiteName), selectedActivity ? slugify(selectedActivity.name) : ''].filter(Boolean).join('_');
+    doc.save(`base_dados_hh_${pdfScope ? pdfScope + '_' : ''}${startDate}_${endDate}.pdf`);
   };
 
   if (role && !['admin', 'super_admin'].includes(role)) {
