@@ -223,7 +223,7 @@ export default function WorkforceDatabase() {
       for (const att of (attendanceData || [])) {
         const report = (att as any).reports as any;
         const date = report?.date || '';
-        const name = ((att as any).user_name || 'Sem nome').trim().toUpperCase();
+        const name = stripAccents(((att as any).user_name || 'Sem nome').trim().toUpperCase());
         const key = `${name}|${date}`;
         if (!attByKey.has(key)) attByKey.set(key, []);
         attByKey.get(key)!.push(att);
