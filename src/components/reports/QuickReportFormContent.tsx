@@ -418,10 +418,20 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
     queryFn: async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('id, name, job_title')
+        .select(`
+          id, 
+          name, 
+          job_title,
+          site_responsibles(site_id)
+        `)
         .eq('is_active', true)
         .order('name');
-      return (data || []).map(p => ({ id: p.id, name: p.name, jobTitle: p.job_title || '' }));
+      return (data || []).map(p => ({ 
+        id: p.id, 
+        name: p.name, 
+        jobTitle: p.job_title || '',
+        siteIds: (p as any).site_responsibles?.map((sr: any) => sr.site_id) || []
+      }));
     },
   });
 

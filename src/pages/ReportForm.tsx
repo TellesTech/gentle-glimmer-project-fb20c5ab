@@ -203,7 +203,13 @@ export default function ReportForm() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, name, job_title, company_id')
+        .select(`
+          id, 
+          name, 
+          job_title, 
+          company_id,
+          site_responsibles(site_id)
+        `)
         .eq('is_active', true)
         .order('name');
       if (error) throw error;
@@ -211,7 +217,8 @@ export default function ReportForm() {
         id: p.id, 
         name: p.name, 
         jobTitle: p.job_title || '',
-        companyId: p.company_id 
+        companyId: p.company_id,
+        siteIds: (p as any).site_responsibles?.map((sr: any) => sr.site_id) || []
       }));
     },
   });
