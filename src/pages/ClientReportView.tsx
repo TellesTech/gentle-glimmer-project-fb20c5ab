@@ -198,31 +198,6 @@ export default function ClientReportView() {
     retry: false,
   });
 
-  // Query for report history
-  const { data: historyData, isLoading: isHistoryLoading } = useQuery({
-    queryKey: ['report-history', resolvedReportId],
-    queryFn: async () => {
-      if (!resolvedReportId) return [];
-
-      const { data, error } = await supabase
-        .from('report_history')
-        .select(`
-          id,
-          action,
-          action_at,
-          details,
-          old_values,
-          new_values,
-          actor:profiles!action_by(id, name, avatar_url)
-        `)
-        .eq('report_id', resolvedReportId)
-        .order('action_at', { ascending: true });
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!resolvedReportId,
-  });
 
   // WEES internal user is logged in (admin/super_admin/collaborator) and not a client
   const isWeesUserRaw = !!weesUser && !!weesRole && !authProfile;
@@ -263,6 +238,32 @@ export default function ClientReportView() {
     useReportSignaturesRealtime(resolvedReportId);
   const pendingSigners = (signatureTimeline?.entries || []).filter((e) => !e.signed);
   const fullySigned = signatureSummary.total > 0 && signatureSummary.pending === 0;
+
+  // Query for report history
+  const { data: historyData, isLoading: isHistoryLoading } = useQuery({
+    queryKey: ['report-history', resolvedReportId],
+    queryFn: async () => {
+      if (!resolvedReportId) return [];
+
+      const { data, error } = await supabase
+        .from('report_history')
+        .select(`
+          id,
+          action,
+          action_at,
+          details,
+          old_values,
+          new_values,
+          actor:profiles!action_by(id, name, avatar_url)
+        `)
+        .eq('report_id', resolvedReportId)
+        .order('action_at', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!resolvedReportId,
+  });
 
   // Update local profile when data changes
   useEffect(() => {
