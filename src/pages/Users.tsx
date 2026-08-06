@@ -22,7 +22,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/loose-client';
-import { cn } from '@/lib/utils';
+import { cn, stripAccents } from '@/lib/utils';
 import type { UserRole } from '@/types';
 
 const translateAuthError = (msg: string): string => {
