@@ -1005,7 +1005,7 @@ export default function WorkforceDatabase() {
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Database className="w-6 h-6 text-primary" />
-            Base de Dados HH
+            Base de Dados
           </h1>
           <p className="text-muted-foreground text-sm">Homem-Hora — Dados automáticos dos RDOs</p>
         </div>
