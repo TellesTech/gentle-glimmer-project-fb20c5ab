@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, AlertTriangle, TrendingUp, TrendingDown, Users, Factory, MapPin, FileText, User, Briefcase, Building2, BarChart3, Check, ChevronsUpDown } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -43,9 +44,17 @@ interface StepBasicInfoProps {
   teams: Team[];
   projects: Project[];
   eligibleSupervisors?: EligibleSupervisor[];
+  allProfiles?: any[];
 }
 
-export function StepBasicInfo({ data, onChange, teams, projects, eligibleSupervisors = [] }: StepBasicInfoProps) {
+export function StepBasicInfo({ 
+  data, 
+  onChange, 
+  teams, 
+  projects, 
+  eligibleSupervisors = [],
+  allProfiles = []
+}: StepBasicInfoProps) {
   const [supervisorPopoverOpen, setSupervisorPopoverOpen] = useState(false);
   const filteredTeams = teams.filter(t => t.projectId === data.projectId);
   
@@ -60,6 +69,13 @@ export function StepBasicInfo({ data, onChange, teams, projects, eligibleSupervi
 
   return (
     <div className="space-y-6">
+      {allProfiles && allProfiles.length > 0 && (
+        <div className="flex items-center gap-2 px-1 mb-2">
+          <Badge variant="secondary" className="text-[10px] px-2 py-0 h-5 font-normal opacity-70">
+            {allProfiles.length} colaboradores na unidade
+          </Badge>
+        </div>
+      )}
       {/* EFETIVO E PORCENTAGENS - Card Unificado e Destacado */}
       <Card className="border-l-4 border-l-primary bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 shadow-md">
         <CardHeader className="pb-2">

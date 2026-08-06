@@ -203,7 +203,13 @@ export default function ReportForm() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, name, job_title, company_id')
+        .select(`
+          id, 
+          name, 
+          job_title, 
+          company_id,
+          site_responsibles(site_id)
+        `)
         .eq('is_active', true)
         .order('name');
       if (error) throw error;
@@ -211,7 +217,8 @@ export default function ReportForm() {
         id: p.id, 
         name: p.name, 
         jobTitle: p.job_title || '',
-        companyId: p.company_id 
+        companyId: p.company_id,
+        siteIds: (p as any).site_responsibles?.map((sr: any) => sr.site_id) || []
       }));
     },
   });
@@ -768,6 +775,17 @@ export default function ReportForm() {
   const renderStep = () => {
     switch (currentStep) {
       case 1:
+        const currentProjectForBasic = projects.find(p => p.id === formData.projectId);
+        const currentSiteIdForBasic = currentProjectForBasic?.site_id;
+        const siteFilteredProfiles = allProfiles.filter(p => {
+          if (!currentSiteIdForBasic) return true;
+          const pSiteIds = (p as any).siteIds || [];
+          if (pSiteIds.length > 0) {
+            return pSiteIds.includes(currentSiteIdForBasic);
+          }
+          return true;
+        });
+
         return (
           <StepBasicInfo
             data={formData}
@@ -775,6 +793,7 @@ export default function ReportForm() {
             teams={teamsForStep}
             projects={projectsForStep}
             eligibleSupervisors={eligibleSupervisors}
+            allProfiles={siteFilteredProfiles}
           />
         );
       case 2:
@@ -786,12 +805,22 @@ export default function ReportForm() {
       case 5:
         return <StepDeviations data={formData} onChange={updateFormData} />;
       case 6:
+        const currentProject = projects.find(p => p.id === formData.projectId);
+        const currentSiteId = currentProject?.site_id;
+        
         return (
           <StepAttendance
             data={formData}
             onChange={updateFormData}
             teamMembers={teamMembersForStep}
-            allProfiles={allProfiles}
+            allProfiles={allProfiles.filter(p => {
+              if (!currentSiteId) return true;
+              const pSiteIds = (p as any).siteIds || [];
+              if (pSiteIds.length > 0) {
+                return pSiteIds.includes(currentSiteId);
+              }
+              return true;
+            })}
             defaultArrivalTime={formData.startTime || '07:00'}
             defaultDepartureTime={formData.endTime || '17:00'}
           />

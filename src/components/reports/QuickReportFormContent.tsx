@@ -216,10 +216,10 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
       if (!selection.projectId) return null;
       const { data } = await supabase
         .from('projects')
-        .select('id, progress_target, end_date, default_planned_workforce, company_id')
+        .select('id, progress_target, end_date, default_planned_workforce, company_id, site_id')
         .eq('id', selection.projectId)
         .maybeSingle();
-      return data;
+      return data as { id: string; progress_target: number; end_date: string; default_planned_workforce: number; company_id: string; site_id: string } | null;
     },
     enabled: !!selection.projectId,
   });
@@ -418,11 +418,31 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
     queryFn: async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('id, name, job_title')
+        .select(`
+          id, 
+          name, 
+          job_title,
+          site_responsibles(site_id)
+        `)
         .eq('is_active', true)
         .order('name');
-      return (data || []).map(p => ({ id: p.id, name: p.name, jobTitle: p.job_title || '' }));
+      return (data || []).map(p => ({ 
+        id: p.id, 
+        name: p.name, 
+        jobTitle: p.job_title || '',
+        siteIds: (p as any).site_responsibles?.map((sr: any) => sr.site_id) || []
+      }));
     },
+  });
+  
+  // Filter profiles based on current site (calculated after allProfiles is defined)
+  const filteredSiteProfiles = allProfiles.filter(p => {
+    if (!projectMeta?.site_id) return true;
+    const pSiteIds = (p as any).siteIds || [];
+    if (pSiteIds.length > 0) {
+      return pSiteIds.includes(projectMeta.site_id);
+    }
+    return true;
   });
 
   // Match profile by partial name (first name, contains, exact)
@@ -1413,7 +1433,9 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
                     <CommandList>
                       <CommandEmpty>Nenhum colaborador encontrado</CommandEmpty>
                       <CommandGroup>
-                        {filteredProfiles.map(profile => (
+                        {filteredSiteProfiles
+                          .filter(p => !collaboratorSearch || p.name?.toLowerCase().includes(collaboratorSearch.toLowerCase()))
+                          .map(profile => (
                           <CommandItem
                             key={profile.id}
                             value={profile.name || ''}
@@ -1428,9 +1450,9 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
                   </Command>
                 </PopoverContent>
               </Popover>
-              {allProfiles.length > 0 && (
+              {filteredSiteProfiles.length > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {allProfiles.length} colaboradores ativos no sistema
+                  {filteredSiteProfiles.length} colaboradores disponíveis nesta unidade
                 </p>
               )}
             </div>
