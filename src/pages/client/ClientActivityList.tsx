@@ -244,6 +244,16 @@ export default function ClientActivityList() {
     return <Badge className="bg-yellow-500 hover:bg-yellow-500 text-white border-transparent gap-1"><Clock className="h-3 w-3" />Pendente</Badge>;
   };
 
+  const activitySiteIds = useMemo(
+    () => (activityInfo?.siteId ? [activityInfo.siteId] : []),
+    [activityInfo?.siteId],
+  );
+  const { names: activityNames, rename: renameActivity, resetName: resetActivityName, isSaving: renamingActivity } =
+    useActivityNames(activitySiteIds);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const customName = projectId ? activityNames.get(projectId) : undefined;
+  const displayName = customName || activityInfo?.name || 'Atividade';
+
   return (
     <ClientLayout>
       <div className="space-y-5">
@@ -257,8 +267,20 @@ export default function ClientActivityList() {
         <PageBackHeader
           onBack={() => navigate(`/client/dashboard?${searchParams.toString()}`)}
           icon={<Wrench className="h-5 w-5" />}
-          title={activityInfo?.name || 'Atividade'}
+          title={displayName}
           className="mb-0"
+          action={
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setRenameOpen(true)}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Renomear
+            </Button>
+          }
         />
 
         <div className="flex flex-wrap items-center gap-4 px-1">
