@@ -61,7 +61,7 @@ export function WorkforceDashboardTab({ records }: Props) {
   const byRole = useMemo(() => {
     const map: Record<string, number> = {};
     records.forEach(r => {
-      const fn = getBaseFunction(normalizeFunction(r.function_role) || 'MEIO OFICIAL');
+      const fn = r.function_role || 'MEIO OFICIAL';
       map[fn] = (map[fn] || 0) + r.normal_hours + r.overtime_75 + r.overtime_100 + r.compensation_hours;
     });
     return Object.entries(map).map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 })).sort((a, b) => b.value - a.value);
