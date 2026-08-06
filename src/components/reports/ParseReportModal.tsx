@@ -465,8 +465,8 @@ export function ParseReportModal({ onDataParsed, teamMembers = [], allProfiles =
           });
         
         formData.attendance = normalizedEfetivo.map((item, index): Attendance => {
-          const matchedTeamMember = matchCollaborator(item.nome, teamMembers.map(m => ({ id: m.id, name: m.name })));
-          const matchedProfile = matchedTeamMember || matchCollaborator(item.nome, allProfiles);
+          // No more teamMembers filtering here since allProfiles is already filtered by site in the parent
+          const matchedProfile = matchCollaborator(item.nome, allProfiles);
           
           if (matchedProfile) {
             matchedCollaborators.push(matchedProfile.name || item.nome);
