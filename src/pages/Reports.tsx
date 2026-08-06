@@ -206,7 +206,8 @@ export default function Reports() {
       const matchesSearch = 
         stripAccents(report.location?.toLowerCase() || '').includes(searchLower) ||
         stripAccents(report.project?.name?.toLowerCase() || '').includes(searchLower) ||
-        stripAccents(report.team?.name?.toLowerCase() || '').includes(searchLower);
+        stripAccents(report.team?.name?.toLowerCase() || '').includes(searchLower) ||
+        stripAccents(report.maintenance_order_title?.toLowerCase() || '').includes(searchLower);
 
       // Status filter
       const matchesStatus = statusFilter === 'all' || report.status === statusFilter;
