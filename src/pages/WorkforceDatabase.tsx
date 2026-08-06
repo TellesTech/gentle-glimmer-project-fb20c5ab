@@ -199,7 +199,7 @@ export default function WorkforceDatabase() {
         if (selectedProject !== 'all') {
           rdoQuery = rdoQuery.eq('reports.project_id', selectedProject);
         } else if (selectedSite !== 'all') {
-          const siteProjectIds = projects.filter(p => p.site_id === selectedSite).map(p => p.id);
+          const siteProjectIds = currentProjects.filter((p: any) => p.site_id === selectedSite).map((p: any) => p.id);
           console.log(`WorkforceDatabase: Filtering by site ${selectedSite}, projects found:`, siteProjectIds);
           if (siteProjectIds.length > 0) {
             rdoQuery = rdoQuery.in('reports.project_id', siteProjectIds);
