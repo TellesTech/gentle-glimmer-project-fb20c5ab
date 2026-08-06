@@ -1081,7 +1081,7 @@ export default function WorkforceDatabase() {
                         {filteredProjects.map((p) => (
                           <CommandItem
                             key={p.id}
-                            value={p.name}
+                            value={p.searchString || p.name}
                             onSelect={() => {
                               setSelectedProject(p.id);
                             }}
@@ -1092,7 +1092,14 @@ export default function WorkforceDatabase() {
                                 selectedProject === p.id ? "opacity-100" : "opacity-0"
                               )}
                             />
-                            {p.name}
+                            <div className="flex flex-col min-w-0 overflow-hidden">
+                              <span className="truncate">{p.name}</span>
+                              {selectedSite === 'all' && p.searchString?.split('|')[1] && (
+                                <span className="text-[10px] text-muted-foreground truncate italic">
+                                  {p.searchString.split('|')[1].trim()}
+                                </span>
+                              )}
+                            </div>
                           </CommandItem>
                         ))}
                       </CommandGroup>
