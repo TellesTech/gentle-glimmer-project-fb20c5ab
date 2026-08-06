@@ -37,6 +37,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminSiteAccess } from '@/hooks/useAdminSiteAccess';
+import { stripAccents } from '@/lib/utils';
 import { toast } from 'sonner';
 import { 
   exportReportsBatch, 
