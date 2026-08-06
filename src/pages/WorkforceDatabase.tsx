@@ -1094,7 +1094,8 @@ export default function WorkforceDatabase() {
       doc.text('TOTAL DE HORAS PERDIDAS NO PERÍODO', delayStartX + 100, y + 5, { align: 'right' });
       doc.text(totalStr, delayStartX + delayWidths.reduce((a, b) => a + b, 0) - 15, y + 5, { align: 'center' });
     }
-    doc.save(`base_dados_hh_${startDate}_${endDate}.pdf`);
+    const pdfScope = [slugify(selectedSiteName), selectedActivity ? slugify(selectedActivity.name) : ''].filter(Boolean).join('_');
+    doc.save(`base_dados_hh_${pdfScope ? pdfScope + '_' : ''}${startDate}_${endDate}.pdf`);
   };
 
   if (role && !['admin', 'super_admin'].includes(role)) {
