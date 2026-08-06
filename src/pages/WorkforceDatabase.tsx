@@ -156,23 +156,32 @@ export default function WorkforceDatabase() {
 
       const enhancedProjects = data.map((p: any) => {
         // Coletar todos os títulos de OM e localizações únicos de todos os relatórios do projeto
-        const allLocations = Array.from(new Set((p.reports || [])
-          .map((r: any) => r.location)
-          .filter(Boolean)));
-        
-        const allOmTitles = Array.from(new Set((p.reports || [])
-          .map((r: any) => r.maintenance_order_title)
-          .filter(Boolean)));
+        const reports = p.reports || [];
+        const allLocations = Array.from(new Set(reports.map((r: any) => r.location).filter(Boolean)));
+        const allOmTitles = Array.from(new Set(reports.map((r: any) => r.maintenance_order_title).filter(Boolean)));
 
-        const latestLocation = allLocations[0] || '';
-        const latestOmTitle = allOmTitles[0] || '';
+        // Tentar encontrar o relatório mais recente com OM e título para o displayName
+        // Isso espelha a lógica de exibição dos cards de RDO
+        const lastWithOM = reports.slice().reverse().find((r: any) => r.maintenance_order_title && r.location);
+        const lastAny = reports[reports.length - 1];
         
-        // Se o nome do projeto for genérico, tenta usar a localização ou título da OM mais recente
+        let formattedName = '';
+        if (lastWithOM) {
+          formattedName = `OM ${lastWithOM.maintenance_order_title} — ${lastWithOM.location}`;
+        } else if (lastAny) {
+          if (lastAny.maintenance_order_title && lastAny.location) {
+            formattedName = `OM ${lastAny.maintenance_order_title} — ${lastAny.location}`;
+          } else if (lastAny.maintenance_order_title) {
+            formattedName = `OM ${lastAny.maintenance_order_title}`;
+          } else if (lastAny.location) {
+            formattedName = lastAny.location;
+          }
+        }
+
         const displayName = isGenericName(p.name) 
-          ? (latestLocation || latestOmTitle || p.name) 
+          ? (formattedName || p.name) 
           : p.name;
 
-        // A searchString agora inclui TODOS os títulos e localizações encontrados nos relatórios
         const searchString = [
           displayName,
           p.name,
@@ -229,18 +238,27 @@ export default function WorkforceDatabase() {
           !name || name === '*' || name.startsWith('Atividade criada via') || name.trim().length <= 1;
 
         currentProjects = latestProjects.map((p: any) => {
-          const allLocations = Array.from(new Set((p.reports || [])
-            .map((r: any) => r.location)
-            .filter(Boolean)));
-          
-          const allOmTitles = Array.from(new Set((p.reports || [])
-            .map((r: any) => r.maintenance_order_title)
-            .filter(Boolean)));
+          const reports = p.reports || [];
+          const allLocations = Array.from(new Set(reports.map((r: any) => r.location).filter(Boolean)));
+          const allOmTitles = Array.from(new Set(reports.map((r: any) => r.maintenance_order_title).filter(Boolean)));
 
-          const latestLocation = allLocations[0] || '';
-          const latestOmTitle = allOmTitles[0] || '';
+          const lastWithOM = reports.slice().reverse().find((r: any) => r.maintenance_order_title && r.location);
+          const lastAny = reports[reports.length - 1];
           
-          const displayName = isGenericName(p.name) ? (latestLocation || latestOmTitle || p.name) : p.name;
+          let formattedName = '';
+          if (lastWithOM) {
+            formattedName = `OM ${lastWithOM.maintenance_order_title} — ${lastWithOM.location}`;
+          } else if (lastAny) {
+            if (lastAny.maintenance_order_title && lastAny.location) {
+              formattedName = `OM ${lastAny.maintenance_order_title} — ${lastAny.location}`;
+            } else if (lastAny.maintenance_order_title) {
+              formattedName = `OM ${lastAny.maintenance_order_title}`;
+            } else if (lastAny.location) {
+              formattedName = lastAny.location;
+            }
+          }
+          
+          const displayName = isGenericName(p.name) ? (formattedName || p.name) : p.name;
           
           const searchString = [
             displayName,
