@@ -734,7 +734,7 @@ export default function WorkforceDatabase() {
         title: 'Sincronização concluída',
         description: `${presencasUpserted} presença(s) e ${atrasosUpserted} atraso(s) materializados.`,
       });
-      await Promise.all([loadRecords(), loadDelays()]);
+      await Promise.all([loadActivities(), loadRecords(), loadDelays()]);
     } catch (err: any) {
       console.error('Erro ao sincronizar:', err);
       toast({ title: 'Erro ao sincronizar', description: err.message || String(err), variant: 'destructive' });
