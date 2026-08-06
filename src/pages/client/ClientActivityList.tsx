@@ -36,7 +36,7 @@ export default function ClientActivityList() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { clientProfile } = useClientAuth();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const isInternalUser = role === 'admin' || role === 'super_admin' || role === 'collaborator';
   const isAdminView = isInternalUser && !clientProfile;
 
@@ -45,13 +45,29 @@ export default function ClientActivityList() {
     queryKey: ['client-activity-info', projectId, clientProfile?.id, isAdminView],
     enabled: !!projectId && (!!clientProfile?.id || isAdminView),
     queryFn: async () => {
-      // 1) Get all reports that could be in this group
-      const { data: siteRows } = await (supabase as any).rpc('portal_user_site_ids', {
-        _user_id: (supabase as any).auth?.user?.id || null, // fallback logic
-      });
-      const siteIds: string[] = (siteRows || [])
-        .map((s: any) => (typeof s === 'string' ? s : s?.portal_user_site_ids))
-        .filter(Boolean);
+      if (!user?.id) return null;
+
+      // 1) Get all sites allowed for this user
+      let siteIds: string[] = [];
+      if (isAdminView) {
+        // Para admin no portal, buscamos os sites que ele tem acesso
+        const [{ data: paa }, { data: srs }] = await Promise.all([
+          supabase.from('portal_admin_access').select('site_id').eq('user_id', user.id),
+          supabase.from('site_responsibles').select('site_id').eq('user_id', user.id),
+        ]);
+        siteIds = Array.from(new Set([
+          ...((paa || []) as any[]).map((r) => r.site_id),
+          ...((srs || []) as any[]).map((r) => r.site_id),
+        ].filter(Boolean)));
+      } else {
+        // Para cliente, usamos a RPC existente
+        const { data: siteRows } = await (supabase as any).rpc('portal_user_site_ids', {
+          _user_id: user.id,
+        });
+        siteIds = (siteRows || [])
+          .map((s: any) => (typeof s === 'string' ? s : s?.portal_user_site_ids))
+          .filter(Boolean);
+      }
       
       let query = supabase
         .from('reports')
@@ -62,6 +78,9 @@ export default function ClientActivityList() {
         const { data: projRows } = await supabase.from('projects').select('id').in('site_id', siteIds);
         const pIds = (projRows || []).map(p => p.id);
         if (pIds.length > 0) query = query.in('project_id', pIds);
+      } else if (!isInternalUser || role !== 'super_admin') {
+        // Se não for super admin e não tiver sites vinculados, não vê nada
+        return null;
       }
 
       const { data: allReports } = await query;
@@ -214,7 +233,10 @@ export default function ClientActivityList() {
         ) : reports.length === 0 ? (
           <Card>
             <CardContent className="text-center py-16 text-muted-foreground text-sm">
-              Nenhum RDO desta atividade está disponível para você.
+              <p>Nenhum RDO desta atividade está disponível para você.</p>
+              {activityInfo?.reportIds && activityInfo.reportIds.length > 0 && (
+                <p className="mt-2 text-xs opacity-50">IDs de relatórios vinculados: {activityInfo.reportIds.length}</p>
+              )}
             </CardContent>
           </Card>
         ) : (
