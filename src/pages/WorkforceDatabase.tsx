@@ -18,6 +18,7 @@ import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import { normalizeFunction, JOB_FUNCTIONS, getBaseFunction } from '@/lib/jobFunctions';
 import { resolveWorkerFunction, ProfileEntry } from '@/lib/resolveWorkerFunction';
+import { stripAccents } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { WorkforceDashboardTab } from '@/components/workforce/WorkforceDashboardTab';
