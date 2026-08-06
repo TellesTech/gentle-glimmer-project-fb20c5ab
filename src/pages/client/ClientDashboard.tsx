@@ -344,13 +344,18 @@ export default function ClientDashboard() {
   // O super admin continua vendo os números totais (ele enxerga as pastas ocultas).
   const visibleReports = useMemo(() => {
     const all = reportsData || [];
+    // Adicionamos um log defensivo para debugar o sumiço dos RDOs
+    if (all.length > 0) {
+      console.log(`[ClientDashboard] Total reports fetched: ${all.length}. AdminView: ${isAdminView}`);
+    }
+    
     if (isSuperAdmin || hiddenMonthKeys.size === 0) return all;
     return all.filter(r => {
       if (!r.report?.date) return true;
       const d = parseISO(r.report.date);
       return !hiddenMonthKeys.has(`${getYear(d)}-${getMonth(d)}`);
     });
-  }, [reportsData, hiddenMonthKeys, isSuperAdmin]);
+  }, [reportsData, hiddenMonthKeys, isSuperAdmin, isAdminView]);
 
   // Photo count
   const reportIds = useMemo(() => (reportsData || []).map(r => r.report_id).filter(Boolean), [reportsData]);
