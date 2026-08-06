@@ -1510,8 +1510,24 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                 onClick={() => setOpenProjectId(projectFolder.id)}
               >
                 {/* Actions */}
-                {isSuperAdmin && (
-                  <div className="absolute top-2 right-2 z-10">
+                <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+                  <button
+                    type="button"
+                    title="Renomear pasta"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRenameTarget({
+                        groupKey: projectFolder.id,
+                        siteId: openSiteId,
+                        currentName: projectFolder.name,
+                        hasCustomName: activityNamesBySite.has(`${openSiteId}::${projectFolder.id}`),
+                      });
+                    }}
+                    className="rounded-md p-1.5 text-muted-foreground hover:text-primary hover:bg-muted transition-colors"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  {isSuperAdmin && (
                     <CardActions
                       id={projectFolder.sourceProjects[0]?.id || projectFolder.id}
                       type="reportGroup"
@@ -1526,8 +1542,8 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                         );
                       }}
                     />
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {/* Header: icon + name + chevron */}
                 <div className="flex items-center gap-2 mb-2">
