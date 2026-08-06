@@ -127,9 +127,11 @@ export function StepAttendance({ data, onChange, teamMembers, allProfiles = [], 
 
   // Filter by search
   const filteredProfiles = searchValue
-    ? availableProfiles.filter(p => 
-        p.name.toLowerCase().includes(searchValue.toLowerCase())
-      )
+    ? availableProfiles.filter(p => {
+        const searchNormalized = stripAccents(searchValue.toLowerCase());
+        const nameNormalized = stripAccents(p.name.toLowerCase());
+        return nameNormalized.includes(searchNormalized);
+      })
     : availableProfiles;
 
   const togglePresence = (memberId: string) => {
