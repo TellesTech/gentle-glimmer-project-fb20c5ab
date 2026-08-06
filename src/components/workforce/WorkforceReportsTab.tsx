@@ -39,7 +39,7 @@ export function WorkforceReportsTab({ records }: { records: WorkforceRecord[] })
   const roleReport = useMemo(() => {
     const map: Record<string, { workers: Set<string>; hn: number; com: number; h75: number; h100: number; adn: number }> = {};
     records.forEach(r => {
-      const fn = getBaseFunction(normalizeFunction(r.function_role) || 'MEIO OFICIAL');
+      const fn = r.function_role || 'MEIO OFICIAL';
       if (!map[fn]) map[fn] = { workers: new Set(), hn: 0, com: 0, h75: 0, h100: 0, adn: 0 };
       map[fn].workers.add(r.worker_name.trim().toUpperCase());
       map[fn].hn += r.normal_hours;
