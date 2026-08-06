@@ -156,6 +156,7 @@ export default function WorkforceDatabase() {
   const loadRecords = async () => {
     setLoading(true);
     try {
+      console.log('WorkforceDatabase: Loading records with filters:', { startDate, endDate, selectedSite, selectedProject });
       // 1. Buscar dados automáticos dos RDOs (reports + report_attendance) com PAGINAÇÃO
       const attendanceData: any[] = [];
       let from = 0;
