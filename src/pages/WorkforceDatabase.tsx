@@ -152,6 +152,7 @@ export default function WorkforceDatabase() {
     : projects.filter(p => p.site_id === selectedSite);
 
   const handleSiteChange = (value: string) => {
+    console.log('WorkforceDatabase: Site changed to:', value);
     setSelectedSite(value);
     setSelectedProject('all');
   };
