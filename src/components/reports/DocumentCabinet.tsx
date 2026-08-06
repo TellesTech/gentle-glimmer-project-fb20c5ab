@@ -1192,6 +1192,21 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
 
   const dialogs = (
     <>
+      <RenameActivityDialog
+        target={renameTarget}
+        onOpenChange={(open) => { if (!open) setRenameTarget(null); }}
+        isSaving={renamingActivity}
+        onSave={async (name) => {
+          if (!renameTarget?.siteId) return;
+          await renameActivity({ siteId: renameTarget.siteId, groupKey: renameTarget.groupKey, name });
+          setRenameTarget(null);
+        }}
+        onReset={async () => {
+          if (!renameTarget?.siteId) return;
+          await resetActivityName({ siteId: renameTarget.siteId, groupKey: renameTarget.groupKey });
+          setRenameTarget(null);
+        }}
+      />
       <BatchDownloadOptionsDialog
         open={downloadDialogOpen}
         onOpenChange={setDownloadDialogOpen}
