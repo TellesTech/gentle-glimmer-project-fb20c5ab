@@ -1114,6 +1114,22 @@ export default function ClientDashboard() {
 
         {/* Empty state removed as per user request */}
       </div>
+
+      <RenameActivityDialog
+        target={renameTarget}
+        isSaving={renamingActivity}
+        onOpenChange={(open) => { if (!open) setRenameTarget(null); }}
+        onSave={async (name) => {
+          if (!renameTarget?.siteId) return;
+          await renameActivity({ siteId: renameTarget.siteId, groupKey: renameTarget.groupKey, name });
+          setRenameTarget(null);
+        }}
+        onReset={async () => {
+          if (!renameTarget?.siteId) return;
+          await resetActivityName({ siteId: renameTarget.siteId, groupKey: renameTarget.groupKey });
+          setRenameTarget(null);
+        }}
+      />
     </ClientLayout>
   );
 }
