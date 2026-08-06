@@ -635,7 +635,7 @@ export default function WorkforceDatabase() {
       if (selectedProject !== 'all') {
         reportsQ = reportsQ.eq('project_id', selectedProject);
       } else if (selectedSite !== 'all') {
-        const siteProjectIds = projects.filter(p => p.site_id === selectedSite).map(p => p.id);
+        const siteProjectIds = (projects.length > 0 ? projects : (await supabase.from('projects').select('id, name, site_id').order('name')).data || []).filter(p => p.site_id === selectedSite).map(p => p.id);
         if (siteProjectIds.length > 0) reportsQ = reportsQ.in('project_id', siteProjectIds);
       }
       const { data: reportRows, error: rErr } = await reportsQ;
