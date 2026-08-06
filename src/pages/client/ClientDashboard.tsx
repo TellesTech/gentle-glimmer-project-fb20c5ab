@@ -546,6 +546,20 @@ export default function ClientDashboard() {
     }
   };
   
+  // Unidades presentes nos RDOs visíveis (para nomes personalizados de pastas)
+  const reportSiteIds = useMemo(() => {
+    const s = new Set<string>();
+    visibleReports.forEach(r => {
+      const sid = (r.report as any)?.project?.site_id;
+      if (sid) s.add(sid);
+    });
+    return Array.from(s);
+  }, [visibleReports]);
+
+  const { names: activityNames, rename: renameActivity, resetName: resetActivityName, isSaving: renamingActivity } =
+    useActivityNames(reportSiteIds);
+  const [renameTarget, setRenameTarget] = useState<RenameActivityTarget | null>(null);
+
   const monthFolders = useMemo(() => {
     const all = visibleReports;
     if (!all.length) return [];
