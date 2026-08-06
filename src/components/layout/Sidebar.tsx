@@ -40,7 +40,7 @@ const quickActionItems: NavItem[] = [
 ];
 
 const managementNavItems: NavItem[] = [
-  { icon: Database, label: 'Base de Dados HH', href: '/workforce-database', roles: ['admin', 'super_admin'] },
+  { icon: Database, label: 'Base de Dados', href: '/workforce-database', roles: ['admin', 'super_admin'] },
   { icon: Users, label: 'Colaboradores', href: '/users', roles: ['admin', 'super_admin'] },
   { icon: HardDrive, label: 'Backup', href: '/admin/backup', roles: ['admin', 'super_admin'] },
   { icon: Activity, label: 'Qualidade de Dados', href: '/admin/data-quality', roles: ['super_admin'] },
