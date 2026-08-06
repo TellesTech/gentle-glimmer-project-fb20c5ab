@@ -712,9 +712,7 @@ export default function WorkforceDatabase() {
   const totals = records.reduce((acc, r) => ({ hn: acc.hn + r.normal_hours, com: acc.com + r.compensation_hours, h75: acc.h75 + r.overtime_75, h100: acc.h100 + r.overtime_100, adn: acc.adn + r.night_bonus }), { hn: 0, com: 0, h75: 0, h100: 0, adn: 0 });
 
   const byRole = records.reduce((acc, r) => {
-    const normalized = normalizeFunction(r.function_role) || 'MEIO OFICIAL';
-    const validRole = (JOB_FUNCTIONS as readonly string[]).includes(normalized) ? normalized : 'MEIO OFICIAL';
-    const roleName = getBaseFunction(validRole);
+    const roleName = r.function_role || 'MEIO OFICIAL';
     if (!acc[roleName]) acc[roleName] = { workers: new Set<string>(), hn: 0, com: 0, h75: 0, h100: 0, adn: 0 };
     acc[roleName].workers.add(r.worker_name.trim().toUpperCase());
     acc[roleName].hn += r.normal_hours;
