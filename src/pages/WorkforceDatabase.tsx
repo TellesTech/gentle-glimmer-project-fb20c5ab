@@ -985,6 +985,9 @@ export default function WorkforceDatabase() {
     const cols = ['ATIVIDADE', 'DIA', 'NOME', 'FUNÇÃO', 'INÍCIO', 'FIM', 'HN', 'COM', 'HH-75%', 'HH-100%', 'ADN'];
     const colWidths = [50, 22, 40, 30, 16, 16, 14, 14, 16, 18, 14];
     let y = headerH + 5; const startX = 10;
+    doc.setTextColor(60, 60, 60); doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
+    doc.text(`Fábrica: ${selectedSiteName}  |  Atividade: ${selectedActivityLabel}  |  Registros: ${records.length}`, startX, y + 2);
+    y += 6;
     const drawTableHeader = () => {
       doc.setFillColor(...accentRgb); doc.rect(startX, y, colWidths.reduce((a, b) => a + b, 0), 7, 'F');
       doc.setTextColor(255, 255, 255); doc.setFontSize(7); doc.setFont('helvetica', 'bold');
