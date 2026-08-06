@@ -216,10 +216,10 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
       if (!selection.projectId) return null;
       const { data } = await supabase
         .from('projects')
-        .select('id, progress_target, end_date, default_planned_workforce, company_id')
+        .select('id, progress_target, end_date, default_planned_workforce, company_id, site_id')
         .eq('id', selection.projectId)
         .maybeSingle();
-      return data;
+      return data as { id: string; progress_target: number; end_date: string; default_planned_workforce: number; company_id: string; site_id: string } | null;
     },
     enabled: !!selection.projectId,
   });
@@ -306,16 +306,6 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
   // Collaborator selector states
   const [collaboratorPopoverOpen, setCollaboratorPopoverOpen] = useState(false);
   const [collaboratorSearch, setCollaboratorSearch] = useState('');
-
-  // Filter profiles based on current site
-  const filteredSiteProfiles = allProfiles.filter(p => {
-    if (!projectMeta?.site_id) return true;
-    const pSiteIds = (p as any).siteIds || [];
-    if (pSiteIds.length > 0) {
-      return pSiteIds.includes(projectMeta.site_id);
-    }
-    return true;
-  });
   
   // Calcular efetivo real baseado na attendance
   const actualWorkforce = formData.attendance.filter(a => a.present).length;
@@ -443,6 +433,16 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
         siteIds: (p as any).site_responsibles?.map((sr: any) => sr.site_id) || []
       }));
     },
+  });
+  
+  // Filter profiles based on current site (calculated after allProfiles is defined)
+  const filteredSiteProfiles = allProfiles.filter(p => {
+    if (!projectMeta?.site_id) return true;
+    const pSiteIds = (p as any).siteIds || [];
+    if (pSiteIds.length > 0) {
+      return pSiteIds.includes(projectMeta.site_id);
+    }
+    return true;
   });
 
   // Match profile by partial name (first name, contains, exact)
