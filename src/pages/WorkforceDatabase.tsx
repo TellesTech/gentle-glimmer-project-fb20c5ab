@@ -712,9 +712,7 @@ export default function WorkforceDatabase() {
   const totals = records.reduce((acc, r) => ({ hn: acc.hn + r.normal_hours, com: acc.com + r.compensation_hours, h75: acc.h75 + r.overtime_75, h100: acc.h100 + r.overtime_100, adn: acc.adn + r.night_bonus }), { hn: 0, com: 0, h75: 0, h100: 0, adn: 0 });
 
   const byRole = records.reduce((acc, r) => {
-    const normalized = normalizeFunction(r.function_role) || 'MEIO OFICIAL';
-    const validRole = (JOB_FUNCTIONS as readonly string[]).includes(normalized) ? normalized : 'MEIO OFICIAL';
-    const roleName = getBaseFunction(validRole);
+    const roleName = r.function_role || 'MEIO OFICIAL';
     if (!acc[roleName]) acc[roleName] = { workers: new Set<string>(), hn: 0, com: 0, h75: 0, h100: 0, adn: 0 };
     acc[roleName].workers.add(r.worker_name.trim().toUpperCase());
     acc[roleName].hn += r.normal_hours;
@@ -733,9 +731,8 @@ export default function WorkforceDatabase() {
     ws.columns = [{ header: 'ATIVIDADE', key: 'activity', width: 30 }, { header: 'DIA', key: 'date', width: 12 }, { header: 'NOME', key: 'name', width: 25 }, { header: 'FUNÇÃO', key: 'role', width: 20 }, { header: 'INÍCIO', key: 'start', width: 18 }, { header: 'FIM', key: 'end', width: 16 }, { header: 'HN', key: 'hn', width: 8 }, { header: 'COM', key: 'com', width: 8 }, { header: 'HH-75%', key: 'h75', width: 8 }, { header: 'HH-100%', key: 'h100', width: 10 }, { header: 'ADN', key: 'adn', width: 8 }];
     ws.getRow(1).eachCell(cell => { Object.assign(cell, { style: headerStyle }); });
     records.forEach(r => {
-      const fnNorm = normalizeFunction(r.function_role) || 'MEIO OFICIAL';
-      const fnValid = (JOB_FUNCTIONS as readonly string[]).includes(fnNorm) ? fnNorm : 'MEIO OFICIAL';
-      ws.addRow({ activity: r.activity_name?.toUpperCase(), date: format(new Date(r.date + 'T12:00:00'), 'dd/MM/yyyy'), name: r.worker_name, role: getBaseFunction(fnValid), start: r.start_time || '', end: r.end_time || '', hn: formatHHMM(r.normal_hours), com: formatHHMM(r.compensation_hours), h75: formatHHMM(r.overtime_75), h100: formatHHMM(r.overtime_100), adn: formatHHMM(r.night_bonus) });
+      const fnValid = r.function_role || 'MEIO OFICIAL';
+      ws.addRow({ activity: r.activity_name?.toUpperCase(), date: format(new Date(r.date + 'T12:00:00'), 'dd/MM/yyyy'), name: r.worker_name, role: fnValid, start: r.start_time || '', end: r.end_time || '', hn: formatHHMM(r.normal_hours), com: formatHHMM(r.compensation_hours), h75: formatHHMM(r.overtime_75), h100: formatHHMM(r.overtime_100), adn: formatHHMM(r.night_bonus) });
     });
     const totalRow = ws.addRow({ activity: 'TOTAL', hn: formatHHMM(totals.hn), com: formatHHMM(totals.com), h75: formatHHMM(totals.h75), h100: formatHHMM(totals.h100), adn: formatHHMM(totals.adn) });
     totalRow.font = { bold: true };
