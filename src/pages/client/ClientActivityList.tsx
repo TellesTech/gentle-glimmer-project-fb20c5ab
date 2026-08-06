@@ -374,6 +374,31 @@ export default function ClientActivityList() {
           </div>
         )}
       </div>
+
+      <RenameActivityDialog
+        target={
+          renameOpen
+            ? {
+                groupKey: projectId || '',
+                siteId: activityInfo?.siteId ?? null,
+                currentName: displayName,
+                hasCustomName: !!customName,
+              }
+            : null
+        }
+        isSaving={renamingActivity}
+        onOpenChange={(open) => setRenameOpen(open)}
+        onSave={async (name) => {
+          if (!activityInfo?.siteId || !projectId) return;
+          await renameActivity({ siteId: activityInfo.siteId, groupKey: projectId, name });
+          setRenameOpen(false);
+        }}
+        onReset={async () => {
+          if (!activityInfo?.siteId || !projectId) return;
+          await resetActivityName({ siteId: activityInfo.siteId, groupKey: projectId });
+          setRenameOpen(false);
+        }}
+      />
     </ClientLayout>
   );
 }
