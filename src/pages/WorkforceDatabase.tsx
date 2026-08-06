@@ -155,20 +155,38 @@ export default function WorkforceDatabase() {
         !name || name === '*' || name.startsWith('Atividade criada via') || name.trim().length <= 1;
 
       const enhancedProjects = data.map((p: any) => {
-        const latestReport = p.reports?.[0];
-        const latestLocation = latestReport?.location;
-        const latestOmTitle = latestReport?.maintenance_order_title;
+        // Coletar todos os títulos de OM e localizações únicos de todos os relatórios do projeto
+        const allLocations = Array.from(new Set((p.reports || [])
+          .map((r: any) => r.location)
+          .filter(Boolean)));
         
-        // Se o nome do projeto for genérico, tenta usar a localização ou título da OM do último relatório
+        const allOmTitles = Array.from(new Set((p.reports || [])
+          .map((r: any) => r.maintenance_order_title)
+          .filter(Boolean)));
+
+        const latestLocation = allLocations[0] || '';
+        const latestOmTitle = allOmTitles[0] || '';
+        
+        // Se o nome do projeto for genérico, tenta usar a localização ou título da OM mais recente
         const displayName = isGenericName(p.name) 
           ? (latestLocation || latestOmTitle || p.name) 
           : p.name;
+
+        // A searchString agora inclui TODOS os títulos e localizações encontrados nos relatórios
+        const searchString = [
+          displayName,
+          p.name,
+          ...allLocations,
+          ...allOmTitles,
+          p.sites?.name || '',
+          p.sites?.companies?.name || ''
+        ].filter(Boolean).join(' | ').toLowerCase();
 
         return {
           id: p.id,
           name: displayName,
           site_id: p.site_id,
-          searchString: `${displayName} | ${p.name} | ${latestLocation || ''} | ${latestOmTitle || ''} | ${p.sites?.name || ''} | ${p.sites?.companies?.name || ''}`.toLowerCase()
+          searchString
         };
       });
       setProjects(enhancedProjects);
@@ -211,16 +229,33 @@ export default function WorkforceDatabase() {
           !name || name === '*' || name.startsWith('Atividade criada via') || name.trim().length <= 1;
 
         currentProjects = latestProjects.map((p: any) => {
-          const latestReport = p.reports?.[0];
-          const latestLocation = latestReport?.location;
-          const latestOmTitle = latestReport?.maintenance_order_title;
+          const allLocations = Array.from(new Set((p.reports || [])
+            .map((r: any) => r.location)
+            .filter(Boolean)));
+          
+          const allOmTitles = Array.from(new Set((p.reports || [])
+            .map((r: any) => r.maintenance_order_title)
+            .filter(Boolean)));
+
+          const latestLocation = allLocations[0] || '';
+          const latestOmTitle = allOmTitles[0] || '';
+          
           const displayName = isGenericName(p.name) ? (latestLocation || latestOmTitle || p.name) : p.name;
           
+          const searchString = [
+            displayName,
+            p.name,
+            ...allLocations,
+            ...allOmTitles,
+            p.sites?.name || '',
+            p.sites?.companies?.name || ''
+          ].filter(Boolean).join(' | ').toLowerCase();
+
           return {
             id: p.id,
             name: displayName,
             site_id: p.site_id,
-            searchString: `${displayName} | ${p.name} | ${latestLocation || ''} | ${latestOmTitle || ''} | ${p.sites?.name || ''} | ${p.sites?.companies?.name || ''}`.toLowerCase()
+            searchString
           };
         });
         setProjects(currentProjects);
