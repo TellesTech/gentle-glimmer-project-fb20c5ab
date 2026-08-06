@@ -42,12 +42,26 @@ function matchProfileByName(partialName: string, profiles: ProfileEntry[]): Prof
   const needle = partialName.trim().toUpperCase();
   if (!needle) return null;
 
-  // Exact match
+  // Exact match (after trim)
   const exact = profiles.find(p => p.name.trim().toUpperCase() === needle);
   if (exact) return exact;
 
+  // Multi-word exact match (handle potential variations in spacing)
+  const normalizedNeedle = needle.replace(/\s+/g, ' ');
+  const normalizedExact = profiles.find(p => p.name.trim().toUpperCase().replace(/\s+/g, ' ') === normalizedNeedle);
+  if (normalizedExact) return normalizedExact;
+
+  // First name + Second name match (more specific than just first name)
+  const needleParts = normalizedNeedle.split(/\s+/);
+  if (needleParts.length >= 2) {
+    const twoNameMatch = profiles.find(p => {
+      const pParts = p.name.trim().toUpperCase().split(/\s+/);
+      return pParts[0] === needleParts[0] && pParts[1] === needleParts[1];
+    });
+    if (twoNameMatch) return twoNameMatch;
+  }
+
   // First name match (only if needle is a single word to avoid false positives)
-  const needleParts = needle.split(/\s+/);
   if (needleParts.length === 1) {
     const firstNameMatch = profiles.find(p => {
       const firstName = p.name.trim().toUpperCase().split(/\s+/)[0];
@@ -56,7 +70,7 @@ function matchProfileByName(partialName: string, profiles: ProfileEntry[]): Prof
     if (firstNameMatch) return firstNameMatch;
   }
 
-  // Partial / contains match
+  // Partial / contains match (as last resort)
   const containsMatch = profiles.find(p => {
     const pName = p.name.trim().toUpperCase();
     return pName.includes(needle) || needle.includes(pName);

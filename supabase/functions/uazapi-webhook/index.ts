@@ -112,11 +112,12 @@ const FUNCTION_STOPWORDS = new Set<string>([
 
 // Normalize a name: lowercase, accent-stripped, single spaces, strip leading numbering ("1.", "2)", "-")
 function normalizeName(s: string): string {
-  return stripAccents((s || "").toLowerCase())
-    .replace(/^\s*\d+[\.\)\-:]\s*/, "")
-    .replace(/[^a-z\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  if (!s) return "";
+  return stripAccents(s.toLowerCase())
+    .replace(/^\s*\d+[\.\)\-:]\s*/, "") // Remove numbering
+    .replace(/[^a-z\s]/g, " ")          // Keep only letters and spaces
+    .replace(/\s+/g, " ")               // Normalize spaces
+    .trim();                            // Aggressive trim
 }
 
 // Remove tokens que são cargos/níveis (FUNCTION_STOPWORDS), preservando apenas nome próprio
