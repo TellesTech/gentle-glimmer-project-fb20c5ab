@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfMonth, endOfMonth, subMonths, subDays, parseISO } from 'date-fns';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Database, Loader2, FileSpreadsheet, FileText, Trash2, Upload, BarChart3, Brain, AlertTriangle, ClipboardList, Factory, RefreshCw } from 'lucide-react';
+import { Database, Loader2, FileSpreadsheet, FileText, Trash2, Upload, BarChart3, Brain, AlertTriangle, ClipboardList, Factory, RefreshCw, Check, ChevronsUpDown, Search } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import { normalizeFunction, JOB_FUNCTIONS, getBaseFunction } from '@/lib/jobFunctions';
@@ -25,6 +25,9 @@ import { WorkforceDashboardTab } from '@/components/workforce/WorkforceDashboard
 import { WorkforceReportsTab } from '@/components/workforce/WorkforceReportsTab';
 import { WorkforceAITab } from '@/components/workforce/WorkforceAITab';
 import { WorkforceDelaysTab } from '@/components/workforce/WorkforceDelaysTab';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 
 interface WorkforceRecord {
   id: string;
@@ -91,7 +94,12 @@ export default function WorkforceDatabase() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => { loadSites(); loadProjects(); }, []);
-  useEffect(() => { loadRecords(); loadDelays(); loadLastReportDate(); }, [startDate, endDate, selectedProject, selectedSite]);
+  useEffect(() => { 
+    console.log('WorkforceDatabase: Effect triggered by filters:', { startDate, endDate, selectedProject, selectedSite });
+    loadRecords(); 
+    loadDelays(); 
+    loadLastReportDate(); 
+  }, [startDate, endDate, selectedProject, selectedSite]);
 
   const loadSites = async () => {
     // Buscar sites + último RDO de cada site (via projects + reports)
@@ -1022,13 +1030,66 @@ export default function WorkforceDatabase() {
             </div>
             <div className="min-w-0 space-y-1.5">
               <Label>Atividade / Projeto</Label>
-              <Select value={selectedProject} onValueChange={setSelectedProject}>
-                <SelectTrigger className="truncate focus:ring-1 focus:ring-offset-0"><SelectValue placeholder="Todos" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os projetos</SelectItem>
-                  {filteredProjects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className={cn(
+                      "w-full justify-between font-normal truncate",
+                      !selectedProject && "text-muted-foreground"
+                    )}
+                  >
+                    <span className="truncate">
+                      {selectedProject === 'all' 
+                        ? "Todos os projetos" 
+                        : projects.find((p) => p.id === selectedProject)?.name || "Selecionar projeto..."}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar projeto..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhum projeto encontrado.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="all"
+                          onSelect={() => {
+                            setSelectedProject('all');
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedProject === 'all' ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          Todos os projetos
+                        </CommandItem>
+                        {filteredProjects.map((p) => (
+                          <CommandItem
+                            key={p.id}
+                            value={p.name}
+                            onSelect={() => {
+                              setSelectedProject(p.id);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedProject === p.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {p.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="flex gap-2">
               <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportExcel} />
