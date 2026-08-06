@@ -1151,7 +1151,10 @@ export default function WorkforceDatabase() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                  <Command>
+                  <Command filter={(value, search) => {
+                    if (value.toLowerCase().includes(search.toLowerCase())) return 1;
+                    return 0;
+                  }}>
                     <CommandInput placeholder="Buscar projeto..." />
                     <CommandList>
                       <CommandEmpty>Nenhum projeto encontrado.</CommandEmpty>
