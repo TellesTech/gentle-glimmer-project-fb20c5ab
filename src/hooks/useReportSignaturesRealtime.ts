@@ -348,8 +348,6 @@ export function useReportSignaturesRealtime(reportId: string | undefined) {
 
         const info = internalInfo(e.name);
         if (!info) {
-          // Exclusão específica solicitada
-          if (normalize(e.name) === 'alex manhaes') return false;
           return true;
         }
 
