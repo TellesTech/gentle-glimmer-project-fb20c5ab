@@ -210,14 +210,12 @@ export default function UsersPage() {
     setIsCreateEditOpen(true);
 
     // Load site assignments (backend validates super_admin permission)
-    if (userToEdit.role !== 'super_admin') {
-      try {
-        const resp = await supabase.functions.invoke('admin-users', {
-          body: { action: 'list-user-sites', userId: userToEdit.id }
-        });
-        if (resp.data?.siteIds) setAssignedSiteIds(new Set(resp.data.siteIds));
-      } catch (e) { console.warn('Failed to load user sites', e); }
-    }
+    try {
+      const resp = await supabase.functions.invoke('admin-users', {
+        body: { action: 'list-user-sites', userId: userToEdit.id }
+      });
+      if (resp.data?.siteIds) setAssignedSiteIds(new Set(resp.data.siteIds));
+    } catch (e) { console.warn('Failed to load user sites', e); }
   };
 
   const openPasswordReset = (userToReset: AdminUser) => {
@@ -281,8 +279,8 @@ export default function UsersPage() {
         // Função do colaborador é resolvida via profiles.job_title em tempo de leitura
 
         // Persist site assignments (backend validates super_admin permission).
-        // Skip only when the *resulting* role is super_admin (acesso total automático).
-        if (formData.role !== 'super_admin') {
+        // Para super admins isso é apenas um filtro de visualização dos RDOs.
+        {
           const sitesResp = await supabase.functions.invoke('admin-users', {
             body: { action: 'set-user-sites', userId: editingUser.id, siteIds: Array.from(assignedSiteIds) }
           });
@@ -335,7 +333,7 @@ export default function UsersPage() {
         toast({ title: 'Usuário criado com sucesso' });
 
         // Persist site assignments for new user (super admin only)
-        if (role === 'super_admin' && createdUserId && assignedSiteIds.size > 0 && formData.role !== 'super_admin') {
+        if (role === 'super_admin' && createdUserId && assignedSiteIds.size > 0) {
           const sitesResp = await supabase.functions.invoke('admin-users', {
             body: { action: 'set-user-sites', userId: createdUserId, siteIds: Array.from(assignedSiteIds) }
           });
@@ -1153,9 +1151,19 @@ export default function UsersPage() {
               </div>
             )}
             {role === 'super_admin' && formData.role === 'super_admin' && (
-              <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground flex items-center gap-2">
-                <Factory className="h-4 w-4 text-primary" />
-                Super admins têm acesso a todas as fábricas automaticamente.
+              <div className="space-y-2">
+                <SiteAccessSelector
+                  selectedSiteIds={assignedSiteIds}
+                  onChange={setAssignedSiteIds}
+                />
+                <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground flex items-start gap-2">
+                  <Factory className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  <span>
+                    Fábricas visíveis nos RDOs. Sem nenhuma marcada, o super admin continua
+                    vendo todas as fábricas. É apenas um filtro de visualização — as permissões
+                    de super admin continuam totais.
+                  </span>
+                </div>
               </div>
             )}
           </div>
