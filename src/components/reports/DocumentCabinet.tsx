@@ -1324,13 +1324,32 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                 </p>
               </div>
             </div>
-            <DownloadButton
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() =>
+                  setRenameTarget({
+                    groupKey: selectedProjectFolder.id,
+                    siteId: openSiteId,
+                    currentName: selectedProjectFolder.name,
+                    hasCustomName: activityNamesBySite.has(`${openSiteId}::${selectedProjectFolder.id}`),
+                  })
+                }
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Renomear
+              </Button>
+              <DownloadButton
               reportIds={selectedProjectFolder.reports.map(r => r.id)}
               folderName={`${selectedCompany.name}_${selectedSiteFolder.name}_${selectedYearFolder.year}_${selectedMonthFolder.monthName}_${
                 selectedProjectFolder.omNumber ? `OM-${selectedProjectFolder.omNumber}` : selectedProjectFolder.name
               }`}
               folderId={`om-${selectedProjectFolder.id}-${openMonth}-${openYear}`}
-            />
+              />
+            </div>
           </div>
 
           {/* Reports list with Drag and Drop */}

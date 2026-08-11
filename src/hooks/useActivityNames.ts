@@ -38,6 +38,8 @@ export function useActivityNames(siteIds: string[] | undefined) {
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['rdo-activity-names'] });
+    queryClient.invalidateQueries({ queryKey: ['client-activity-info'] });
+    queryClient.invalidateQueries({ queryKey: ['reports-cabinet-all-v2'] });
   };
 
   const rename = useMutation({
