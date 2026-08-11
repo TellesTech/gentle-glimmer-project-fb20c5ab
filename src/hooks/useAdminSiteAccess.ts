@@ -41,8 +41,10 @@ export function useAdminSiteAccess(): AdminSiteAccess {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const scopedRole = role === 'admin' || role === 'super_admin';
+
   useEffect(() => {
-    if (!user || role !== 'admin') {
+    if (!user || !scopedRole) {
       setIsLoading(false);
       return;
     }
@@ -137,7 +139,7 @@ export function useAdminSiteAccess(): AdminSiteAccess {
       setError(err?.message || 'Erro ao carregar unidades');
       setIsLoading(false);
     });
-  }, [user, role]);
+  }, [user, role, scopedRole]);
 
   const setActiveSiteId = useCallback((id: string) => {
     setActiveSiteIdState(id);
@@ -152,7 +154,7 @@ export function useAdminSiteAccess(): AdminSiteAccess {
     primarySiteId: activeSiteId || siteIds[0] || null,
     activeSiteId,
     setActiveSiteId,
-    isLoading: role === 'admin' ? isLoading : false,
+    isLoading: scopedRole ? isLoading : false,
     error,
   };
 }

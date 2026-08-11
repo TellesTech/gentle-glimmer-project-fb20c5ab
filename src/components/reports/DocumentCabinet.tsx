@@ -207,7 +207,8 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
   const { role, user } = useAuth();
   const queryClient = useQueryClient();
   const { siteIds } = useAdminSiteAccess();
-  const isRestrictedAdmin = role === 'admin' && siteIds.length > 0;
+  // Escopo restrito: admin ou super admin com fábricas selecionadas no cadastro.
+  const isRestrictedAdmin = (role === 'admin' || role === 'super_admin') && siteIds.length > 0;
   const isSuperAdmin = role === 'super_admin' || role === 'admin';
 
   const [searchParams, setSearchParams] = useSearchParams();
