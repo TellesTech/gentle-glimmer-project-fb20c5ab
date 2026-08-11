@@ -178,6 +178,8 @@ export async function ensureAccessRecord(
       .select("id")
       .eq("report_id", reportId)
       .ilike("client_email", signer.email)
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
     if (existing) return existing.id;
   }
@@ -189,13 +191,22 @@ export async function ensureAccessRecord(
     .select("id")
     .single();
   if (error || !data) {
-    console.error("ensureAccessRecord insert failed:", error?.message, error?.details, error?.hint);
+    console.error("ensureAccessRecord insert failed", JSON.stringify({
+      code: (error as { code?: string } | null)?.code ?? null,
+      message: error?.message ?? null,
+      details: error?.details ?? null,
+      hint: error?.hint ?? null,
+      reportId,
+      signerKind: signer.kind,
+      hasEmail: !!signer.email,
+    }));
     if (signer.email) {
       const { data: retry } = await service
         .from("client_report_access")
         .select("id")
         .eq("report_id", reportId)
         .ilike("client_email", signer.email)
+        .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       if (retry) return retry.id;
