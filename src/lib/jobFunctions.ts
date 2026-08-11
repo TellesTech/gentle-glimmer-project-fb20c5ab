@@ -29,6 +29,7 @@ export const JOB_FUNCTIONS = [
   'PINTOR ESCALADOR N1',
   'PINTOR ESCALADOR N2',
   'PINTOR ESCALADOR N3',
+  'PLANEJADOR',
   'PROGRAMADOR',
   'PROJETISTA',
   'RH',
@@ -195,8 +196,12 @@ const SYNONYMS: Record<string, string> = {
 
   // Analista de Planejamento
   'ANALISTA DE PLANEJAMENTO': 'ANALISTA DE PLANEJAMENTO',
-  'PLANEJAMENTO': 'ANALISTA DE PLANEJAMENTO',
   'ANALISTA PLANEJAMENTO': 'ANALISTA DE PLANEJAMENTO',
+
+  // Planejador
+  'PLANEJADOR': 'PLANEJADOR',
+  'PLANEJADORA': 'PLANEJADOR',
+  'PLANEJAMENTO': 'PLANEJADOR',
 
   // Sinônimos extras
   'COLABORADOR': 'MEIO OFICIAL',
@@ -253,6 +258,7 @@ export function getBaseFunction(role: string): string {
   if (upper.startsWith('SUPERVISOR')) return 'SUPERVISOR';
   if (upper === 'MEIO OFICIAL') return 'MEIO OFICIAL';
   if (upper === 'PROGRAMADOR') return 'PROGRAMADOR';
+  if (upper === 'PLANEJADOR') return 'PLANEJADOR';
   if (upper === 'PROJETISTA') return 'PROJETISTA';
   if (upper === 'ALMOXARIFE') return 'ALMOXARIFE';
   if (upper === 'COMERCIAL') return 'COMERCIAL';
@@ -270,6 +276,7 @@ export function getBaseFunction(role: string): string {
   if (upper.startsWith('SERVIÇOS GERAIS') || upper.startsWith('SERVICOS GERAIS')) return 'SERVIÇOS GERAIS';
   if (upper.startsWith('COORDENADOR') || upper.startsWith('COORD')) return 'COORDENADOR';
   if (upper.startsWith('ELETRICISTA')) return 'ELETRICISTA ESCALADOR N1';
-  if (upper.startsWith('ANALISTA DE PLANEJAMENTO') || upper === 'PLANEJAMENTO') return 'ANALISTA DE PLANEJAMENTO';
+  if (upper.startsWith('ANALISTA DE PLANEJAMENTO')) return 'ANALISTA DE PLANEJAMENTO';
+  if (upper.startsWith('PLANEJADOR') || upper === 'PLANEJAMENTO') return 'PLANEJADOR';
   return upper;
 }
