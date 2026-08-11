@@ -37,6 +37,7 @@ export function useGlobalErrorHandler() {
         msg.includes('Failed to fetch') ||
         msg.includes('NetworkError') ||
         msg.includes('Load failed') ||
+        msg.includes('ResizeObserver loop') ||
         msg.includes('Lock') ||
         msg.includes('auth-token')
       ) {
@@ -65,6 +66,7 @@ export function useGlobalErrorHandler() {
         message.includes('Failed to fetch') ||
         message.includes('NetworkError') ||
         message.includes('Load failed') ||
+        message.includes('ResizeObserver loop') ||
         message.includes('AbortError') ||
         message.includes('steal')
       ) {
