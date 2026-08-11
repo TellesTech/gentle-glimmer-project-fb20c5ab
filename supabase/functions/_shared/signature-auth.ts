@@ -181,11 +181,29 @@ export async function ensureAccessRecord(
       .maybeSingle();
     if (existing) return existing.id;
   }
+  // created_by references profiles(id): only internal WEES users have a profile row.
+  const createdBy = signer.kind === "wees" ? signer.userId : null;
   const { data, error } = await service
     .from("client_report_access")
-    .insert({ report_id: reportId, client_name: signer.name, client_email: signer.email, created_by: signer.userId })
+    .insert({ report_id: reportId, client_name: signer.name, client_email: signer.email, created_by: createdBy })
     .select("id")
     .single();
-  if (error || !data) throw new SignatureAuthError("Não foi possível registrar o acesso da assinatura", 500);
+  if (error || !data) {
+    console.error("ensureAccessRecord insert failed:", error?.message, error?.details, error?.hint);
+    if (signer.email) {
+      const { data: retry } = await service
+        .from("client_report_access")
+        .select("id")
+        .eq("report_id", reportId)
+        .ilike("client_email", signer.email)
+        .limit(1)
+        .maybeSingle();
+      if (retry) return retry.id;
+    }
+    throw new SignatureAuthError(
+      `Não foi possível registrar o acesso da assinatura${error?.message ? `: ${error.message}` : ""}`,
+      500,
+    );
+  }
   return data.id;
 }
