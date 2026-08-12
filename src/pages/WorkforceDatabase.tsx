@@ -312,13 +312,14 @@ export default function WorkforceDatabase() {
       }
 
       // 3. Converter attendance em WorkforceRecord com cálculo CLT
-      // Agrupar por worker+date para mesclar turnos do mesmo dia
+      // Agrupar por worker+date+RDO: cada atividade é calculada separadamente
       const attByKey = new Map<string, any[]>();
       for (const att of (attendanceData || [])) {
         const report = (att as any).reports as any;
         const date = report?.date || '';
         const name = stripAccents(((att as any).user_name || 'Sem nome').trim().toUpperCase());
-        const key = `${name}|${date}`;
+        const scope = report?.id || report?.project_id || 'sem-rdo';
+        const key = `${name}|${date}|${scope}`;
         if (!attByKey.has(key)) attByKey.set(key, []);
         attByKey.get(key)!.push(att);
       }
@@ -660,13 +661,14 @@ export default function WorkforceDatabase() {
         from += pageSize;
       }
 
-      // 2) Agrupar por (worker+date) — mesma chave usada em loadRecords
+      // 2) Agrupar por (worker+date+RDO) — mesma chave usada em loadRecords
       const groups = new Map<string, any[]>();
       for (const att of attendanceData) {
         const report = (att as any).reports;
         const date = report?.date || '';
         const name = ((att as any).user_name || 'Sem nome').trim().toUpperCase();
-        const key = `${name}|${date}`;
+        const scope = report?.id || report?.project_id || 'sem-rdo';
+        const key = `${name}|${date}|${scope}`;
         if (!groups.has(key)) groups.set(key, []);
         groups.get(key)!.push(att);
       }
