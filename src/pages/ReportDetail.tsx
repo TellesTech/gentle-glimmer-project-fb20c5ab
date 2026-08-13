@@ -20,6 +20,7 @@ import { EmptyState, StatusBadge } from '@/components/shared';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { PhotoGallery } from '@/components/reports/PhotoGallery';
 import { ApprovalTimeline } from '@/components/reports/ApprovalTimeline';
+import { fetchReportHistoryWithSignatures } from '@/lib/reportHistoryWithSignatures';
 import { ReportProgressStepper } from '@/components/reports/ReportProgressStepper';
 import { ShareReportDialog } from '@/components/client/ShareReportDialog';
 import { SendForSignatureDialog } from '@/components/reports/SendForSignatureDialog';
