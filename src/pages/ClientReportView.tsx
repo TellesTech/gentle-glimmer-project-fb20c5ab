@@ -26,6 +26,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PhotoGallery } from '@/components/reports/PhotoGallery';
 import { SignatureTimeline } from '@/components/client/SignatureTimeline';
 import { ApprovalTimeline } from '@/components/reports/ApprovalTimeline';
+import { fetchReportHistoryWithSignatures } from '@/lib/reportHistoryWithSignatures';
 import { useReportSignaturesRealtime } from '@/hooks/useReportSignaturesRealtime';
 import { getReportPdfBlob } from '@/lib/clientReportDownload';
 import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
@@ -248,22 +249,7 @@ export default function ClientReportView() {
     queryFn: async () => {
       if (!resolvedReportId) return [];
 
-      const { data, error } = await supabase
-        .from('report_history')
-        .select(`
-          id,
-          action,
-          action_at,
-          details,
-          old_values,
-          new_values,
-          actor:profiles!action_by(id, name, avatar_url)
-        `)
-        .eq('report_id', resolvedReportId)
-        .order('action_at', { ascending: true });
-
-      if (error) throw error;
-      return data || [];
+      return await fetchReportHistoryWithSignatures(resolvedReportId);
     },
     enabled: !!resolvedReportId,
   });
