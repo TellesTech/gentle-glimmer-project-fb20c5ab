@@ -35,14 +35,28 @@ export async function getReportPdfBlob(reportId: string): Promise<{ blob: Blob; 
 
   const filename = buildRdoFileName((report as any).rdo_number, (report as any).date);
 
-  // 1) Signed PDF already stored
+  // 1) Signed PDF already stored — usar apenas se estiver atualizado
+  // (não pode ser mais antigo que a última assinatura registrada)
   const signedUrl = (report as any).signed_pdf_url;
+  const signatureRows: any[] = (report as any).signatures || [];
+  const lastSignatureAt = signatureRows.reduce((acc: number, s: any) => {
+    const t = s?.signed_at ? new Date(s.signed_at).getTime() : 0;
+    return t > acc ? t : acc;
+  }, 0);
+
   if (signedUrl) {
     try {
       const resp = await fetch(signedUrl);
       if (resp.ok) {
-        const blob = await resp.blob();
-        if (blob.size > 0) return { blob, filename };
+        const lastModifiedHeader = resp.headers.get('last-modified');
+        const fileTime = lastModifiedHeader ? new Date(lastModifiedHeader).getTime() : 0;
+        const isStale = !fileTime || (lastSignatureAt > 0 && fileTime < lastSignatureAt);
+        if (!isStale) {
+          const blob = await resp.blob();
+          if (blob.size > 0) return { blob, filename };
+        } else {
+          console.info('[clientReportDownload] PDF armazenado desatualizado, regerando com todas as assinaturas');
+        }
       }
     } catch (err) {
       console.warn('[clientReportDownload] falha ao baixar PDF assinado, gerando novo', err);

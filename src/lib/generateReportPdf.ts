@@ -65,6 +65,9 @@ const COLORS: Record<string, RGB> = {
   border: { r: 200, g: 200, b: 200 },
 };
 
+// Verde usado para indicar assinatura concluída
+const SIGNED_GREEN: RGB = { r: 22, g: 128, b: 61 };
+
 // === HELPER: Carregar imagem como Base64 ===
 async function loadImageAsBase64(storedUrl: string): Promise<string | null> {
   try {
@@ -1052,10 +1055,15 @@ async function buildReportPdfDoc(
     }
   }
   
-  // === ASSINATURAS DO CLIENTE ===
-  const manualSignatures = (signatures || []).filter(
-    sig => sig.signatureData
-  );
+  // === ASSINATURAS (WEES + CLIENTE) ===
+  const manualSignatures = (signatures || [])
+    .filter(sig => sig.signatureData)
+    .slice()
+    .sort((a, b) => {
+      const ta = a.signedAt ? new Date(a.signedAt).getTime() : 0;
+      const tb = b.signedAt ? new Date(b.signedAt).getTime() : 0;
+      return ta - tb;
+    });
   
   if (manualSignatures.length > 0) {
     drawSectionTitle('Assinaturas', `${manualSignatures.length} assinatura${manualSignatures.length > 1 ? 's' : ''}`);
@@ -1064,9 +1072,10 @@ async function buildReportPdfDoc(
       // Calcular altura necessária
       const sigBoxHeight = 35;
       checkPageBreak(sigBoxHeight + 8);
-      
-      // Box com borda usando cor primária
-      setDrawColor(primaryColor);
+
+      const isSigned = Boolean(sig.signedAt);
+      // Borda verde quando assinado, cor primária caso contrário
+      setDrawColor(isSigned ? SIGNED_GREEN : primaryColor);
       setFillColor(COLORS.lightGray);
       doc.setLineWidth(1);
       doc.roundedRect(margin, y, contentWidth, sigBoxHeight, 2, 2, 'FD');
@@ -1110,7 +1119,16 @@ async function buildReportPdfDoc(
       doc.setFont(font.family, font.style('bold'));
       const cleanSignerName = (sig.signerName || '').replace(/\s*-\s*Wees$/i, '').trim();
       doc.text(prepareText(cleanSignerName), infoX, infoY);
-      
+
+      // Origem da assinatura (WEES ou Cliente)
+      const roleText = (sig.signerRole || '').toLowerCase();
+      const isClientSigner = /cliente|client/.test(roleText);
+      const originLabel = isClientSigner ? 'CLIENTE' : 'WEES';
+      setColor(isSigned ? SIGNED_GREEN : COLORS.textMuted);
+      doc.setFontSize(6.5);
+      doc.setFont(font.family, font.style('bold'));
+      doc.text(originLabel, pageWidth - margin - 6, infoY, { align: 'right' });
+
       infoY += 5;
       
       if (sig.signerRole) {

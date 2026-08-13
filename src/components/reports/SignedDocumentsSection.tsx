@@ -7,6 +7,7 @@ import {
   Loader2, MapPin, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { getReportPdfBlob } from '@/lib/clientReportDownload';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -121,11 +122,9 @@ export function SignedDocumentsSection({ onClose, adminProjectIds }: SignedDocum
 
     try {
       for (const r of filteredReports) {
-        if (!r.signed_pdf_url) continue;
         try {
-          const res = await fetch(r.signed_pdf_url);
-          if (!res.ok) continue;
-          const buf = await res.arrayBuffer();
+          const { blob: pdfBlob } = await getReportPdfBlob(r.id);
+          const buf = await pdfBlob.arrayBuffer();
           zip.file(buildFileName(r), new Uint8Array(buf));
           successCount++;
         } catch (err) {
@@ -154,19 +153,17 @@ export function SignedDocumentsSection({ onClose, adminProjectIds }: SignedDocum
   };
 
   const handleDownloadSingle = async (r: SignedReport) => {
-    if (!r.signed_pdf_url) {
-      toast.error('PDF assinado não disponível');
-      return;
-    }
     setDownloadingId(r.id);
     try {
-      const res = await fetch(r.signed_pdf_url);
-      if (!res.ok) throw new Error('Falha ao baixar');
-      const blob = await res.blob();
+      const { blob } = await getReportPdfBlob(r.id);
       triggerDownloadFromBlob(blob, buildFileName(r));
     } catch (err) {
       console.error(err);
-      window.open(r.signed_pdf_url, '_blank', 'noopener,noreferrer');
+      if (r.signed_pdf_url) {
+        window.open(r.signed_pdf_url, '_blank', 'noopener,noreferrer');
+      } else {
+        toast.error('Não foi possível gerar o PDF');
+      }
     } finally {
       setDownloadingId(null);
     }
