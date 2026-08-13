@@ -490,6 +490,7 @@ export default function Settings() {
                 <SignatureInput
                   onSignatureChange={(data) => setProfileData(p => ({ ...p, signatureData: data }))}
                   initialSignature={profileData.signatureData}
+                  signerName={profileData.name}
                 />
               </div>
 

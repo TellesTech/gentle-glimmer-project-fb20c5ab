@@ -101,6 +101,7 @@ export function OneClickSignatureCard({
               <div className="w-full min-h-32 overflow-visible bg-white rounded-lg border-2 border-primary/30 flex items-center justify-center p-1">
                 <SignatureImage
                   value={identity.savedSignature}
+                  signerName={identity.name}
                   alt="Sua assinatura cadastrada"
                   className="h-32 w-full"
                 />
