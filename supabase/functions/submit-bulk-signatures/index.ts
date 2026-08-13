@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3.23.8";
-import { createServiceClient, ensureAccessRecord, verifySigner } from "../_shared/signature-auth.ts";
+import { createServiceClient, ensureAccessRecord, finalizeApproval, verifySigner } from "../_shared/signature-auth.ts";
 
 const ItemSchema = z.object({ reportId: z.string().uuid(), documentHash: z.string().max(255).optional().nullable(), documentVersion: z.string().max(100).optional().nullable() }).strict();
 const BodySchema = z.object({
@@ -48,6 +48,7 @@ serve(async (req) => {
           details: { signer_kind: signer.kind, document_hash: item.documentHash || null, document_version: item.documentVersion || null, geolocation: parsed.data.geolocation || null, legal_basis: "MP 2.200-2/2001" },
         });
         if (auditError) console.error("Bulk signature saved but audit failed:", auditError);
+        await finalizeApproval(service, item.reportId, signer);
         results.push({ reportId: item.reportId, ok: true, signatureId: signature.id });
       } catch (error) {
         results.push({ reportId: item.reportId, ok: false, error: error instanceof Error ? error.message : "Erro ao processar o RDO" });
