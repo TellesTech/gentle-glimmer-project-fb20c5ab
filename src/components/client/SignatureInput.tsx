@@ -58,8 +58,8 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
     // Target ink area inside the source surface (leaves room for flourishes).
     const TARGET_W = 1500;
     const TARGET_H = 300;
-    const scale = Math.min(TARGET_W / baseInkWidth, TARGET_H / baseInkHeight, 1.8);
-    const fontSize = Math.max(24, Math.min(180, BASE * scale));
+    const fontScale = Math.min(TARGET_W / baseInkWidth, TARGET_H / baseInkHeight, 1.8);
+    const fontSize = Math.max(24, Math.min(180, BASE * fontScale));
 
     const ratio = fontSize / BASE;
     const inkWidth = baseInkWidth * ratio;
@@ -104,8 +104,8 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
     if (maxX < minX || maxY < minY) return null;
 
     const canvas = document.createElement('canvas');
-    const width = 1200;
-    const height = 320;
+    const width = 1600;
+    const height = 400;
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
