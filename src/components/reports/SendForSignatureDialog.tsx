@@ -24,6 +24,7 @@ import { generateReportPdfAsBlob } from '@/lib/generateReportPdf';
 import { supabase } from '@/integrations/supabase/loose-client';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { SignatureImage } from '@/components/signatures/SignatureImage';
 import type {
   Report, Company, Site, Project,
   Shift, DeviationType, ImpactLevel, ReportStatus,
@@ -548,7 +549,7 @@ export function SendForSignatureDialog({
                 ) : (
                   <div className="bg-white rounded-lg p-2 border border-primary/10">
                     <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1 px-1">Prévia da Assinatura</p>
-                    <img src={weesSigner.signatureData} className="max-h-16 mx-auto object-contain" alt="Assinatura" />
+                    <SignatureImage value={weesSigner.signatureData} className="h-24 w-full" alt="Assinatura" />
                   </div>
                 )}
               </div>
