@@ -549,7 +549,7 @@ export function SendForSignatureDialog({
                 ) : (
                   <div className="bg-white rounded-lg p-2 border border-primary/10">
                     <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1 px-1">Prévia da Assinatura</p>
-                    <SignatureImage value={weesSigner.signatureData} className="h-24 w-full" alt="Assinatura" />
+                    <SignatureImage value={weesSigner.signatureData} signerName={weesSigner.name} className="h-24 w-full" alt="Assinatura" />
                   </div>
                 )}
               </div>

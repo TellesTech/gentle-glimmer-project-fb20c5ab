@@ -380,6 +380,7 @@ export default function ClientProfile() {
                   onSignatureChange={setNewSignature}
                   disabled={isSaving}
                   initialSignature={effectiveProfile.signature_data || undefined}
+                  signerName={effectiveProfile.name}
                 />
                 <div className="flex gap-2">
                   <Button onClick={handleSignatureSave} disabled={isSaving || !newSignature}>
@@ -405,6 +406,7 @@ export default function ClientProfile() {
               <div className="p-3 sm:p-4 border-2 border-dashed rounded-lg bg-muted/30">
                   <SignatureImage
                     value={effectiveProfile.signature_data}
+                    signerName={effectiveProfile.name}
                     alt="Sua assinatura"
                     className="h-28 sm:h-36"
                   />

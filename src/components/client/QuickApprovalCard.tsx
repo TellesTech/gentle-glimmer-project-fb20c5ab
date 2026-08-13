@@ -110,6 +110,7 @@ export function QuickApprovalCard({
             <div className="h-28 w-full overflow-visible bg-white rounded-lg border flex items-center justify-center">
               <SignatureImage
                 value={profile.signature_data}
+                signerName={profile.name}
                 alt="Assinatura" 
                 className="h-full"
               />

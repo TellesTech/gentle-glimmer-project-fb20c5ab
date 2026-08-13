@@ -66,6 +66,7 @@ function Row({ entry }: { entry: SignatureEntry }) {
         <div className="mt-3 min-h-28 w-full overflow-visible bg-background rounded-md border border-border/50 p-1">
           <SignatureImage
             value={entry.signatureData}
+            signerName={entry.name}
             alt={`Assinatura de ${entry.name}`}
             className="h-28 w-full"
           />

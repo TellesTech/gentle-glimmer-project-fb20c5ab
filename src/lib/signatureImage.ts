@@ -9,6 +9,115 @@
 
 export type SignatureKind = 'image' | 'autentique' | 'none';
 
+const SIGNATURE_WIDTH = 1600;
+const SIGNATURE_HEIGHT = 480;
+const SAFE_X = 140;
+const SAFE_Y = 64;
+
+/** Gera uma assinatura tipográfica em alta resolução sem depender do tamanho do nome. */
+export async function generateTypedSignatureImage(name: string): Promise<string | null> {
+  const normalizedName = name.trim();
+  if (!normalizedName || typeof document === 'undefined') return null;
+
+  try {
+    await document.fonts.load('180px "Great Vibes"');
+  } catch {
+    // O fallback cursivo ainda produz uma assinatura completa se a fonte web falhar.
+  }
+  const fontFor = (size: number) => `${size}px "Great Vibes", cursive`;
+  const measureCanvas = document.createElement('canvas');
+  const measureContext = measureCanvas.getContext('2d');
+  if (!measureContext) return null;
+
+  const baseSize = 180;
+  measureContext.font = fontFor(baseSize);
+  const metrics = measureContext.measureText(normalizedName);
+  const left = metrics.actualBoundingBoxLeft || 0;
+  const right = metrics.actualBoundingBoxRight || metrics.width;
+  const ascent = metrics.actualBoundingBoxAscent || baseSize;
+  const descent = metrics.actualBoundingBoxDescent || baseSize * 0.4;
+  const measuredWidth = Math.max(left + right, metrics.width, 1);
+  const measuredHeight = Math.max(ascent + descent, 1);
+  const scale = Math.min(
+    (SIGNATURE_WIDTH - SAFE_X * 2) / measuredWidth,
+    (SIGNATURE_HEIGHT - SAFE_Y * 2) / measuredHeight,
+    1,
+  );
+  const fontSize = Math.max(18, baseSize * scale);
+  const ratio = fontSize / baseSize;
+
+  const source = document.createElement('canvas');
+  source.width = Math.ceil(measuredWidth * ratio + SAFE_X * 2);
+  source.height = Math.ceil(measuredHeight * ratio + SAFE_Y * 2);
+  const sourceContext = source.getContext('2d', { willReadFrequently: true });
+  if (!sourceContext) return null;
+  sourceContext.font = fontFor(fontSize);
+  sourceContext.fillStyle = '#1a1a1a';
+  sourceContext.textAlign = 'left';
+  sourceContext.textBaseline = 'alphabetic';
+  sourceContext.fillText(
+    normalizedName,
+    SAFE_X + left * ratio,
+    SAFE_Y + ascent * ratio,
+  );
+
+  const pixels = sourceContext.getImageData(0, 0, source.width, source.height);
+  let minX = source.width;
+  let minY = source.height;
+  let maxX = -1;
+  let maxY = -1;
+  for (let y = 0; y < source.height; y += 1) {
+    for (let x = 0; x < source.width; x += 1) {
+      if (pixels.data[(y * source.width + x) * 4 + 3] > 8) {
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+  }
+  if (maxX < minX || maxY < minY) return null;
+
+  return placeInkOnSafeCanvas(source, minX, minY, maxX, maxY);
+}
+
+function placeInkOnSafeCanvas(
+  source: HTMLCanvasElement,
+  minX: number,
+  minY: number,
+  maxX: number,
+  maxY: number,
+): string | null {
+  const inkWidth = maxX - minX + 1;
+  const inkHeight = maxY - minY + 1;
+  const output = document.createElement('canvas');
+  output.width = SIGNATURE_WIDTH;
+  output.height = SIGNATURE_HEIGHT;
+  const context = output.getContext('2d');
+  if (!context) return null;
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, output.width, output.height);
+  const scale = Math.min(
+    (output.width - SAFE_X * 2) / inkWidth,
+    (output.height - SAFE_Y * 2) / inkHeight,
+    1,
+  );
+  const width = inkWidth * scale;
+  const height = inkHeight * scale;
+  context.drawImage(
+    source,
+    minX,
+    minY,
+    inkWidth,
+    inkHeight,
+    (output.width - width) / 2,
+    (output.height - height) / 2,
+    width,
+    height,
+  );
+  return output.toDataURL('image/png');
+}
+
 /** Remove espaços, quebras de linha e aspas envolventes de um valor de assinatura. */
 export function normalizeSignatureSrc(value?: string | null): string | null {
   if (!value) return null;
@@ -58,7 +167,7 @@ export function dataUrlToBlobUrl(value?: string | null): string | null {
  * com margem permanente. Assim, o mesmo bitmap pode ser reduzido na interface
  * ou no PDF sem encostar/cortar os floreios da assinatura.
  */
-export async function normalizeSignatureImage(value?: string | null): Promise<string | null> {
+export async function normalizeSignatureImage(value?: string | null, signerName?: string | null): Promise<string | null> {
   const src = normalizeSignatureSrc(value);
   if (!src) return null;
 
@@ -67,6 +176,13 @@ export async function normalizeSignatureImage(value?: string | null): Promise<st
     image.crossOrigin = 'anonymous';
     image.onload = () => {
       try {
+        // O gerador legado produzia PNGs 400x120 e podia cortar o fim de nomes
+        // cursivos. Quando o nome é conhecido, a fonte tipográfica pode ser
+        // reconstruída integralmente; imagens enviadas/desenhadas são mantidas.
+        if (image.naturalWidth === 400 && image.naturalHeight === 120 && signerName?.trim()) {
+          generateTypedSignatureImage(signerName).then((generated) => resolve(generated || src));
+          return;
+        }
         const source = document.createElement('canvas');
         source.width = image.naturalWidth || image.width;
         source.height = image.naturalHeight || image.height;
@@ -106,39 +222,7 @@ export async function normalizeSignatureImage(value?: string | null): Promise<st
           return;
         }
 
-        const inkWidth = maxX - minX + 1;
-        const inkHeight = maxY - minY + 1;
-        const output = document.createElement('canvas');
-        output.width = 1600;
-        output.height = 480;
-        const outputContext = output.getContext('2d');
-        if (!outputContext) {
-          resolve(src);
-          return;
-        }
-
-        outputContext.fillStyle = '#ffffff';
-        outputContext.fillRect(0, 0, output.width, output.height);
-        const safeX = 120;
-        const safeY = 60;
-        const scale = Math.min(
-          (output.width - safeX * 2) / inkWidth,
-          (output.height - safeY * 2) / inkHeight,
-        );
-        const drawWidth = inkWidth * scale;
-        const drawHeight = inkHeight * scale;
-        outputContext.drawImage(
-          source,
-          minX,
-          minY,
-          inkWidth,
-          inkHeight,
-          (output.width - drawWidth) / 2,
-          (output.height - drawHeight) / 2,
-          drawWidth,
-          drawHeight,
-        );
-        resolve(output.toDataURL('image/png'));
+        resolve(placeInkOnSafeCanvas(source, minX, minY, maxX, maxY) || src);
       } catch {
         // URLs sem CORS não permitem leitura dos pixels; ainda podem ser exibidas normalmente.
         resolve(src);
