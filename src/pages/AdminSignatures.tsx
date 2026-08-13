@@ -28,7 +28,7 @@ interface ApproverRow {
   id: string;
   status: string;
   created_at: string;
-  signed_at: string | null;
+  approved_at: string | null;
   contact: {
     id: string;
     name: string;
@@ -99,7 +99,7 @@ export default function AdminSignatures() {
           id,
           status,
           created_at,
-          signed_at,
+          approved_at,
           contact:company_contacts (
             id,
             name,
@@ -273,8 +273,8 @@ export default function AdminSignatures() {
                         {format(new Date(r.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {r.signed_at
-                          ? format(new Date(r.signed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+                        {r.approved_at
+                          ? format(new Date(r.approved_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
                           : '—'}
                       </TableCell>
                       <TableCell>
