@@ -95,6 +95,16 @@ function getStatusChangeDescription(details?: unknown): string {
   return `${oldLabel} → ${newLabel}`;
 }
 
+function getSignatureInfo(details?: unknown): { name?: string; role?: string; isInternal: boolean } {
+  if (!details || typeof details !== 'object') return { isInternal: false };
+  const d = details as Record<string, unknown>;
+  return {
+    name: typeof d.signer_name === 'string' ? d.signer_name.trim() : undefined,
+    role: typeof d.signer_role === 'string' ? d.signer_role.trim() : undefined,
+    isInternal: !!d.is_internal,
+  };
+}
+
 export function ApprovalTimeline({ history = [], isLoading }: ApprovalTimelineProps) {
   if (isLoading) {
     return (
@@ -140,6 +150,10 @@ export function ApprovalTimeline({ history = [], isLoading }: ApprovalTimelinePr
       details = getChangedFieldsDescription(entry.old_values, entry.new_values);
     } else if (entry.action === 'status_changed') {
       details = getStatusChangeDescription(entry.details);
+    } else if (entry.action === 'signed') {
+      const sig = getSignatureInfo(entry.details);
+      const origin = sig.isInternal ? 'Assinatura interna (WEES)' : 'Assinatura do cliente';
+      details = sig.role ? `${origin} — ${sig.role}` : origin;
     } else if (isWhatsApp && entry.details && typeof entry.details === 'object') {
       const d = entry.details as Record<string, unknown>;
       const sender = d.sender_name as string;
@@ -152,7 +166,20 @@ export function ApprovalTimeline({ history = [], isLoading }: ApprovalTimelinePr
       ? (entry.details as Record<string, unknown>).sender_name as string | undefined
       : undefined;
     const whatsAppSender = rawWhatsAppSender && rawWhatsAppSender.trim().length >= 2 ? rawWhatsAppSender.trim() : undefined;
-    const actorName = entry.actor?.name || whatsAppSender || (isWhatsApp ? 'Assistente IA RDO' : undefined);
+    // Eventos automáticos (status_changed / approved) sem autor: atribui o
+    // signatário cuja assinatura ocorreu em janela de poucos segundos.
+    let inferredSigner: string | undefined;
+    if (!entry.actor && (entry.action === 'status_changed' || entry.action === 'approved')) {
+      const t = new Date(entry.action_at).getTime();
+      const match = sortedHistory.find(
+        e =>
+          e.action === 'signed' &&
+          Math.abs(new Date(e.action_at).getTime() - t) <= 120000
+      );
+      inferredSigner = match ? getSignatureInfo(match.details).name : undefined;
+    }
+
+    const actorName = entry.actor?.name || inferredSigner || whatsAppSender || (isWhatsApp ? 'Assistente IA RDO' : undefined);
     const actorAvatar = entry.actor?.avatar_url || null;
 
     return {

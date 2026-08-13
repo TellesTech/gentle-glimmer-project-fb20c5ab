@@ -20,6 +20,7 @@ import { EmptyState, StatusBadge } from '@/components/shared';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { PhotoGallery } from '@/components/reports/PhotoGallery';
 import { ApprovalTimeline } from '@/components/reports/ApprovalTimeline';
+import { fetchReportHistoryWithSignatures } from '@/lib/reportHistoryWithSignatures';
 import { ReportProgressStepper } from '@/components/reports/ReportProgressStepper';
 import { ShareReportDialog } from '@/components/client/ShareReportDialog';
 import { SendForSignatureDialog } from '@/components/reports/SendForSignatureDialog';
@@ -117,22 +118,7 @@ export default function ReportDetail() {
     queryFn: async () => {
       if (!reportId) return [];
 
-      const { data, error } = await supabase
-        .from('report_history')
-        .select(`
-          id,
-          action,
-          action_at,
-          details,
-          old_values,
-          new_values,
-          actor:profiles!action_by(id, name, avatar_url)
-        `)
-        .eq('report_id', reportId)
-        .order('action_at', { ascending: true });
-
-      if (error) throw error;
-      return data || [];
+      return await fetchReportHistoryWithSignatures(reportId);
     },
     enabled: !!reportId,
   });
