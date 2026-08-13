@@ -19,7 +19,11 @@ export async function generateTypedSignatureImage(name: string): Promise<string 
   const normalizedName = name.trim();
   if (!normalizedName || typeof document === 'undefined') return null;
 
-  await document.fonts.load('180px "Great Vibes"');
+  try {
+    await document.fonts.load('180px "Great Vibes"');
+  } catch {
+    // O fallback cursivo ainda produz uma assinatura completa se a fonte web falhar.
+  }
   const fontFor = (size: number) => `${size}px "Great Vibes", cursive`;
   const measureCanvas = document.createElement('canvas');
   const measureContext = measureCanvas.getContext('2d');

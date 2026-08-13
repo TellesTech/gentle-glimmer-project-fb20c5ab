@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PenLine, Check, Loader2, Building2, Sparkles } from 'lucide-react';
 import { SignatureInput } from '@/components/client/SignatureInput';
+import { normalizeSignatureImage } from '@/lib/signatureImage';
 
 export interface OneClickSignerIdentity {
   name: string;
@@ -51,7 +52,8 @@ export function OneClickSignatureCard({
 
   const handleClickSign = async () => {
     if (useOneClick && identity.savedSignature) {
-      await onSign(identity.savedSignature);
+      const safeSignature = await normalizeSignatureImage(identity.savedSignature, identity.name);
+      await onSign(safeSignature || identity.savedSignature);
       return;
     }
     if (!manualSignature) return;
@@ -140,6 +142,7 @@ export function OneClickSignatureCard({
           <>
             <SignatureInput
               onSignatureChange={setManualSignature}
+            signerName={identity.name}
               disabled={isSubmitting}
             />
 

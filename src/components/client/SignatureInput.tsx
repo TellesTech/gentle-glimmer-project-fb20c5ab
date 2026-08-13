@@ -18,11 +18,16 @@ interface SignatureInputProps {
 export function SignatureInput({ onSignatureChange, disabled = false, initialSignature, signerName }: SignatureInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const userInteractedRef = useRef(false);
+  const onSignatureChangeRef = useRef(onSignatureChange);
   const [activeTab, setActiveTab] = useState<string>('type');
   const [typedName, setTypedName] = useState('');
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [typedSignaturePreview, setTypedSignaturePreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    onSignatureChangeRef.current = onSignatureChange;
+  }, [onSignatureChange]);
 
   useEffect(() => {
     // Don't clobber a saved signature if the user hasn't interacted yet.
@@ -32,13 +37,14 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
       generateTypedSignatureImage(typedName).then((signature) => {
         if (!active) return;
         setTypedSignaturePreview(signature);
-        onSignatureChange(signature);
+        onSignatureChangeRef.current(signature);
       });
       return () => { active = false; };
     } else if (activeTab === 'type') {
-      onSignatureChange(null);
+      setTypedSignaturePreview(null);
+      onSignatureChangeRef.current(null);
     }
-  }, [typedName, activeTab, onSignatureChange]);
+  }, [typedName, activeTab]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
