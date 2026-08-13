@@ -28,7 +28,7 @@ interface ApproverRow {
   id: string;
   status: string;
   created_at: string;
-  signed_at: string | null;
+  approved_at: string | null;
   contact: {
     id: string;
     name: string;
@@ -99,7 +99,7 @@ export default function AdminSignatures() {
           id,
           status,
           created_at,
-          signed_at,
+          approved_at,
           contact:company_contacts (
             id,
             name,
@@ -122,7 +122,34 @@ export default function AdminSignatures() {
         `)
         .order('created_at', { ascending: false });
 
-      setRows((data as any) || []);
+      const rowsData = ((data as any) || []) as ApproverRow[];
+
+      // Fail-safe: a stored signature always counts as signed, even if the
+      // approver row was left pending by an older signing flow.
+      const reportIds = Array.from(new Set(rowsData.map((r) => r.report?.id).filter(Boolean))) as string[];
+      if (reportIds.length) {
+        const { data: sigs } = await supabase
+          .from('report_signatures')
+          .select('report_id, signer_email, signed_at, signature_data')
+          .in('report_id', reportIds);
+        const signedMap = new Map<string, string>();
+        (sigs || []).forEach((s: any) => {
+          if (!s.signature_data || !s.signer_email) return;
+          const key = `${s.report_id}|${String(s.signer_email).toLowerCase()}`;
+          if (!signedMap.has(key)) signedMap.set(key, s.signed_at);
+        });
+        rowsData.forEach((r) => {
+          if (r.status === 'approved' || r.status === 'rejected') return;
+          const key = `${r.report?.id}|${(r.contact?.email || '').toLowerCase()}`;
+          const signedAt = signedMap.get(key);
+          if (signedAt) {
+            r.status = 'approved';
+            r.approved_at = r.approved_at || signedAt;
+          }
+        });
+      }
+
+      setRows(rowsData);
       setLoading(false);
     };
     fetchData();
@@ -273,8 +300,8 @@ export default function AdminSignatures() {
                         {format(new Date(r.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {r.signed_at
-                          ? format(new Date(r.signed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+                        {r.approved_at
+                          ? format(new Date(r.approved_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
                           : '—'}
                       </TableCell>
                       <TableCell>
