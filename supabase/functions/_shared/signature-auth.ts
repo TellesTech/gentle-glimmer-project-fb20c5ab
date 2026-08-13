@@ -16,6 +16,8 @@ export interface VerifiedSigner {
   role: string | null;
   kind: "wees" | "client" | "contact" | "guest";
   accessId: string | null;
+  approverTable?: "report_client_approvers" | "report_company_approvers";
+  approverId?: string;
 }
 
 export function createServiceClient(): SupabaseClient {
@@ -65,7 +67,7 @@ export async function verifySigner(
       .maybeSingle();
     if (assignedClient) {
       const { data: assignment } = await service.from("report_client_approvers").select("id").eq("report_id", reportId).eq("client_id", assignedClient.id).maybeSingle();
-      if (assignment) return { userId: authenticated.id, name: assignedClient.name, email: assignedClient.email || authenticated.email, role: assignedClient.role || "Cliente", kind: "client", accessId: null };
+      if (assignment) return { userId: authenticated.id, name: assignedClient.name, email: assignedClient.email || authenticated.email, role: assignedClient.role || "Cliente", kind: "client", accessId: null, approverTable: "report_client_approvers", approverId: assignment.id };
     }
 
     const { data: assignedContact } = await service
@@ -76,7 +78,7 @@ export async function verifySigner(
       .maybeSingle();
     if (assignedContact) {
       const { data: assignment } = await service.from("report_company_approvers").select("id").eq("report_id", reportId).eq("contact_id", assignedContact.id).maybeSingle();
-      if (assignment) return { userId: authenticated.id, name: assignedContact.name, email: assignedContact.email || authenticated.email, role: assignedContact.role || "Cliente", kind: "contact", accessId: null };
+      if (assignment) return { userId: authenticated.id, name: assignedContact.name, email: assignedContact.email || authenticated.email, role: assignedContact.role || "Cliente", kind: "contact", accessId: null, approverTable: "report_company_approvers", approverId: assignment.id };
     }
 
     const { data: roleRows } = await service.from("user_roles").select("role").eq("user_id", authenticated.id);
@@ -132,7 +134,7 @@ export async function verifySigner(
         .eq("client_id", client.id)
         .maybeSingle();
       if (!assignment) throw new SignatureAuthError("Você não está indicado para assinar este RDO", 403);
-      return { userId: authenticated.id, name: client.name, email: client.email || authenticated.email, role: client.role || "Cliente", kind: "client", accessId: null };
+      return { userId: authenticated.id, name: client.name, email: client.email || authenticated.email, role: client.role || "Cliente", kind: "client", accessId: null, approverTable: "report_client_approvers", approverId: assignment.id };
     }
 
     const { data: contact } = await service
@@ -149,7 +151,7 @@ export async function verifySigner(
         .eq("contact_id", contact.id)
         .maybeSingle();
       if (!assignment) throw new SignatureAuthError("Você não está indicado para assinar este RDO", 403);
-      return { userId: authenticated.id, name: contact.name, email: contact.email || authenticated.email, role: contact.role || "Cliente", kind: "contact", accessId: null };
+      return { userId: authenticated.id, name: contact.name, email: contact.email || authenticated.email, role: contact.role || "Cliente", kind: "contact", accessId: null, approverTable: "report_company_approvers", approverId: assignment.id };
     }
 
     throw new SignatureAuthError("Usuário sem perfil autorizado para assinatura", 403);
@@ -217,4 +219,73 @@ export async function ensureAccessRecord(
     );
   }
   return data.id;
+}
+
+/**
+ * Closes the approval cycle after a signature is stored:
+ * marks the signer's approver row as approved and, once every approver of the
+ * report has approved, flips the report to "signed".
+ * Never throws: a signature must stay valid even if this bookkeeping fails.
+ */
+export async function finalizeApproval(
+  service: SupabaseClient,
+  reportId: string,
+  signer: VerifiedSigner,
+  signedAt: string = new Date().toISOString(),
+): Promise<void> {
+  try {
+    if (signer.approverTable && signer.approverId) {
+      const { error } = await service
+        .from(signer.approverTable)
+        .update({ status: "approved", approved_at: signedAt })
+        .eq("id", signer.approverId);
+      if (error) console.error("finalizeApproval: approver update failed", error.message);
+    } else if (signer.email) {
+      // Guest / link signer: match the approver by e-mail.
+      const { data: contact } = await service
+        .from("company_contacts")
+        .select("id")
+        .ilike("email", signer.email)
+        .maybeSingle();
+      if (contact) {
+        await service
+          .from("report_company_approvers")
+          .update({ status: "approved", approved_at: signedAt })
+          .eq("report_id", reportId)
+          .eq("contact_id", contact.id)
+          .is("approved_at", null);
+      }
+      const { data: clientProfile } = await service
+        .from("client_profiles")
+        .select("id")
+        .ilike("email", signer.email)
+        .maybeSingle();
+      if (clientProfile) {
+        await service
+          .from("report_client_approvers")
+          .update({ status: "approved", approved_at: signedAt })
+          .eq("report_id", reportId)
+          .eq("client_id", clientProfile.id)
+          .is("approved_at", null);
+      }
+    }
+
+    const [{ data: companyApprovers }, { data: clientApprovers }] = await Promise.all([
+      service.from("report_company_approvers").select("approved_at").eq("report_id", reportId),
+      service.from("report_client_approvers").select("approved_at").eq("report_id", reportId),
+    ]);
+    const all = [...(companyApprovers ?? []), ...(clientApprovers ?? [])];
+    if (all.length === 0 || all.some((row) => !row.approved_at)) return;
+
+    const { data: report } = await service.from("reports").select("status").eq("id", reportId).maybeSingle();
+    if (report && report.status !== "signed" && report.status !== "finalized") {
+      const { error } = await service
+        .from("reports")
+        .update({ status: "signed", approved_at: signedAt })
+        .eq("id", reportId);
+      if (error) console.error("finalizeApproval: report status update failed", error.message);
+    }
+  } catch (error) {
+    console.error("finalizeApproval unexpected error", error);
+  }
 }

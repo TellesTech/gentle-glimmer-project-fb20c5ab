@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3.23.8";
-import { createServiceClient, ensureAccessRecord, SignatureAuthError, verifySigner } from "../_shared/signature-auth.ts";
+import { createServiceClient, ensureAccessRecord, finalizeApproval, SignatureAuthError, verifySigner } from "../_shared/signature-auth.ts";
 
 const BodySchema = z.object({
   accessToken: z.string().uuid().optional(),
@@ -52,6 +52,7 @@ serve(async (req) => {
       details: { signer_kind: signer.kind, document_hash: documentHash || null, document_version: documentVersion || null, geolocation: geolocation || null, legal_basis: "MP 2.200-2/2001" },
     });
     if (auditError) console.error("Signature saved but audit log failed:", auditError);
+    await finalizeApproval(service, reportId, signer, signature.signed_at || new Date().toISOString());
     console.log("Verified signature saved:", signature.id, signer.kind);
     return jsonResponse({ success: true, signature: { id: signature.id, signedAt: signature.signed_at, signerName: signature.signer_name } });
   } catch (error) {
