@@ -1107,7 +1107,7 @@ async function buildReportPdfDoc(
       // Tentar renderizar a imagem da assinatura
       if (sig.signatureData && sig.signatureData.startsWith('data:image')) {
         try {
-          const safeSignature = await normalizeSignatureImage(sig.signatureData) || sig.signatureData;
+          const safeSignature = await normalizeSignatureImage(sig.signatureData, cleanSignerName) || sig.signatureData;
           const imgDims = await getImageDimensions(safeSignature);
           const innerMargin = 3;
           const fitted = fitImageToBox(

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect } from 'react';
 // Tracks user interaction so we don't overwrite an existing saved signature with null on mount/tab switches.
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,160 +6,39 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Eraser, Check, Upload, Keyboard, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { SignatureImage } from '@/components/signatures/SignatureImage';
+import { generateTypedSignatureImage } from '@/lib/signatureImage';
 
 interface SignatureInputProps {
   onSignatureChange: (signatureData: string | null) => void;
   disabled?: boolean;
   initialSignature?: string | null;
+  signerName?: string | null;
 }
 
-export function SignatureInput({ onSignatureChange, disabled = false, initialSignature }: SignatureInputProps) {
+export function SignatureInput({ onSignatureChange, disabled = false, initialSignature, signerName }: SignatureInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const userInteractedRef = useRef(false);
   const [activeTab, setActiveTab] = useState<string>('type');
   const [typedName, setTypedName] = useState('');
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [signatureFontReady, setSignatureFontReady] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    document.fonts.load('180px "Great Vibes"').then(() => {
-      if (active) setSignatureFontReady(true);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const generateTypedSignature = useCallback((name: string): string | null => {
-    const normalizedName = name.trim();
-    if (!normalizedName || !signatureFontReady) return null;
-
-    const fontFor = (size: number) => `${size}px "Great Vibes", "Dancing Script", cursive`;
-
-    // Measure the REAL ink box (cursive flourishes overflow measureText().width),
-    // then size the render surface around it so nothing is ever clipped.
-    const measureCanvas = document.createElement('canvas');
-    measureCanvas.width = 10;
-    measureCanvas.height = 10;
-    const measureCtx = measureCanvas.getContext('2d');
-    if (!measureCtx) return null;
-
-    const BASE = 100;
-    measureCtx.font = fontFor(BASE);
-    const m = measureCtx.measureText(normalizedName);
-    const inkLeft = m.actualBoundingBoxLeft ?? 0;
-    const inkRight = m.actualBoundingBoxRight ?? m.width;
-    const baseInkWidth = Math.max(inkLeft + inkRight, m.width * 1.2, 1);
-    const baseAscent = m.actualBoundingBoxAscent || BASE * 0.9;
-    const baseDescent = m.actualBoundingBoxDescent || BASE * 0.5;
-    const baseInkHeight = Math.max(baseAscent + baseDescent, 1);
-
-    // Target ink area inside the source surface (leaves room for flourishes).
-    const TARGET_W = 1500;
-    const TARGET_H = 300;
-    const fontScale = Math.min(TARGET_W / baseInkWidth, TARGET_H / baseInkHeight, 1.8);
-    const fontSize = Math.max(24, Math.min(180, BASE * fontScale));
-
-    const ratio = fontSize / BASE;
-    const inkWidth = baseInkWidth * ratio;
-    const inkHeight = baseInkHeight * ratio;
-    const padX = Math.max(60, inkWidth * 0.12);
-    const padY = Math.max(40, inkHeight * 0.25);
-
-    const sourceCanvas = document.createElement('canvas');
-    sourceCanvas.width = Math.ceil(inkWidth + padX * 2);
-    sourceCanvas.height = Math.ceil(inkHeight + padY * 2);
-    const sourceCtx = sourceCanvas.getContext('2d', { willReadFrequently: true });
-    if (!sourceCtx) return null;
-
-    sourceCtx.fillStyle = '#1a1a1a';
-    sourceCtx.textAlign = 'left';
-    sourceCtx.textBaseline = 'alphabetic';
-    sourceCtx.font = fontFor(fontSize);
-    // Position using the measured ink box so the first/last strokes stay inside.
-    sourceCtx.fillText(
-      normalizedName,
-      padX + inkLeft * ratio,
-      padY + baseAscent * ratio,
-    );
-
-    const pixels = sourceCtx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
-    let minX = sourceCanvas.width;
-    let minY = sourceCanvas.height;
-    let maxX = -1;
-    let maxY = -1;
-
-    for (let y = 0; y < sourceCanvas.height; y += 1) {
-      for (let x = 0; x < sourceCanvas.width; x += 1) {
-        if (pixels.data[(y * sourceCanvas.width + x) * 4 + 3] > 8) {
-          minX = Math.min(minX, x);
-          minY = Math.min(minY, y);
-          maxX = Math.max(maxX, x);
-          maxY = Math.max(maxY, y);
-        }
-      }
-    }
-
-    if (maxX < minX || maxY < minY) return null;
-
-    const canvas = document.createElement('canvas');
-    const width = 1600;
-    const height = 400;
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-
-    // White background
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const sourceWidth = maxX - minX + 1;
-    const sourceHeight = maxY - minY + 1;
-    // Keep a generous permanent margin inside the saved bitmap. This is
-    // intentionally larger than the visual container padding because cursive
-    // entry/exit strokes can otherwise look clipped after responsive scaling.
-    const safeX = 160;
-    const safeY = 56;
-    const scale = Math.min(
-      (width - safeX * 2) / sourceWidth,
-      (height - safeY * 2) / sourceHeight,
-      1,
-    );
-    const drawWidth = sourceWidth * scale;
-    const drawHeight = sourceHeight * scale;
-    ctx.drawImage(
-      sourceCanvas,
-      minX,
-      minY,
-      sourceWidth,
-      sourceHeight,
-      (width - drawWidth) / 2,
-      (height - drawHeight) / 2,
-      drawWidth,
-      drawHeight,
-    );
-
-    return canvas.toDataURL('image/png');
-  }, [signatureFontReady]);
-
-  const typedSignaturePreview = useMemo(
-    () => generateTypedSignature(typedName),
-    [generateTypedSignature, typedName],
-  );
+  const [typedSignaturePreview, setTypedSignaturePreview] = useState<string | null>(null);
 
   useEffect(() => {
     // Don't clobber a saved signature if the user hasn't interacted yet.
     if (!userInteractedRef.current) return;
     if (activeTab === 'type' && typedName.trim()) {
-      const signature = generateTypedSignature(typedName);
-      onSignatureChange(signature);
+      let active = true;
+      generateTypedSignatureImage(typedName).then((signature) => {
+        if (!active) return;
+        setTypedSignaturePreview(signature);
+        onSignatureChange(signature);
+      });
+      return () => { active = false; };
     } else if (activeTab === 'type') {
       onSignatureChange(null);
     }
-  }, [typedName, activeTab, generateTypedSignature, onSignatureChange]);
+  }, [typedName, activeTab, onSignatureChange]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -366,7 +245,7 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
         <div className="p-3 bg-muted/30 rounded-lg border">
           <p className="text-xs text-muted-foreground mb-2">Assinatura salva anteriormente:</p>
            <div className="min-h-28 w-full rounded border bg-white p-2">
-             <SignatureImage value={initialSignature} alt="Assinatura salva" className="h-24" />
+             <SignatureImage value={initialSignature} signerName={signerName} alt="Assinatura salva" className="h-24" />
            </div>
         </div>
       )}

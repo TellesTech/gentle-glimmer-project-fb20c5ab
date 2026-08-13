@@ -5,6 +5,7 @@ import { dataUrlToBlobUrl, getSignatureKind, normalizeSignatureImage, normalizeS
 
 interface SignatureImageProps {
   value?: string | null;
+  signerName?: string | null;
   alt: string;
   className?: string;
   /** Texto do selo exibido quando a imagem não pode ser carregada. */
@@ -17,7 +18,7 @@ interface SignatureImageProps {
  *  - se a data URL falhar (ex.: CSP bloqueando `data:`), tenta novamente via blob:;
  *  - se ainda assim falhar, mostra um selo discreto em vez do ícone quebrado.
  */
-export function SignatureImage({ value, alt, className, fallbackLabel }: SignatureImageProps) {
+export function SignatureImage({ value, signerName, alt, className, fallbackLabel }: SignatureImageProps) {
   const kind = getSignatureKind(value);
   const [src, setSrc] = useState<string | null>(normalizeSignatureSrc(value));
   const [failed, setFailed] = useState(false);
@@ -29,13 +30,13 @@ export function SignatureImage({ value, alt, className, fallbackLabel }: Signatu
     triedBlobRef.current = false;
     setFailed(false);
     setSrc(null);
-    normalizeSignatureImage(value).then((normalized) => {
+    normalizeSignatureImage(value, signerName).then((normalized) => {
       if (active) setSrc(normalized);
     });
     return () => {
       active = false;
     };
-  }, [value]);
+  }, [value, signerName]);
 
   useEffect(() => {
     return () => {
