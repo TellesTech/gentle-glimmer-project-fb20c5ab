@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { dataUrlToBlobUrl, getSignatureKind, normalizeSignatureSrc } from '@/lib/signatureImage';
+import { dataUrlToBlobUrl, getSignatureKind, normalizeSignatureImage, normalizeSignatureSrc } from '@/lib/signatureImage';
 
 interface SignatureImageProps {
   value?: string | null;
@@ -25,9 +25,16 @@ export function SignatureImage({ value, alt, className, fallbackLabel }: Signatu
   const triedBlobRef = useRef(false);
 
   useEffect(() => {
+    let active = true;
     triedBlobRef.current = false;
     setFailed(false);
-    setSrc(normalizeSignatureSrc(value));
+    setSrc(null);
+    normalizeSignatureImage(value).then((normalized) => {
+      if (active) setSrc(normalized);
+    });
+    return () => {
+      active = false;
+    };
   }, [value]);
 
   useEffect(() => {
@@ -71,7 +78,7 @@ export function SignatureImage({ value, alt, className, fallbackLabel }: Signatu
   return (
     <div
       className={cn(
-        'flex min-h-20 w-full items-center justify-center overflow-visible px-8 py-3 sm:px-14',
+        'flex min-h-24 w-full items-center justify-center overflow-visible px-4 py-3 sm:px-8',
         className,
       )}
     >
@@ -79,7 +86,7 @@ export function SignatureImage({ value, alt, className, fallbackLabel }: Signatu
         src={src}
         alt={alt}
         onError={handleError}
-        className="block h-auto max-h-full w-auto max-w-full shrink object-contain"
+        className="block h-full max-h-full w-full max-w-full object-contain"
       />
     </div>
   );

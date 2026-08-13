@@ -1400,11 +1400,11 @@ export default function ReportDetail() {
                   className="p-4 rounded-xl border-2 border-success/20 bg-success/5"
                 >
                   {/* Signature image */}
-                  <div className="h-32 w-full overflow-hidden bg-white rounded-lg mb-4 border border-border/50">
+                  <div className="min-h-36 w-full overflow-visible bg-white rounded-lg mb-4 border border-border/50 p-2">
                     <SignatureImage
                       value={sig.signature_data}
                       alt={`Assinatura de ${sig.signer_name}`}
-                      className="h-full w-full"
+                      className="h-32 w-full"
                     />
                   </div>
                   

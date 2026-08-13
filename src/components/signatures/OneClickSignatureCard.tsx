@@ -98,11 +98,11 @@ export function OneClickSignatureCard({
                 <Sparkles className="w-3.5 h-3.5 text-primary" />
                 Sua firma cadastrada será aplicada ao relatório
               </p>
-              <div className="w-full h-28 overflow-hidden bg-white rounded-lg border-2 border-primary/30 flex items-center justify-center">
+              <div className="w-full min-h-32 overflow-visible bg-white rounded-lg border-2 border-primary/30 flex items-center justify-center p-1">
                 <SignatureImage
                   value={identity.savedSignature}
                   alt="Sua assinatura cadastrada"
-                  className="h-full w-full"
+                  className="h-32 w-full"
                 />
               </div>
             </div>

@@ -6,6 +6,7 @@ import type { Report, Company, Site, Project } from '@/types';
 import { getLogoBase64 } from './logoBase64';
 import { supabase } from '@/integrations/supabase/client';
 import { registerPdfFont, type PdfFontHandle } from './pdfFonts';
+import { normalizeSignatureImage } from './signatureImage';
 
 // === LABELS (com acentos - jsPDF suporta UTF-8) ===
 const SHIFT_LABELS: Record<string, string> = {
@@ -1106,14 +1107,21 @@ async function buildReportPdfDoc(
       // Tentar renderizar a imagem da assinatura
       if (sig.signatureData && sig.signatureData.startsWith('data:image')) {
         try {
-          const imgDims = await getImageDimensions(sig.signatureData);
-          const fitted = fitImageToBox(imgDims.width, imgDims.height, sigAreaWidth - 4, sigAreaHeight - 4);
+          const safeSignature = await normalizeSignatureImage(sig.signatureData) || sig.signatureData;
+          const imgDims = await getImageDimensions(safeSignature);
+          const innerMargin = 3;
+          const fitted = fitImageToBox(
+            imgDims.width,
+            imgDims.height,
+            sigAreaWidth - innerMargin * 2,
+            sigAreaHeight - innerMargin * 2,
+          );
           
           doc.addImage(
-            sig.signatureData,
+            safeSignature,
             'PNG',
-            margin + 4 + 2 + fitted.offsetX,
-            y + 4 + 2 + fitted.offsetY,
+            margin + 4 + innerMargin + fitted.offsetX,
+            y + 4 + innerMargin + fitted.offsetY,
             fitted.width,
             fitted.height
           );

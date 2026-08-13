@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Eraser, Check, Upload, Keyboard, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { SignatureImage } from '@/components/signatures/SignatureImage';
 
 interface SignatureInputProps {
   onSignatureChange: (signatureData: string | null) => void;
@@ -281,7 +282,7 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
             />
             
             {typedName.trim() && (
-              <div className="w-full h-32 border-2 border-primary rounded-lg bg-white flex items-center justify-center overflow-hidden px-3">
+              <div className="w-full h-36 border-2 border-primary rounded-lg bg-white flex items-center justify-center overflow-visible p-2">
                 {typedSignaturePreview && (
                   <img
                     src={typedSignaturePreview}
@@ -364,11 +365,9 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
       {initialSignature && !hasSignature && (
         <div className="p-3 bg-muted/30 rounded-lg border">
           <p className="text-xs text-muted-foreground mb-2">Assinatura salva anteriormente:</p>
-          <img
-            src={initialSignature} 
-            alt="Assinatura salva" 
-            className="h-16 w-full object-contain bg-white rounded border px-4 py-2"
-          />
+           <div className="min-h-28 w-full rounded border bg-white p-2">
+             <SignatureImage value={initialSignature} alt="Assinatura salva" className="h-24" />
+           </div>
         </div>
       )}
     </div>

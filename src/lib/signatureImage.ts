@@ -52,3 +52,99 @@ export function dataUrlToBlobUrl(value?: string | null): string | null {
     return null;
   }
 }
+
+/**
+ * Recorta apenas o espaço vazio da imagem e a recoloca sobre uma tela ampla,
+ * com margem permanente. Assim, o mesmo bitmap pode ser reduzido na interface
+ * ou no PDF sem encostar/cortar os floreios da assinatura.
+ */
+export async function normalizeSignatureImage(value?: string | null): Promise<string | null> {
+  const src = normalizeSignatureSrc(value);
+  if (!src) return null;
+
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.onload = () => {
+      try {
+        const source = document.createElement('canvas');
+        source.width = image.naturalWidth || image.width;
+        source.height = image.naturalHeight || image.height;
+        const sourceContext = source.getContext('2d', { willReadFrequently: true });
+        if (!sourceContext || source.width < 1 || source.height < 1) {
+          resolve(src);
+          return;
+        }
+
+        sourceContext.drawImage(image, 0, 0);
+        const pixels = sourceContext.getImageData(0, 0, source.width, source.height);
+        let minX = source.width;
+        let minY = source.height;
+        let maxX = -1;
+        let maxY = -1;
+
+        for (let y = 0; y < source.height; y += 1) {
+          for (let x = 0; x < source.width; x += 1) {
+            const index = (y * source.width + x) * 4;
+            const alpha = pixels.data[index + 3];
+            const isInk = alpha > 12 && (
+              pixels.data[index] < 245
+              || pixels.data[index + 1] < 245
+              || pixels.data[index + 2] < 245
+            );
+            if (isInk) {
+              minX = Math.min(minX, x);
+              minY = Math.min(minY, y);
+              maxX = Math.max(maxX, x);
+              maxY = Math.max(maxY, y);
+            }
+          }
+        }
+
+        if (maxX < minX || maxY < minY) {
+          resolve(src);
+          return;
+        }
+
+        const inkWidth = maxX - minX + 1;
+        const inkHeight = maxY - minY + 1;
+        const output = document.createElement('canvas');
+        output.width = 1600;
+        output.height = 480;
+        const outputContext = output.getContext('2d');
+        if (!outputContext) {
+          resolve(src);
+          return;
+        }
+
+        outputContext.fillStyle = '#ffffff';
+        outputContext.fillRect(0, 0, output.width, output.height);
+        const safeX = 120;
+        const safeY = 60;
+        const scale = Math.min(
+          (output.width - safeX * 2) / inkWidth,
+          (output.height - safeY * 2) / inkHeight,
+        );
+        const drawWidth = inkWidth * scale;
+        const drawHeight = inkHeight * scale;
+        outputContext.drawImage(
+          source,
+          minX,
+          minY,
+          inkWidth,
+          inkHeight,
+          (output.width - drawWidth) / 2,
+          (output.height - drawHeight) / 2,
+          drawWidth,
+          drawHeight,
+        );
+        resolve(output.toDataURL('image/png'));
+      } catch {
+        // URLs sem CORS não permitem leitura dos pixels; ainda podem ser exibidas normalmente.
+        resolve(src);
+      }
+    };
+    image.onerror = () => resolve(src);
+    image.src = src;
+  });
+}
