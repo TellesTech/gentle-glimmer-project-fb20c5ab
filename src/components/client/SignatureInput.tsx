@@ -35,26 +35,54 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
     const normalizedName = name.trim();
     if (!normalizedName || !signatureFontReady) return null;
 
-    // First render on a large transparent surface. We then inspect the pixels
-    // actually painted by the cursive font, avoiding unreliable italic glyph
-    // metrics and preserving every flourish.
+    const fontFor = (size: number) => `${size}px "Great Vibes", "Dancing Script", cursive`;
+
+    // Measure the REAL ink box (cursive flourishes overflow measureText().width),
+    // then size the render surface around it so nothing is ever clipped.
+    const measureCanvas = document.createElement('canvas');
+    measureCanvas.width = 10;
+    measureCanvas.height = 10;
+    const measureCtx = measureCanvas.getContext('2d');
+    if (!measureCtx) return null;
+
+    const BASE = 100;
+    measureCtx.font = fontFor(BASE);
+    const m = measureCtx.measureText(normalizedName);
+    const inkLeft = m.actualBoundingBoxLeft ?? 0;
+    const inkRight = m.actualBoundingBoxRight ?? m.width;
+    const baseInkWidth = Math.max(inkLeft + inkRight, m.width * 1.2, 1);
+    const baseAscent = m.actualBoundingBoxAscent || BASE * 0.9;
+    const baseDescent = m.actualBoundingBoxDescent || BASE * 0.5;
+    const baseInkHeight = Math.max(baseAscent + baseDescent, 1);
+
+    // Target ink area inside the source surface (leaves room for flourishes).
+    const TARGET_W = 1500;
+    const TARGET_H = 300;
+    const fontScale = Math.min(TARGET_W / baseInkWidth, TARGET_H / baseInkHeight, 1.8);
+    const fontSize = Math.max(24, Math.min(180, BASE * fontScale));
+
+    const ratio = fontSize / BASE;
+    const inkWidth = baseInkWidth * ratio;
+    const inkHeight = baseInkHeight * ratio;
+    const padX = Math.max(60, inkWidth * 0.12);
+    const padY = Math.max(40, inkHeight * 0.25);
+
     const sourceCanvas = document.createElement('canvas');
-    sourceCanvas.width = 1800;
-    sourceCanvas.height = 480;
+    sourceCanvas.width = Math.ceil(inkWidth + padX * 2);
+    sourceCanvas.height = Math.ceil(inkHeight + padY * 2);
     const sourceCtx = sourceCanvas.getContext('2d', { willReadFrequently: true });
     if (!sourceCtx) return null;
 
-    let fontSize = 180;
     sourceCtx.fillStyle = '#1a1a1a';
-    sourceCtx.textAlign = 'center';
-    sourceCtx.textBaseline = 'middle';
-    sourceCtx.font = `${fontSize}px "Great Vibes", "Dancing Script", cursive`;
-
-    while (sourceCtx.measureText(normalizedName).width > sourceCanvas.width - 320 && fontSize > 48) {
-      fontSize -= 4;
-      sourceCtx.font = `${fontSize}px "Great Vibes", "Dancing Script", cursive`;
-    }
-    sourceCtx.fillText(normalizedName, sourceCanvas.width / 2, sourceCanvas.height / 2);
+    sourceCtx.textAlign = 'left';
+    sourceCtx.textBaseline = 'alphabetic';
+    sourceCtx.font = fontFor(fontSize);
+    // Position using the measured ink box so the first/last strokes stay inside.
+    sourceCtx.fillText(
+      normalizedName,
+      padX + inkLeft * ratio,
+      padY + baseAscent * ratio,
+    );
 
     const pixels = sourceCtx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
     let minX = sourceCanvas.width;
@@ -76,8 +104,8 @@ export function SignatureInput({ onSignatureChange, disabled = false, initialSig
     if (maxX < minX || maxY < minY) return null;
 
     const canvas = document.createElement('canvas');
-    const width = 1200;
-    const height = 320;
+    const width = 1600;
+    const height = 400;
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');

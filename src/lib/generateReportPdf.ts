@@ -1069,8 +1069,24 @@ async function buildReportPdfDoc(
     drawSectionTitle('Assinaturas', `${manualSignatures.length} assinatura${manualSignatures.length > 1 ? 's' : ''}`);
     
     for (const sig of manualSignatures) {
-      // Calcular altura necessária
-      const sigBoxHeight = 35;
+      const sigAreaWidth = 70;
+      const infoX = margin + sigAreaWidth + 12;
+      // Largura disponível para o nome (reserva espaço do rótulo WEES/CLIENTE)
+      const nameMaxWidth = pageWidth - margin - 24 - infoX;
+      const cleanSignerName = (sig.signerName || '').replace(/\s*-\s*Wees$/i, '').trim();
+      doc.setFontSize(9);
+      doc.setFont(font.family, font.style('bold'));
+      let nameFontSize = 9;
+      let nameLines: string[] = doc.splitTextToSize(prepareText(cleanSignerName), nameMaxWidth);
+      if (nameLines.length > 2) {
+        nameFontSize = 7.5;
+        doc.setFontSize(nameFontSize);
+        nameLines = doc.splitTextToSize(prepareText(cleanSignerName), nameMaxWidth);
+      }
+      nameLines = nameLines.slice(0, 2);
+
+      // Calcular altura necessária (cresce se o nome ocupar 2 linhas)
+      const sigBoxHeight = 35 + (nameLines.length - 1) * 4;
       checkPageBreak(sigBoxHeight + 8);
 
       const isSigned = Boolean(sig.signedAt);
@@ -1081,7 +1097,6 @@ async function buildReportPdfDoc(
       doc.roundedRect(margin, y, contentWidth, sigBoxHeight, 2, 2, 'FD');
       
       // Área da assinatura (lado esquerdo)
-      const sigAreaWidth = 70;
       const sigAreaHeight = sigBoxHeight - 8;
       
       // Fundo branco para assinatura
@@ -1111,14 +1126,16 @@ async function buildReportPdfDoc(
       }
       
       // Informações do assinante (lado direito)
-      const infoX = margin + sigAreaWidth + 12;
       let infoY = y + 8;
       
       setColor(COLORS.text);
-      doc.setFontSize(9);
+      doc.setFontSize(nameFontSize);
       doc.setFont(font.family, font.style('bold'));
-      const cleanSignerName = (sig.signerName || '').replace(/\s*-\s*Wees$/i, '').trim();
-      doc.text(prepareText(cleanSignerName), infoX, infoY);
+      const originLabelY = infoY;
+      nameLines.forEach((line, idx) => {
+        doc.text(line, infoX, infoY + idx * 4);
+      });
+      infoY += (nameLines.length - 1) * 4;
 
       // Origem da assinatura (WEES ou Cliente)
       const roleText = (sig.signerRole || '').toLowerCase();
@@ -1127,7 +1144,7 @@ async function buildReportPdfDoc(
       setColor(isSigned ? SIGNED_GREEN : COLORS.textMuted);
       doc.setFontSize(6.5);
       doc.setFont(font.family, font.style('bold'));
-      doc.text(originLabel, pageWidth - margin - 6, infoY, { align: 'right' });
+      doc.text(originLabel, pageWidth - margin - 6, originLabelY, { align: 'right' });
 
       infoY += 5;
       
