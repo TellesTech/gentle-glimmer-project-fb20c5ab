@@ -65,6 +65,9 @@ const COLORS: Record<string, RGB> = {
   border: { r: 200, g: 200, b: 200 },
 };
 
+// Verde usado para indicar assinatura concluída
+const SIGNED_GREEN: RGB = { r: 22, g: 128, b: 61 };
+
 // === HELPER: Carregar imagem como Base64 ===
 async function loadImageAsBase64(storedUrl: string): Promise<string | null> {
   try {
