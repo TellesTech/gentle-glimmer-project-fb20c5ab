@@ -928,13 +928,15 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
     setCurrentStep(3);
   };
 
-  const handleProjectSelect = (project: typeof projects[0]) => {
+  const handleProjectSelect = (project: typeof projects[0] & { omNumber?: string | null; omTitle?: string | null }) => {
     setSelection(prev => ({
       ...prev,
       projectId: project.id,
       projectName: project.name,
       teamId: null,
       teamName: null,
+      omNumber: project.omNumber || null,
+      omTitle: project.omTitle || null,
     }));
     // Abre o calendário no mês da pasta selecionada (ex.: Julho), não no mês atual
     if (selectedFolder && /^\d{4}-\d{2}$/.test(selectedFolder)) {
