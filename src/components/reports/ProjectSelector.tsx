@@ -1382,8 +1382,22 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
       const params = new URLSearchParams();
       params.set('date', dateStr);
       if (selection.teamId) params.set('teamId', selection.teamId);
-      navigate(`/reports/create/${selection.projectId}?${params.toString()}`, { replace: true });
+      
+      navigate(`/reports/create/${selection.projectId}?${params.toString()}`, { 
+        replace: true,
+        state: {
+          omNumber: selection.omNumber,
+          omTitle: selection.omTitle,
+        }
+      });
     }
+  };
+
+  const handleDateClick = (date: Date) => {
+    onComplete({
+      ...selection,
+      date: format(date, 'yyyy-MM-dd'),
+    } as any);
   };
 
   const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
