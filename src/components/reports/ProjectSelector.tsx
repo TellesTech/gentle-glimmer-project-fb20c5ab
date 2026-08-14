@@ -719,6 +719,8 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
         totalWorkforce: g.workforce,
         lastReportDate: g.lastDate,
         progress: Math.min(Math.round(g.progress * 10) / 10, 100),
+        omNumber: g.omNumber,
+        omTitle: bestTitle || null,
       } as any;
     });
 
@@ -798,6 +800,9 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
         projectName: returnState.projectName || null,
         teamId: null,
         teamName: null,
+        omNumber: (returnState as any).omNumber || null,
+        omTitle: (returnState as any).omTitle || null,
+      });
       });
       setCurrentStep(returnState.returnToStep);
       setIsAutoSelected(true);
@@ -1789,7 +1794,14 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
                           <div
                             key={proj.__key || project.id}
                             className="group rounded-xl border bg-card p-3.5 hover:bg-muted/60 transition-colors cursor-pointer shadow-sm"
-                            onClick={() => handleProjectSelect(project)}
+                            onClick={() => {
+                              const proj = project as any;
+                              handleProjectSelect({
+                                ...project,
+                                omNumber: proj.omNumber,
+                                omTitle: proj.omTitle,
+                              } as any);
+                            }}
                           >
                             {/* Header: icon + name + code + delay + admin edit + chevron */}
                             <div className="flex items-start justify-between gap-2 mb-1">
