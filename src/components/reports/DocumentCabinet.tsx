@@ -5,7 +5,7 @@ import { ptBR } from 'date-fns/locale';
 import { 
   Folder, FileText, ChevronLeft, ChevronRight,
   Building2, MapPin, Calendar, Download, Loader2, HardHat, FolderKanban,
-  MoreVertical, Pencil, Trash2
+  MoreVertical, Pencil, Trash2, Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useActivityNames } from '@/hooks/useActivityNames';

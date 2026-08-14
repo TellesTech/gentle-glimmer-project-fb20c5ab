@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Save, Send, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -113,6 +113,7 @@ const steps = [
 
 export default function ReportForm() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
@@ -362,7 +363,7 @@ export default function ReportForm() {
         maintenanceOrderTitle: state.omTitle || prev.maintenanceOrderTitle,
         // If we have a title, we might want to default an activity
         activities: state.omTitle && prev.activities.length === 0 
-          ? [{ id: `init-${Date.now()}`, description: state.omTitle, completed: false, order: 0 }] 
+          ? [{ id: `init-${Date.now()}`, reportId: '', description: state.omTitle, completed: false, order: 0 }] 
           : prev.activities
       }));
     }
