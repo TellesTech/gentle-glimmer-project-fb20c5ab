@@ -803,7 +803,6 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
         omNumber: (returnState as any).omNumber || null,
         omTitle: (returnState as any).omTitle || null,
       });
-      });
       setCurrentStep(returnState.returnToStep);
       setIsAutoSelected(true);
       // Clear navigation state to prevent re-triggering
