@@ -1160,11 +1160,11 @@ export function ProjectSelector({ onComplete, initialData }) {
             navigate(`/reports/${existingReport.id}`);
         }
         else {
-            const params = new URLSearchParams();
-            params.set('date', dateStr);
-            if (selection.teamId)
-                params.set('teamId', selection.teamId);
-            navigate(`/reports/create/${selection.projectId}?${params.toString()}`, { replace: true });
+            // Use onComplete as the primary action for the Wizard flow
+            onComplete({
+                ...selection,
+                date: dateStr,
+            });
         }
     };
     const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
