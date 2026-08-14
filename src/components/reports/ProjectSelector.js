@@ -614,6 +614,9 @@ export function ProjectSelector({ onComplete, initialData }) {
             setCurrentStep(2);
         }
     }, [initialData]);
+    const handleStepClick = (step) => {
+        setCurrentStep(step);
+    };
     // Update team when project changes
     useEffect(() => {
         if (projectTeam && selection.projectId) {
@@ -712,6 +715,8 @@ export function ProjectSelector({ onComplete, initialData }) {
             projectName: project.name,
             teamId: null,
             teamName: null,
+            omNumber: project.omNumber || null,
+            omTitle: project.omTitle || null,
         }));
         // Abre o calendário no mês da pasta selecionada (ex.: Julho), não no mês atual
         if (selectedFolder && /^\d{4}-\d{2}$/.test(selectedFolder)) {
