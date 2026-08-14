@@ -1777,7 +1777,7 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
                     {monthScopedProjects.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground">
                         <Search className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                        <p className="font-medium">Nenhuma atividade encontrada</p>
+                        <p className="font-medium">não econtro a atividade desmi OM 24030</p>
                       </div>
                     ) : (
                       <>
