@@ -76,6 +76,8 @@ interface SelectionData {
   projectName: string | null;
   teamId: string | null;
   teamName: string | null;
+  omNumber?: string | null;
+  omTitle?: string | null;
 }
 
 interface ProjectSelectorProps {
@@ -261,6 +263,8 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
     projectName: initialData?.projectName || null,
     teamId: initialData?.teamId || null,
     teamName: initialData?.teamName || null,
+    omNumber: (initialData as any)?.omNumber || null,
+    omTitle: (initialData as any)?.omTitle || null,
   });
   const [isAutoSelected, setIsAutoSelected] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());

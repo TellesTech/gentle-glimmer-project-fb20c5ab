@@ -1331,6 +1331,27 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                 size="sm"
                 className="gap-1.5"
                 onClick={() =>
+                  navigate('/reports/new', {
+                    state: {
+                      companyId: selectedCompany.id,
+                      companyName: selectedCompany.name,
+                      siteId: selectedSiteFolder.id,
+                      siteName: selectedSiteFolder.name,
+                      omNumber: selectedProjectFolder.omNumber,
+                      omTitle: selectedProjectFolder.omTitle,
+                    }
+                  })
+                }
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Novo Relatório
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() =>
                   setRenameTarget({
                     groupKey: selectedProjectFolder.id,
                     siteId: openSiteId,

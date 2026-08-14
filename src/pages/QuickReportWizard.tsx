@@ -19,6 +19,8 @@ interface SelectionData {
   projectName: string | null;
   teamId: string | null;
   teamName: string | null;
+  omNumber?: string | null;
+  omTitle?: string | null;
 }
 
 export default function QuickReportWizard() {
@@ -26,7 +28,14 @@ export default function QuickReportWizard() {
   const location = useLocation();
   // Context passed from the Reports cabinet ("Novo Relatório" in the current unit)
   const contextFromState = (location.state || null) as
-    | { companyId?: string | null; companyName?: string | null; siteId?: string | null; siteName?: string | null }
+    | { 
+        companyId?: string | null; 
+        companyName?: string | null; 
+        siteId?: string | null; 
+        siteName?: string | null;
+        omNumber?: string | null;
+        omTitle?: string | null;
+      }
     | null;
   const { role } = useAuth();
   const { companies, primarySiteId, isLoading: isAccessLoading } = useAdminSiteAccess();
@@ -91,6 +100,8 @@ export default function QuickReportWizard() {
         projectName: data.projectName,
         teamId: data.teamId,
         teamName: data.teamName,
+        omNumber: data.omNumber,
+        omTitle: data.omTitle,
       }
     });
   }, [navigate]);
