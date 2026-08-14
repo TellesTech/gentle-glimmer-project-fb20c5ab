@@ -821,24 +821,6 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
     }
   }, [initialData]);
 
-  const handleProjectSelect = (project: Project & { omNumber?: string | null; omTitle?: string | null }) => {
-    setSelection(prev => ({ 
-      ...prev, 
-      projectId: project.id, 
-      projectName: project.name,
-      omNumber: project.omNumber || null,
-      omTitle: project.omTitle || null
-    }));
-    setCurrentStep(4);
-  };
-
-  const handleDateClick = (date: Date) => {
-    onComplete({
-      ...selection,
-      date: format(date, 'yyyy-MM-dd'),
-    } as any);
-  };
-
   const handleStepClick = (step: number) => {
     setCurrentStep(step);
   };
