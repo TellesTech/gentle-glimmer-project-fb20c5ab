@@ -1379,25 +1379,12 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
     if (existingReport) {
       navigate(`/reports/${existingReport.id}`);
     } else {
-      const params = new URLSearchParams();
-      params.set('date', dateStr);
-      if (selection.teamId) params.set('teamId', selection.teamId);
-      
-      navigate(`/reports/create/${selection.projectId}?${params.toString()}`, { 
-        replace: true,
-        state: {
-          omNumber: selection.omNumber,
-          omTitle: selection.omTitle,
-        }
-      });
+      // Use onComplete as the primary action for the Wizard flow
+      onComplete({
+        ...selection,
+        date: dateStr,
+      } as any);
     }
-  };
-
-  const handleDateClick = (date: Date) => {
-    onComplete({
-      ...selection,
-      date: format(date, 'yyyy-MM-dd'),
-    } as any);
   };
 
   const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
