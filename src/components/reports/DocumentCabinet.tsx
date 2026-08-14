@@ -5,7 +5,7 @@ import { ptBR } from 'date-fns/locale';
 import { 
   Folder, FileText, ChevronLeft, ChevronRight,
   Building2, MapPin, Calendar, Download, Loader2, HardHat, FolderKanban,
-  MoreVertical, Pencil, Trash2
+  MoreVertical, Pencil, Trash2, Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useActivityNames } from '@/hooks/useActivityNames';
@@ -1325,6 +1325,27 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() =>
+                  navigate('/reports/new', {
+                    state: {
+                      companyId: selectedCompany.id,
+                      companyName: selectedCompany.name,
+                      siteId: selectedSiteFolder.id,
+                      siteName: selectedSiteFolder.name,
+                      omNumber: selectedProjectFolder.omNumber,
+                      omTitle: selectedProjectFolder.omTitle,
+                    }
+                  })
+                }
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Novo Relatório
+              </Button>
               <Button
                 type="button"
                 variant="outline"

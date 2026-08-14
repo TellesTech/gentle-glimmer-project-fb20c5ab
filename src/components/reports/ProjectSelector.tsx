@@ -76,6 +76,8 @@ interface SelectionData {
   projectName: string | null;
   teamId: string | null;
   teamName: string | null;
+  omNumber?: string | null;
+  omTitle?: string | null;
 }
 
 interface ProjectSelectorProps {
@@ -261,6 +263,8 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
     projectName: initialData?.projectName || null,
     teamId: initialData?.teamId || null,
     teamName: initialData?.teamName || null,
+    omNumber: (initialData as any)?.omNumber || null,
+    omTitle: (initialData as any)?.omTitle || null,
   });
   const [isAutoSelected, setIsAutoSelected] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -715,6 +719,8 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
         totalWorkforce: g.workforce,
         lastReportDate: g.lastDate,
         progress: Math.min(Math.round(g.progress * 10) / 10, 100),
+        omNumber: g.omNumber,
+        omTitle: bestTitle || null,
       } as any;
     });
 
@@ -794,6 +800,8 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
         projectName: returnState.projectName || null,
         teamId: null,
         teamName: null,
+        omNumber: (returnState as any).omNumber || null,
+        omTitle: (returnState as any).omTitle || null,
       });
       setCurrentStep(returnState.returnToStep);
       setIsAutoSelected(true);
@@ -812,6 +820,10 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
       setCurrentStep(2);
     }
   }, [initialData]);
+
+  const handleStepClick = (step: number) => {
+    setCurrentStep(step);
+  };
 
   // Update team when project changes
   useEffect(() => {
@@ -916,13 +928,15 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
     setCurrentStep(3);
   };
 
-  const handleProjectSelect = (project: typeof projects[0]) => {
+  const handleProjectSelect = (project: typeof projects[0] & { omNumber?: string | null; omTitle?: string | null }) => {
     setSelection(prev => ({
       ...prev,
       projectId: project.id,
       projectName: project.name,
       teamId: null,
       teamName: null,
+      omNumber: project.omNumber || null,
+      omTitle: project.omTitle || null,
     }));
     // Abre o calendário no mês da pasta selecionada (ex.: Julho), não no mês atual
     if (selectedFolder && /^\d{4}-\d{2}$/.test(selectedFolder)) {
@@ -1365,10 +1379,11 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
     if (existingReport) {
       navigate(`/reports/${existingReport.id}`);
     } else {
-      const params = new URLSearchParams();
-      params.set('date', dateStr);
-      if (selection.teamId) params.set('teamId', selection.teamId);
-      navigate(`/reports/create/${selection.projectId}?${params.toString()}`, { replace: true });
+      // Use onComplete as the primary action for the Wizard flow
+      onComplete({
+        ...selection,
+        date: dateStr,
+      } as any);
     }
   };
 
@@ -1785,7 +1800,14 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
                           <div
                             key={proj.__key || project.id}
                             className="group rounded-xl border bg-card p-3.5 hover:bg-muted/60 transition-colors cursor-pointer shadow-sm"
-                            onClick={() => handleProjectSelect(project)}
+                            onClick={() => {
+                              const proj = project as any;
+                              handleProjectSelect({
+                                ...project,
+                                omNumber: proj.omNumber,
+                                omTitle: proj.omTitle,
+                              } as any);
+                            }}
                           >
                             {/* Header: icon + name + code + delay + admin edit + chevron */}
                             <div className="flex items-start justify-between gap-2 mb-1">

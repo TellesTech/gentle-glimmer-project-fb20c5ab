@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Save, Send, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -113,6 +113,7 @@ const steps = [
 
 export default function ReportForm() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
@@ -333,12 +334,16 @@ export default function ReportForm() {
     }
   }, [existingReport, isEditing, dataLoaded]);
 
-  // Set projectId and teamId from URL params (only for new reports)
+  // Set projectId, teamId and OM info from URL params or state (only for new reports)
   useEffect(() => {
     if (isEditing) return;
+    
     const projectIdFromUrl = searchParams.get('projectId');
     const teamIdFromUrl = searchParams.get('teamId');
     const dateFromUrl = searchParams.get('date');
+    
+    // Check for state from Wizard
+    const state = location.state as any;
     
     if (projectIdFromUrl && !formData.projectId) {
       setFormData(prev => ({ ...prev, projectId: projectIdFromUrl }));
@@ -349,7 +354,20 @@ export default function ReportForm() {
     if (dateFromUrl) {
       setFormData(prev => ({ ...prev, date: parseISO(dateFromUrl) }));
     }
-  }, [searchParams, formData.projectId, formData.teamId, isEditing]);
+    
+    // Apply OM info from state if available
+    if (state?.omNumber || state?.omTitle) {
+      setFormData(prev => ({
+        ...prev,
+        maintenanceOrderNumber: state.omNumber || prev.maintenanceOrderNumber,
+        maintenanceOrderTitle: state.omTitle || prev.maintenanceOrderTitle,
+        // If we have a title, we might want to default an activity
+        activities: state.omTitle && prev.activities.length === 0 
+          ? [{ id: `init-${Date.now()}`, reportId: '', description: state.omTitle, completed: false, order: 0 }] 
+          : prev.activities
+      }));
+    }
+  }, [searchParams, location.state, formData.projectId, formData.teamId, isEditing]);
 
   // Copy from previous report if copyFrom param is present
   const copyFromId = searchParams.get('copyFrom');
