@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Download, FileSignature, Plus, X } from 'lucide-react';
+import { CheckCircle2, Download, FileSignature, Plus, X } from 'lucide-react';
 
 interface BatchDownloadOptionsDialogProps {
   open: boolean;
