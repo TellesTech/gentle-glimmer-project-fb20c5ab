@@ -1,6 +1,6 @@
 import { parseISO } from 'date-fns';
 import { supabase } from '@/integrations/supabase/loose-client';
-import { generateReportPdfAsBlob } from '@/lib/generateReportPdf';
+import { generateReportPdfAsBlob, type PdfOptions } from '@/lib/generateReportPdf';
 
 const REPORT_SELECT = `
   *,
@@ -24,7 +24,17 @@ export function buildRdoFileName(rdoNumber?: number | null, date?: string | null
  * Generates (or fetches) the PDF of a report as a Blob.
  * Prefers the stored signed PDF when available.
  */
-export async function getReportPdfBlob(reportId: string): Promise<{ blob: Blob; filename: string }> {
+export interface GetReportPdfOptions {
+  /** Opções extras do gerador (ex.: campos em branco para assinatura). */
+  pdfOptions?: PdfOptions;
+  /** Ignora o PDF armazenado e sempre gera um novo. */
+  forceRegenerate?: boolean;
+}
+
+export async function getReportPdfBlob(
+  reportId: string,
+  options?: GetReportPdfOptions,
+): Promise<{ blob: Blob; filename: string }> {
   const { data: report, error } = await supabase
     .from('reports')
     .select(REPORT_SELECT)
@@ -44,7 +54,9 @@ export async function getReportPdfBlob(reportId: string): Promise<{ blob: Blob; 
     return t > acc ? t : acc;
   }, 0);
 
-  if (signedUrl) {
+  const mustRegenerate = Boolean(options?.forceRegenerate || options?.pdfOptions?.includeSignatureFields);
+
+  if (signedUrl && !mustRegenerate) {
     try {
       const resp = await fetch(signedUrl);
       if (resp.ok) {
@@ -202,6 +214,7 @@ export async function getReportPdfBlob(reportId: string): Promise<{ blob: Blob; 
     projectForPdf,
     reportForPdf.signatures,
     tenantColors,
+    options?.pdfOptions,
   );
 
   return { blob, filename };

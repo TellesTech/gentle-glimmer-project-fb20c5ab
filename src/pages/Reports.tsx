@@ -420,7 +420,13 @@ export default function Reports() {
         }
       }
       
-      toast.success(`${selectedReports.size} relatórios exportados com sucesso!`);
+      if (result.failed > 0) {
+        toast.warning(
+          `${selectedReports.size - result.failed} de ${selectedReports.size} relatórios exportados. ${result.failed} falharam.`
+        );
+      } else {
+        toast.success(`${selectedReports.size} relatórios exportados com sucesso!`);
+      }
       setShowBatchExportDialog(false);
       exitSelectionMode();
     } catch (error) {

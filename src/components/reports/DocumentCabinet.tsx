@@ -506,7 +506,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     };
 
     try {
-      const { blob } = await exportReportsBatch(
+      const { blob, failed } = await exportReportsBatch(
         reportIds,
         'zip',
         (progress) => setExportProgress(progress),
@@ -523,7 +523,10 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
 
       toast({
         title: 'Download iniciado',
-        description: `${reportIds.length} relatório(s) sendo baixado(s).`,
+        description: failed > 0
+          ? `${reportIds.length - failed} de ${reportIds.length} relatório(s) no ZIP. ${failed} falharam.`
+          : `${reportIds.length} relatório(s) sendo baixado(s).`,
+        variant: failed > 0 ? 'destructive' : undefined,
       });
     } catch (error) {
       console.error('Error exporting reports:', error);
