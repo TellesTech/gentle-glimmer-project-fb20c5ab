@@ -560,7 +560,7 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
       try {
         const { data, error } = await supabase
           .from('reports')
-          .select('id, project_id, date, daily_progress, actual_workforce, maintenance_order_number, maintenance_order_title')
+          .select('id, project_id, date, location, daily_progress, actual_workforce, maintenance_order_number, maintenance_order_title')
           .in('project_id', projectIds);
         if (error) {
           console.error('Error fetching reports for folders:', error);
