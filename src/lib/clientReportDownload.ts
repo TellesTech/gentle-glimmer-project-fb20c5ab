@@ -214,6 +214,7 @@ export async function getReportPdfBlob(
     projectForPdf,
     reportForPdf.signatures,
     tenantColors,
+    options?.pdfOptions,
   );
 
   return { blob, filename };
