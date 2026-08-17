@@ -1,9 +1,8 @@
 import JSZip from 'jszip';
-import { format, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/loose-client';
-import { formatRdoNumber } from './formatters';
-import { generateReportPdfAsBlob, TenantColors, PdfOptions } from './generateReportPdf';
+import { PdfOptions } from './generateReportPdf';
+import { getReportPdfBlob } from './clientReportDownload';
 
 export type BatchExportFormat = 'combined' | 'zip';
 export type BatchExportDestination = 'download' | 'cloud' | 'both';
