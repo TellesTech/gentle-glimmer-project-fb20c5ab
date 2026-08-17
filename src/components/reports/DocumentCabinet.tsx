@@ -287,6 +287,8 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     folderName: string;
     folderId: string;
   } | null>(null);
+  /** Ids dos RDOs assinados dentro da pasta selecionada para download. */
+  const [signedReportIds, setSignedReportIds] = useState<string[]>([]);
 
   const handleDelete = async () => {
     if (!deletingItem) return;
@@ -485,16 +487,46 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     
     setPendingDownload({ reportIds, folderName, folderId });
     setDownloadDialogOpen(true);
+
+    // Descobre quais RDOs desta pasta já estão assinados (para o filtro do diálogo)
+    setSignedReportIds([]);
+    supabase
+      .from('reports')
+      .select('id')
+      .in('id', reportIds)
+      .in('status', ['signed', 'finalized'])
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn('[download] falha ao buscar RDOs assinados', error);
+          return;
+        }
+        setSignedReportIds((data || []).map((r: any) => r.id));
+      });
   };
 
   const handleDownloadWithOptions = async (options: {
     includeSignatureFields: boolean;
     signatureFieldLabels: string[];
+    onlySigned: boolean;
     downloadWindow?: Window | null;
   }) => {
     if (!pendingDownload) return;
 
-    const { reportIds, folderName, folderId } = pendingDownload;
+    const { reportIds: allReportIds, folderName, folderId } = pendingDownload;
+    const reportIds = options.onlySigned
+      ? allReportIds.filter((id) => signedReportIds.includes(id))
+      : allReportIds;
+    const skipped = allReportIds.length - reportIds.length;
+
+    if (reportIds.length === 0) {
+      toast({
+        title: 'Nenhum RDO assinado',
+        description: 'Esta pasta não possui RDOs assinados para baixar.',
+        variant: 'destructive',
+      });
+      setPendingDownload(null);
+      return;
+    }
 
     setIsExporting(true);
     setExportingId(folderId);
@@ -524,8 +556,8 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
       toast({
         title: 'Download iniciado',
         description: failed > 0
-          ? `${reportIds.length - failed} de ${reportIds.length} relatório(s) no ZIP. ${failed} falharam.`
-          : `${reportIds.length} relatório(s) sendo baixado(s).`,
+          ? `${reportIds.length - failed} de ${reportIds.length} relatório(s) no ZIP. ${failed} falharam.${skipped > 0 ? ` ${skipped} ignorado(s) por não estarem assinados.` : ''}`
+          : `${reportIds.length} relatório(s) sendo baixado(s).${skipped > 0 ? ` ${skipped} ignorado(s) por não estarem assinados.` : ''}`,
         variant: failed > 0 ? 'destructive' : undefined,
       });
     } catch (error) {
@@ -1216,6 +1248,11 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
         onOpenChange={setDownloadDialogOpen}
         onConfirm={handleDownloadWithOptions}
         reportCount={pendingDownload?.reportIds.length || 0}
+        signedCount={
+          pendingDownload
+            ? pendingDownload.reportIds.filter((id) => signedReportIds.includes(id)).length
+            : 0
+        }
         folderName={pendingDownload?.folderName || ''}
       />
       <ConfirmDialog

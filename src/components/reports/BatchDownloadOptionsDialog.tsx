@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Download, FileSignature, Plus, X } from 'lucide-react';
+import { CheckCircle2, Download, FileSignature, Plus, X } from 'lucide-react';
 
 interface BatchDownloadOptionsDialogProps {
   open: boolean;
@@ -20,10 +20,13 @@ interface BatchDownloadOptionsDialogProps {
   onConfirm: (options: {
     includeSignatureFields: boolean;
     signatureFieldLabels: string[];
+    onlySigned: boolean;
     downloadWindow?: Window | null;
   }) => void;
   reportCount: number;
   folderName: string;
+  /** Quantidade de RDOs assinados dentro da pasta (para o filtro "somente assinados"). */
+  signedCount?: number;
 }
 
 export function BatchDownloadOptionsDialog({
@@ -32,8 +35,10 @@ export function BatchDownloadOptionsDialog({
   onConfirm,
   reportCount,
   folderName,
+  signedCount,
 }: BatchDownloadOptionsDialogProps) {
   const [includeSignatureFields, setIncludeSignatureFields] = useState(false);
+  const [onlySigned, setOnlySigned] = useState(false);
   const [signatureLabels, setSignatureLabels] = useState<string[]>([
     'Responsável pela Contratada',
     'Responsável pela Contratante',
@@ -54,6 +59,7 @@ export function BatchDownloadOptionsDialog({
   };
 
   const handleConfirm = () => {
+    if (onlySigned && (signedCount ?? 0) === 0) return;
     // Open a window synchronously from the click gesture to avoid popup blockers.
     // We'll navigate it later when the ZIP is ready.
     const downloadWindow = window.open('about:blank', '_blank', 'noopener,noreferrer');
@@ -70,6 +76,7 @@ export function BatchDownloadOptionsDialog({
       onConfirm({
         includeSignatureFields,
         signatureFieldLabels: signatureLabels.filter((l) => l.trim() !== ''),
+        onlySigned,
         downloadWindow,
       });
     }, 0);
@@ -88,12 +95,36 @@ export function BatchDownloadOptionsDialog({
             Opções de Download
           </DialogTitle>
           <DialogDescription>
-            Baixar <strong>{reportCount}</strong> relatório(s) de{' '}
+            Baixar{' '}
+            <strong>
+              {onlySigned ? `${signedCount ?? 0} de ${reportCount}` : reportCount}
+            </strong>{' '}
+            relatório(s) de{' '}
             <strong>{folderName}</strong>
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          <div className="flex items-start space-x-3">
+            <Checkbox
+              id="only-signed"
+              checked={onlySigned}
+              onCheckedChange={(checked) => setOnlySigned(checked === true)}
+            />
+            <div className="space-y-1">
+              <Label htmlFor="only-signed" className="flex items-center gap-2 cursor-pointer">
+                <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                Baixar somente RDOs assinados
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Ignora rascunhos e RDOs ainda sem assinatura
+              </p>
+              {onlySigned && (signedCount ?? 0) === 0 && (
+                <p className="text-xs text-destructive">Nenhum RDO assinado nesta pasta</p>
+              )}
+            </div>
+          </div>
+
           <div className="flex items-start space-x-3">
             <Checkbox
               id="include-signatures"
@@ -162,7 +193,11 @@ export function BatchDownloadOptionsDialog({
           <Button variant="outline" onClick={handleClose}>
             Cancelar
           </Button>
-          <Button onClick={handleConfirm} className="gap-2">
+          <Button
+            onClick={handleConfirm}
+            className="gap-2"
+            disabled={onlySigned && (signedCount ?? 0) === 0}
+          >
             <Download className="h-4 w-4" />
             Baixar
           </Button>
