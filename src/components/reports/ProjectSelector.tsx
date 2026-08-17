@@ -53,6 +53,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn, stripAccents } from '@/lib/utils';
+import { buildActivityGroups } from '@/lib/rdoActivityGroups';
+import { useActivityNames } from '@/hooks/useActivityNames';
 import { 
   format, 
   startOfMonth, 
@@ -558,7 +560,7 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
       try {
         const { data, error } = await supabase
           .from('reports')
-          .select('id, project_id, date, daily_progress, actual_workforce, maintenance_order_number, maintenance_order_title')
+          .select('id, project_id, date, location, daily_progress, actual_workforce, maintenance_order_number, maintenance_order_title')
           .in('project_id', projectIds);
         if (error) {
           console.error('Error fetching reports for folders:', error);
@@ -661,66 +663,61 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
     return projects;
   }, [projects, activitySearch, selectedFolder, monthlyFolders]);
 
+  // Nomes personalizados das pastas de atividade (mesma fonte de "Meus RDOs")
+  const { names: activityCustomNames } = useActivityNames(selection.siteId ? [selection.siteId] : []);
+
   // When inside a monthly folder, recalculate metrics using only that month's reports
   const monthScopedProjects = useMemo(() => {
     if (!selectedFolder || selectedFolder === 'all' || activitySearch.trim()) return filteredProjects;
 
     const monthReports = reportsForFolders.filter(r => (r.date || '').substring(0, 7) === selectedFolder);
-
-    // Agrupa por OM (número > título), espelhando "Meus Relatórios",
-    // para que as mesmas atividades apareçam nos dois caminhos.
-    const normOm = (v?: string | null) => {
-      const s = (v || '').trim();
-      if (!s || /^(na|n\/a|null|undefined|-|sem om|s\/n|0)$/i.test(s)) return null;
-      const digits = s.replace(/\D/g, '');
-      return digits.length >= 4 ? digits : s.toUpperCase();
-    };
     const projById = new Map(filteredProjects.map(p => [p.id, p as any]));
-    type Group = {
-      key: string; omNumber: string | null; titleCounts: Record<string, number>;
-      projectCounts: Record<string, number>; count: number; workforce: number;
-      progress: number; lastDate: string | null;
-    };
-    const groups = new Map<string, Group>();
-    monthReports.forEach((r: any) => {
-      if (!projById.has(r.project_id)) return;
-      const om = normOm(r.maintenance_order_number);
-      const title = (r.maintenance_order_title || '').trim();
-      const key = om ? `om:${om}` : title ? `title:${title.toLowerCase()}` : `project:${r.project_id}`;
-      let g = groups.get(key);
-      if (!g) {
-        g = { key, omNumber: om, titleCounts: {}, projectCounts: {}, count: 0, workforce: 0, progress: 0, lastDate: null };
-        groups.set(key, g);
-      }
-      if (title) g.titleCounts[title] = (g.titleCounts[title] || 0) + 1;
-      g.projectCounts[r.project_id] = (g.projectCounts[r.project_id] || 0) + 1;
-      g.count++;
-      g.workforce += Number(r.actual_workforce) || 0;
-      g.progress += Number(r.daily_progress) || 0;
-      if (!g.lastDate || (r.date || '') > g.lastDate) g.lastDate = r.date || null;
-    });
+    const scopedReports = monthReports.filter((r: any) => projById.has(r.project_id));
+
+    // Fonte única de verdade: mesmo agrupamento usado em "Meus RDOs"
+    const groups = buildActivityGroups(
+      scopedReports.map((r: any) => ({
+        id: r.id,
+        date: r.date,
+        location: r.location ?? null,
+        maintenance_order_number: r.maintenance_order_number,
+        maintenance_order_title: r.maintenance_order_title,
+        project_id: r.project_id,
+        project_name: projById.get(r.project_id)?.name ?? null,
+        site_id: selection.siteId ?? null,
+      })),
+      activityCustomNames,
+    );
+
+    // Métricas por grupo (contagem, efetivo, progresso)
+    const metricsByReportId = new Map<string, any>(scopedReports.map((r: any) => [r.id, r]));
 
     const usedProjectIds = new Set<string>();
-    const items = Array.from(groups.values()).map(g => {
-      const repProjectId = Object.entries(g.projectCounts).sort((a, b) => b[1] - a[1])[0][0];
-      usedProjectIds.add(repProjectId);
-      Object.keys(g.projectCounts).forEach(id => usedProjectIds.add(id));
+    const items = groups.map(g => {
+      const projectCounts: Record<string, number> = {};
+      let workforce = 0;
+      let progress = 0;
+      g.reportIds.forEach(rid => {
+        const r = metricsByReportId.get(rid);
+        if (!r) return;
+        projectCounts[r.project_id] = (projectCounts[r.project_id] || 0) + 1;
+        workforce += Number(r.actual_workforce) || 0;
+        progress += Number(r.daily_progress) || 0;
+      });
+      const repProjectId = Object.entries(projectCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || g.projectIds[0];
+      g.projectIds.forEach(id => usedProjectIds.add(id));
       const base = projById.get(repProjectId) || {};
-      const bestTitle = Object.entries(g.titleCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
-      const name = g.omNumber
-        ? (bestTitle ? `OM ${g.omNumber} — ${bestTitle}` : `OM ${g.omNumber}`)
-        : (bestTitle || base.name || 'Atividade');
       return {
         ...base,
-        __key: g.key,
+        __key: g.id,
         id: repProjectId,
-        name,
+        name: g.name,
         reportsCount: g.count,
-        totalWorkforce: g.workforce,
+        totalWorkforce: workforce,
         lastReportDate: g.lastDate,
-        progress: Math.min(Math.round(g.progress * 10) / 10, 100),
+        progress: Math.min(Math.round(progress * 10) / 10, 100),
         omNumber: g.omNumber,
-        omTitle: bestTitle || null,
+        omTitle: g.omTitle,
       } as any;
     });
 
@@ -732,7 +729,7 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
     });
 
     return items.sort((a, b) => (b.lastReportDate || '').localeCompare(a.lastReportDate || ''));
-  }, [selectedFolder, filteredProjects, reportsForFolders, activitySearch]);
+  }, [selectedFolder, filteredProjects, reportsForFolders, activitySearch, activityCustomNames, selection.siteId]);
 
 
   const { data: projectReports = [] } = useQuery({
@@ -1632,7 +1629,7 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
           ) : projects.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <HardHat className="h-12 w-12 mx-auto mb-3 opacity-30" />
-              <p className="font-medium">não econtro a atividade desmi OM 24030</p>
+              <p className="font-medium">Nenhuma atividade cadastrada</p>
               <p className="text-sm mt-1">Crie uma atividade para esta unidade</p>
               {isAdmin && (
                 <Button
@@ -1777,7 +1774,7 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
                     {monthScopedProjects.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground">
                         <Search className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                        <p className="font-medium">não econtro a atividade desmi OM 24030</p>
+                        <p className="font-medium">Nenhuma atividade encontrada</p>
                       </div>
                     ) : (
                       <>
