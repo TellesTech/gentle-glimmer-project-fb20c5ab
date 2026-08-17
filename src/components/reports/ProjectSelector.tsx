@@ -53,6 +53,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn, stripAccents } from '@/lib/utils';
+import { buildActivityGroups } from '@/lib/rdoActivityGroups';
+import { useActivityNames } from '@/hooks/useActivityNames';
 import { 
   format, 
   startOfMonth, 
