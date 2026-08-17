@@ -1248,6 +1248,11 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
         onOpenChange={setDownloadDialogOpen}
         onConfirm={handleDownloadWithOptions}
         reportCount={pendingDownload?.reportIds.length || 0}
+        signedCount={
+          pendingDownload
+            ? pendingDownload.reportIds.filter((id) => signedReportIds.includes(id)).length
+            : 0
+        }
         folderName={pendingDownload?.folderName || ''}
       />
       <ConfirmDialog
