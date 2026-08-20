@@ -71,6 +71,7 @@ export default function QuickReportWizard() {
         companyName: contextFromState.companyName || '',
         siteId: contextFromState.siteId,
         siteName: contextFromState.siteName || '',
+        omNumber: contextFromState.omNumber || null,
       };
     }
     if (role === 'admin') {
