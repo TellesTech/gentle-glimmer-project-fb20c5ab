@@ -1056,23 +1056,48 @@ export default function ClientDashboard() {
                         }}
                       >
                         <div className="relative w-24 h-20 sm:w-32 sm:h-24 transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
-                          {/* Renomear pasta de atividade */}
-                          <button
-                            type="button"
-                            title="Renomear pasta"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setRenameTarget({
-                                groupKey: a.id,
-                                siteId: a.siteId,
-                                currentName: a.name,
-                                hasCustomName: a.hasCustomName,
-                              });
-                            }}
-                            className="absolute -top-2 -right-2 z-30 rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-primary hover:border-primary transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
+                          {/* Renomear e Novo Relatório */}
+                          <div className="absolute -top-2 -right-2 z-30 flex gap-1 transition-opacity opacity-100 md:opacity-0 md:group-hover:opacity-100">
+                            {isAdminView && (
+                              <button
+                                type="button"
+                                title="Novo Relatório"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const folder = visibleMonthFolders.find(m => m.id === selectedMonthId);
+                                  navigate('/reports/new', {
+                                    state: {
+                                      companyId: adminCompanyId,
+                                      companyName: (visibleReports.find(r => r.report?.project?.id === a.id) as any)?.report?.project?.company?.name || clientProfile?.company_id,
+                                      siteId: a.siteId || adminSiteId,
+                                      siteName: (visibleReports.find(r => r.report?.project?.id === a.id) as any)?.report?.project?.site?.name,
+                                      omNumber: a.id.startsWith('om:') ? a.id.replace('om:', '') : null,
+                                      omTitle: a.name,
+                                    }
+                                  });
+                                }}
+                                className="rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              title="Renomear pasta"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setRenameTarget({
+                                  groupKey: a.id,
+                                  siteId: a.siteId,
+                                  currentName: a.name,
+                                  hasCustomName: a.hasCustomName,
+                                });
+                              }}
+                              className="rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                           {/* Folder Rear Part */}
                           <div className={cn(
                             "absolute inset-x-0 bottom-0 top-3 rounded-lg shadow-sm",
