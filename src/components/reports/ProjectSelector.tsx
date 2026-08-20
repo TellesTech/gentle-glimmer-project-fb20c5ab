@@ -1438,6 +1438,17 @@ export function ProjectSelector({ onComplete, initialData, originOm }: ProjectSe
 
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
+      {omMismatch && (
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <p className="font-medium">Este RDO será salvo em outra atividade</p>
+            <p className="text-xs opacity-90 break-words">
+              Destino selecionado: {describeOmContext({ omNumber: selection.omNumber, omTitle: selection.omTitle }, selection.projectName)} — pasta de origem: {originLabel}
+            </p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="space-y-3">
         {/* Back Button */}
