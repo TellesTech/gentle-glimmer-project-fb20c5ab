@@ -363,7 +363,9 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
 
   // Estados para pastas de atividades (Step 3)
   const [activitySearch, setActivitySearch] = useState('');
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(
+    (initialData as any)?.omNumber || null
+  );
 
   const isAdmin = role === 'admin' || role === 'super_admin';
 

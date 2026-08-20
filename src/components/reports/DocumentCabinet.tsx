@@ -1603,7 +1603,9 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
               <div
                 key={projectFolder.id}
                 className="relative rounded-xl border bg-card p-3.5 hover:bg-muted/60 transition-colors cursor-pointer shadow-sm group"
-                onClick={() => setOpenProjectId(projectFolder.id)}
+                onClick={() => {
+                  setOpenProjectId(projectFolder.id);
+                }}
               >
                 {/* Actions */}
                 <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
