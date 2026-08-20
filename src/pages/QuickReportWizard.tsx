@@ -101,11 +101,11 @@ export default function QuickReportWizard() {
         projectName: data.projectName,
         teamId: data.teamId,
         teamName: data.teamName,
-        omNumber: data.omNumber,
+        omNumber: data.omNumber || initialData?.omNumber,
         omTitle: data.omTitle,
       }
     });
-  }, [navigate]);
+  }, [navigate, initialData?.omNumber]);
 
   if (isLoading || (role === 'admin' && (isAccessLoading || isSiteDataLoading))) {
     return (
