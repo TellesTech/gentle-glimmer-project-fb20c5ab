@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format, parseISO, getYear, getMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronRight, CheckCircle2, Clock, Wrench, Pencil } from 'lucide-react';
+import { ChevronRight, CheckCircle2, Clock, Wrench, Pencil, Plus } from 'lucide-react';
 import { buildActivityGroups, type ActivityGroupInputReport } from '@/lib/rdoActivityGroups';
 import { useActivityNames } from '@/hooks/useActivityNames';
 import { RenameActivityDialog, type RenameActivityTarget } from '@/components/reports/RenameActivityDialog';
@@ -83,7 +83,7 @@ export default function ClientActivityList() {
       
       let query = supabase
         .from('reports')
-        .select('id, date, maintenance_order_number, maintenance_order_title, location, project:projects(id, name, site_id)')
+        .select('id, date, maintenance_order_number, maintenance_order_title, location, project:projects(id, name, site_id, company:companies(id, name))')
         .in('status', ['sent', 'signed', 'finalized']);
       
       if (siteIds.length > 0) {
@@ -116,6 +116,8 @@ export default function ClientActivityList() {
         maintenance_order_title: r.maintenance_order_title,
         project_id: r.project?.id || '',
         project_name: r.project?.name || '',
+        site_name: (r.project as any)?.site?.name || '',
+        company_name: (r.project as any)?.site?.company?.name || '',
       }));
 
       const groups = buildActivityGroups(inputReports);
@@ -130,6 +132,8 @@ export default function ClientActivityList() {
           maintenance_order_title: r.maintenance_order_title,
           project_id: r.project?.id || '',
           project_name: r.project?.name || '',
+          site_name: (r.project as any)?.site?.name || '',
+          company_name: (r.project as any)?.site?.company?.name || '',
         })));
         group = allGroups.find(g => g.id === projectId);
       }
@@ -140,7 +144,14 @@ export default function ClientActivityList() {
           (allReports.find((r: any) => group!.reportIds.includes(r.id))?.project as any)?.site_id ??
           urlSiteId ??
           null;
-        return { name: group.name, reportIds: group.reportIds, siteId: groupSiteId as string | null };
+        return { 
+          name: group.name, 
+          reportIds: group.reportIds, 
+          siteId: groupSiteId as string | null,
+          siteName: group.siteName,
+          companyId: (scoped.find((r: any) => group!.reportIds.includes(r.id))?.project as any)?.site?.company?.id || null,
+          companyName: group.companyName
+        };
       }
 
       // Fallback: maybe it's a direct project UUID (legacy link)
@@ -280,7 +291,10 @@ export default function ClientActivityList() {
                   onClick={() =>
                     navigate('/reports/new', {
                       state: {
+                        companyId: activityInfo?.companyId,
+                        companyName: activityInfo?.companyName,
                         siteId: activityInfo?.siteId,
+                        siteName: activityInfo?.siteName,
                         omNumber: activityInfo?.reportIds.length ? activityInfo.name.match(/OM (\d+)/)?.[1] : null,
                         omTitle: activityInfo?.name,
                       }
