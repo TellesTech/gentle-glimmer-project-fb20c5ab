@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,6 +9,17 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Building2 } from 'lucide-react';
+import { describeOmContext, isOmContextMismatch } from '@/lib/omContextMatch';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface SelectionData {
   companyId: string | null;
@@ -89,8 +100,18 @@ export default function QuickReportWizard() {
     return undefined;
   }, [role, adminSiteData, companies, contextFromState]);
 
-  const handleSelectionComplete = useCallback((data: SelectionData) => {
-    // Navigate to simplified report form with selection data
+  // Pasta de origem (card clicado em "Meus RDOs")
+  const originOm = useMemo(() => {
+    if (!contextFromState?.omNumber && !contextFromState?.omTitle) return null;
+    return {
+      omNumber: contextFromState?.omNumber || null,
+      omTitle: contextFromState?.omTitle || null,
+    };
+  }, [contextFromState?.omNumber, contextFromState?.omTitle]);
+
+  const [pendingSelection, setPendingSelection] = useState<SelectionData | null>(null);
+
+  const goToForm = useCallback((data: SelectionData, keepOrigin: boolean) => {
     navigate(`/reports/create/${data.projectId}`, {
       state: {
         companyId: data.companyId,
@@ -101,11 +122,20 @@ export default function QuickReportWizard() {
         projectName: data.projectName,
         teamId: data.teamId,
         teamName: data.teamName,
-        omNumber: data.omNumber || initialData?.omNumber,
-        omTitle: data.omTitle,
+        date: (data as any).date,
+        omNumber: keepOrigin ? (originOm?.omNumber ?? null) : (data.omNumber ?? null),
+        omTitle: keepOrigin ? (originOm?.omTitle ?? null) : (data.omTitle ?? null),
       }
     });
-  }, [navigate, initialData?.omNumber]);
+  }, [navigate, originOm]);
+
+  const handleSelectionComplete = useCallback((data: SelectionData) => {
+    if (originOm && isOmContextMismatch(originOm, { omNumber: data.omNumber, omTitle: data.omTitle })) {
+      setPendingSelection(data);
+      return;
+    }
+    goToForm(data, false);
+  }, [originOm, goToForm]);
 
   if (isLoading || (role === 'admin' && (isAccessLoading || isSiteDataLoading))) {
     return (
@@ -130,5 +160,47 @@ export default function QuickReportWizard() {
     );
   }
 
-  return <ProjectSelector onComplete={handleSelectionComplete} initialData={initialData} />;
+  return (
+    <>
+      <ProjectSelector onComplete={handleSelectionComplete} initialData={initialData} originOm={originOm} />
+
+      <AlertDialog open={!!pendingSelection} onOpenChange={(open) => { if (!open) setPendingSelection(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Atividade diferente da pasta de origem</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você abriu "Novo Relatório" a partir de {describeOmContext(originOm)}, mas selecionou{' '}
+              {describeOmContext(
+                { omNumber: pendingSelection?.omNumber, omTitle: pendingSelection?.omTitle },
+                pendingSelection?.projectName
+              )}
+              . Onde este RDO deve ser salvo?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel>Voltar e revisar</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={() => {
+                const sel = pendingSelection;
+                setPendingSelection(null);
+                if (sel) goToForm(sel, false);
+              }}
+            >
+              Salvar na atividade selecionada
+            </Button>
+            <AlertDialogAction
+              onClick={() => {
+                const sel = pendingSelection;
+                setPendingSelection(null);
+                if (sel) goToForm(sel, true);
+              }}
+            >
+              Manter pasta de origem
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
 }

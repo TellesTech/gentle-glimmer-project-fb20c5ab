@@ -47,6 +47,7 @@ import {
   Search,
   Clock
 } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { parseIntervalToMinutes, formatMinutesToHours } from '@/lib/formatters';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -68,6 +69,7 @@ import {
   parseISO
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { describeOmContext, isOmContextMismatch } from '@/lib/omContextMatch';
 
 interface SelectionData {
   companyId: string | null;
@@ -85,6 +87,8 @@ interface SelectionData {
 interface ProjectSelectorProps {
   onComplete: (data: SelectionData) => void;
   initialData?: Partial<SelectionData>;
+  /** Pasta de origem (card clicado em "Meus RDOs"), usada para alertar divergências. */
+  originOm?: { omNumber?: string | null; omTitle?: string | null } | null;
 }
 
 // Card clicável premium
@@ -247,7 +251,7 @@ interface ReturnState {
   projectName?: string;
 }
 
-export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProps) {
+export function ProjectSelector({ onComplete, initialData, originOm }: ProjectSelectorProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const returnState = location.state as ReturnState | null;
@@ -1404,6 +1408,11 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
     4: "Selecione a Data",
   };
 
+  const originLabel = originOm ? describeOmContext(originOm) : null;
+  const omMismatch = !!originOm
+    && !!selection.projectId
+    && isOmContextMismatch(originOm, { omNumber: selection.omNumber, omTitle: selection.omTitle });
+
   if (isLoadingUserTeam) {
     return (
       <div className="space-y-4">
@@ -1430,6 +1439,17 @@ export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProp
 
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
+      {omMismatch && (
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <p className="font-medium">Este RDO será salvo em outra atividade</p>
+            <p className="text-xs opacity-90 break-words">
+              Destino selecionado: {describeOmContext({ omNumber: selection.omNumber, omTitle: selection.omTitle }, selection.projectName)} — pasta de origem: {originLabel}
+            </p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="space-y-3">
         {/* Back Button */}
