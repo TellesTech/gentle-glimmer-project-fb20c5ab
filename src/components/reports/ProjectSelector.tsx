@@ -68,6 +68,7 @@ import {
   parseISO
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { describeOmContext, isOmContextMismatch } from '@/lib/omContextMatch';
 
 interface SelectionData {
   companyId: string | null;
