@@ -47,6 +47,7 @@ import {
   Search,
   Clock
 } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { parseIntervalToMinutes, formatMinutesToHours } from '@/lib/formatters';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
