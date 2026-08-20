@@ -85,6 +85,8 @@ interface SelectionData {
 interface ProjectSelectorProps {
   onComplete: (data: SelectionData) => void;
   initialData?: Partial<SelectionData>;
+  /** Pasta de origem (card clicado em "Meus RDOs"), usada para alertar divergências. */
+  originOm?: { omNumber?: string | null; omTitle?: string | null } | null;
 }
 
 // Card clicável premium
@@ -247,7 +249,7 @@ interface ReturnState {
   projectName?: string;
 }
 
-export function ProjectSelector({ onComplete, initialData }: ProjectSelectorProps) {
+export function ProjectSelector({ onComplete, initialData, originOm }: ProjectSelectorProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const returnState = location.state as ReturnState | null;
