@@ -357,15 +357,20 @@ export default function ReportForm() {
     
     // Apply OM info from state if available
     if (state?.omNumber || state?.omTitle) {
-      setFormData(prev => ({
-        ...prev,
-        maintenanceOrderNumber: state.omNumber || prev.maintenanceOrderNumber,
-        maintenanceOrderTitle: state.omTitle || prev.maintenanceOrderTitle,
-        // If we have a title, we might want to default an activity
-        activities: state.omTitle && prev.activities.length === 0 
-          ? [{ id: `init-${Date.now()}`, reportId: '', description: state.omTitle, completed: false, order: 0 }] 
-          : prev.activities
-      }));
+      setFormData(prev => {
+        const newOmNumber = state.omNumber || prev.maintenanceOrderNumber;
+        const newOmTitle = state.omTitle || prev.maintenanceOrderTitle;
+        
+        return {
+          ...prev,
+          maintenanceOrderNumber: newOmNumber,
+          maintenanceOrderTitle: newOmTitle,
+          // Se temos um título e nenhuma atividade, inicializa a primeira linha
+          activities: newOmTitle && prev.activities.length === 0 
+            ? [{ id: `init-${Date.now()}`, reportId: '', description: newOmTitle, completed: false, order: 0 }] 
+            : prev.activities
+        };
+      });
     }
   }, [searchParams, location.state, formData.projectId, formData.teamId, isEditing]);
 

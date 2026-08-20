@@ -1357,8 +1357,19 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
               <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center">
                 <HardHat className="h-6 w-6 text-primary" />
               </div>
-              <div>
-                <h2 className="font-semibold text-xl">{selectedProjectFolder.name}</h2>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  {selectedProjectFolder.omNumber ? (
+                    <span className="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold tracking-wide shrink-0">
+                      OM {selectedProjectFolder.omNumber}
+                    </span>
+                  ) : (
+                    <span className="px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground text-[10px] font-bold tracking-wide shrink-0">
+                      SEM Nº DE OM
+                    </span>
+                  )}
+                  <h2 className="font-semibold text-xl truncate" title={selectedProjectFolder.name}>{selectedProjectFolder.name}</h2>
+                </div>
                 <p className="text-sm text-muted-foreground">
                   {selectedProjectFolder.count} relatório(s) em {selectedMonthFolder.monthName}/{selectedYearFolder.year}
                 </p>
@@ -1371,14 +1382,14 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                 size="sm"
                 className="gap-1.5"
                 onClick={() =>
-                  navigate('/reports/new', {
+                  navigate('/reports/wizard', {
                     state: {
                       companyId: selectedCompany.id,
                       companyName: selectedCompany.name,
                       siteId: selectedSiteFolder.id,
                       siteName: selectedSiteFolder.name,
                       omNumber: selectedProjectFolder.omNumber,
-                      omTitle: selectedProjectFolder.omTitle,
+                      omTitle: selectedProjectFolder.name,
                     }
                   })
                 }
@@ -1404,11 +1415,11 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                 Renomear
               </Button>
               <DownloadButton
-              reportIds={selectedProjectFolder.reports.map(r => r.id)}
-              folderName={`${selectedCompany.name}_${selectedSiteFolder.name}_${selectedYearFolder.year}_${selectedMonthFolder.monthName}_${
-                selectedProjectFolder.omNumber ? `OM-${selectedProjectFolder.omNumber}` : selectedProjectFolder.name
-              }`}
-              folderId={`om-${selectedProjectFolder.id}-${openMonth}-${openYear}`}
+                reportIds={selectedProjectFolder.reports.map(r => r.id)}
+                folderName={`${selectedCompany.name}_${selectedSiteFolder.name}_${selectedYearFolder.year}_${selectedMonthFolder.monthName}_${
+                  selectedProjectFolder.omNumber ? `OM-${selectedProjectFolder.omNumber}` : selectedProjectFolder.name
+                }`}
+                folderId={`om-${selectedProjectFolder.id}-${openMonth}-${openYear}`}
               />
             </div>
           </div>
@@ -1603,7 +1614,9 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
               <div
                 key={projectFolder.id}
                 className="relative rounded-xl border bg-card p-3.5 hover:bg-muted/60 transition-colors cursor-pointer shadow-sm group"
-                onClick={() => setOpenProjectId(projectFolder.id)}
+                onClick={() => {
+                  setOpenProjectId(projectFolder.id);
+                }}
               >
                 {/* Actions */}
                 <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
