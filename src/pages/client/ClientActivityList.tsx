@@ -270,16 +270,38 @@ export default function ClientActivityList() {
           title={displayName}
           className="mb-0"
           actions={
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="gap-1.5"
-              onClick={() => setRenameOpen(true)}
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              Renomear
-            </Button>
+            <div className="flex items-center gap-2">
+              {isAdminView && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() =>
+                    navigate('/reports/new', {
+                      state: {
+                        siteId: activityInfo?.siteId,
+                        omNumber: activityInfo?.reportIds.length ? activityInfo.name.match(/OM (\d+)/)?.[1] : null,
+                        omTitle: activityInfo?.name,
+                      }
+                    })
+                  }
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Novo Relatório
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setRenameOpen(true)}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Renomear
+              </Button>
+            </div>
           }
         />
 
