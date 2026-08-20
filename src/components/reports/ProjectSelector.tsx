@@ -1406,6 +1406,11 @@ export function ProjectSelector({ onComplete, initialData, originOm }: ProjectSe
     4: "Selecione a Data",
   };
 
+  const originLabel = originOm ? describeOmContext(originOm) : null;
+  const omMismatch = !!originOm
+    && !!selection.projectId
+    && isOmContextMismatch(originOm, { omNumber: selection.omNumber, omTitle: selection.omTitle });
+
   if (isLoadingUserTeam) {
     return (
       <div className="space-y-4">
