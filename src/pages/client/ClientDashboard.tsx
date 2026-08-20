@@ -106,6 +106,8 @@ function buildRdoCardImage(rdoNumber: number | null | undefined, dateLabel: stri
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
+import { Plus } from 'lucide-react';
+
 // Native portal-only flow
 
 const monthNames = [
@@ -214,7 +216,7 @@ export default function ClientDashboard() {
         .from('reports')
         .select(`
           id, date, shift, status, rdo_number, location, maintenance_order_number, maintenance_order_title,
-          project:projects (id, name, site_id, company:companies (id, name))
+          project:projects (id, name, site_id, site:sites(id, name, company:companies(id, name)))
         `)
         .in('project_id', pIds)
         .in('status', ['sent', 'signed', 'finalized'])
@@ -235,7 +237,11 @@ export default function ClientDashboard() {
             location: r.location ?? null,
             maintenance_order_number: r.maintenance_order_number ?? null,
             maintenance_order_title: r.maintenance_order_title ?? null,
-            project: r.project,
+            project: {
+              ...r.project,
+              site_name: (r.project as any)?.site?.name || '',
+              company_name: (r.project as any)?.site?.company?.name || '',
+            },
           },
         };
       }) as PendingReport[];
@@ -320,7 +326,11 @@ export default function ClientDashboard() {
               location: r.location ?? null,
               maintenance_order_number: r.maintenance_order_number ?? null,
               maintenance_order_title: r.maintenance_order_title ?? null,
-              project: r.project,
+              project: {
+                ...r.project,
+                site_name: (r.project as any)?.site?.name || '',
+                company_name: (r.project as any)?.site?.company?.name || '',
+              },
             },
           };
         }) as PendingReport[];
