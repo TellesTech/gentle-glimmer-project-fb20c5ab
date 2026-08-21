@@ -45,6 +45,8 @@ interface SelectionState {
   projectName: string;
   teamId: string | null;
   teamName: string | null;
+  omNumber?: string | null;
+  omTitle?: string | null;
 }
 
 export default function SimplifiedReportForm() {
