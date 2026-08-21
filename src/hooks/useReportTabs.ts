@@ -20,7 +20,7 @@ function getStorageKey(projectId: string, date: string): string {
   return `report-tabs-${projectId}-${date}`;
 }
 
-function createInitialFormData(date: string): ReportFormData {
+function createInitialFormData(date: string, omContext?: { omNumber?: string | null; omTitle?: string | null }): ReportFormData {
   const hour = new Date().getHours();
   const defaultShift = hour >= 6 && hour < 18 ? 'morning' : 'night';
   
