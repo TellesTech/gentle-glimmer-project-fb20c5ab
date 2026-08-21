@@ -54,8 +54,8 @@ function createInitialFormData(date: string, omContext?: { omNumber?: string | n
   };
 }
 
-function createNewTab(date: string, tabNumber: number): ReportTab {
-  const formData = createInitialFormData(date);
+function createNewTab(date: string, tabNumber: number, omContext?: { omNumber?: string | null; omTitle?: string | null }): ReportTab {
+  const formData = createInitialFormData(date, omContext);
   const shiftLabel = formData.shift === 'morning' ? 'Diurno' : 'Noturno';
   
   return {
@@ -67,7 +67,7 @@ function createNewTab(date: string, tabNumber: number): ReportTab {
   };
 }
 
-export function useReportTabs(projectId: string, initialDate: string) {
+export function useReportTabs(projectId: string, initialDate: string, omContext?: { omNumber?: string | null; omTitle?: string | null }) {
   const [state, setState] = useState<ReportTabsState>(() => {
     // Try to recover from localStorage
     const storageKey = getStorageKey(projectId, initialDate);
@@ -93,7 +93,7 @@ export function useReportTabs(projectId: string, initialDate: string) {
     }
     
     // Create initial tab
-    const initialTab = createNewTab(initialDate, 1);
+    const initialTab = createNewTab(initialDate, 1, omContext);
     return {
       tabs: [initialTab],
       activeTabId: initialTab.id,
@@ -109,7 +109,7 @@ export function useReportTabs(projectId: string, initialDate: string) {
   const addTab = useCallback(() => {
     if (state.tabs.length >= MAX_TABS) return;
     
-    const newTab = createNewTab(initialDate, state.tabs.length + 1);
+    const newTab = createNewTab(initialDate, state.tabs.length + 1, omContext);
     setState(prev => ({
       tabs: [...prev.tabs, newTab],
       activeTabId: newTab.id,
