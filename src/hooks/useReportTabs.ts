@@ -51,6 +51,8 @@ function createInitialFormData(date: string, omContext?: { omNumber?: string | n
     activitySteps: [],
     plannedWorkforce: 0,
     realPercentage: 0,
+    maintenanceOrderNumber: omContext?.omNumber || '',
+    maintenanceOrderTitle: omContext?.omTitle || '',
   };
 }
 
@@ -114,7 +116,7 @@ export function useReportTabs(projectId: string, initialDate: string, omContext?
       tabs: [...prev.tabs, newTab],
       activeTabId: newTab.id,
     }));
-  }, [state.tabs.length, initialDate]);
+  }, [state.tabs.length, initialDate, omContext]);
 
   const removeTab = useCallback((tabId: string) => {
     setState(prev => {
@@ -122,7 +124,7 @@ export function useReportTabs(projectId: string, initialDate: string, omContext?
       
       // If no tabs left, create a new one
       if (filteredTabs.length === 0) {
-        const newTab = createNewTab(initialDate, 1);
+        const newTab = createNewTab(initialDate, 1, omContext);
         return {
           tabs: [newTab],
           activeTabId: newTab.id,
@@ -141,7 +143,7 @@ export function useReportTabs(projectId: string, initialDate: string, omContext?
         activeTabId: newActiveId,
       };
     });
-  }, [initialDate]);
+  }, [initialDate, omContext]);
 
   const setActiveTab = useCallback((tabId: string) => {
     setState(prev => ({
