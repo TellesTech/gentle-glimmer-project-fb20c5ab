@@ -280,8 +280,8 @@ export default function ReportForm() {
         activityLocation: existingReport.location || '',
         startTime: existingReport.start_time || '',
         endTime: existingReport.end_time || '',
-        maintenanceOrderTitle: '',
-        maintenanceOrderNumber: '',
+        maintenanceOrderTitle: existingReport.maintenance_order_title || '',
+        maintenanceOrderNumber: existingReport.maintenance_order_number || '',
         contractNumber: existingReport.contract_number || '',
         technicalResponsibleName: existingReport.technical_responsible_name || '',
         technicalResponsibleRole: existingReport.technical_responsible_role || '',
@@ -529,6 +529,8 @@ export default function ReportForm() {
           real_percentage: formData.realPercentage || null,
           client_name: formData.clientName || null,
           client_company: formData.clientCompany || null,
+          maintenance_order_number: formData.maintenanceOrderNumber || null,
+          maintenance_order_title: formData.maintenanceOrderTitle || null,
         })
         .eq('id', id);
 
@@ -671,6 +673,8 @@ export default function ReportForm() {
           planned_workforce: formData.plannedWorkforce || 0,
           actual_workforce: formData.attendance.filter(a => a.present).length,
           real_percentage: formData.realPercentage || null,
+          maintenance_order_number: formData.maintenanceOrderNumber || null,
+          maintenance_order_title: formData.maintenanceOrderTitle || null,
         })
         .select()
         .single();

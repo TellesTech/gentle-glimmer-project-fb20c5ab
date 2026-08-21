@@ -20,7 +20,7 @@ function getStorageKey(projectId: string, date: string): string {
   return `report-tabs-${projectId}-${date}`;
 }
 
-function createInitialFormData(date: string): ReportFormData {
+function createInitialFormData(date: string, omContext?: { omNumber?: string | null; omTitle?: string | null }): ReportFormData {
   const hour = new Date().getHours();
   const defaultShift = hour >= 6 && hour < 18 ? 'morning' : 'night';
   
@@ -51,11 +51,13 @@ function createInitialFormData(date: string): ReportFormData {
     activitySteps: [],
     plannedWorkforce: 0,
     realPercentage: 0,
+    maintenanceOrderNumber: omContext?.omNumber || '',
+    maintenanceOrderTitle: omContext?.omTitle || '',
   };
 }
 
-function createNewTab(date: string, tabNumber: number): ReportTab {
-  const formData = createInitialFormData(date);
+function createNewTab(date: string, tabNumber: number, omContext?: { omNumber?: string | null; omTitle?: string | null }): ReportTab {
+  const formData = createInitialFormData(date, omContext);
   const shiftLabel = formData.shift === 'morning' ? 'Diurno' : 'Noturno';
   
   return {
@@ -67,7 +69,7 @@ function createNewTab(date: string, tabNumber: number): ReportTab {
   };
 }
 
-export function useReportTabs(projectId: string, initialDate: string) {
+export function useReportTabs(projectId: string, initialDate: string, omContext?: { omNumber?: string | null; omTitle?: string | null }) {
   const [state, setState] = useState<ReportTabsState>(() => {
     // Try to recover from localStorage
     const storageKey = getStorageKey(projectId, initialDate);
@@ -93,7 +95,7 @@ export function useReportTabs(projectId: string, initialDate: string) {
     }
     
     // Create initial tab
-    const initialTab = createNewTab(initialDate, 1);
+    const initialTab = createNewTab(initialDate, 1, omContext);
     return {
       tabs: [initialTab],
       activeTabId: initialTab.id,
@@ -109,12 +111,12 @@ export function useReportTabs(projectId: string, initialDate: string) {
   const addTab = useCallback(() => {
     if (state.tabs.length >= MAX_TABS) return;
     
-    const newTab = createNewTab(initialDate, state.tabs.length + 1);
+    const newTab = createNewTab(initialDate, state.tabs.length + 1, omContext);
     setState(prev => ({
       tabs: [...prev.tabs, newTab],
       activeTabId: newTab.id,
     }));
-  }, [state.tabs.length, initialDate]);
+  }, [state.tabs.length, initialDate, omContext]);
 
   const removeTab = useCallback((tabId: string) => {
     setState(prev => {
@@ -122,7 +124,7 @@ export function useReportTabs(projectId: string, initialDate: string) {
       
       // If no tabs left, create a new one
       if (filteredTabs.length === 0) {
-        const newTab = createNewTab(initialDate, 1);
+        const newTab = createNewTab(initialDate, 1, omContext);
         return {
           tabs: [newTab],
           activeTabId: newTab.id,
@@ -141,7 +143,7 @@ export function useReportTabs(projectId: string, initialDate: string) {
         activeTabId: newActiveId,
       };
     });
-  }, [initialDate]);
+  }, [initialDate, omContext]);
 
   const setActiveTab = useCallback((tabId: string) => {
     setState(prev => ({

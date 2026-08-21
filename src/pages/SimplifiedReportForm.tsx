@@ -45,6 +45,8 @@ interface SelectionState {
   projectName: string;
   teamId: string | null;
   teamName: string | null;
+  omNumber?: string | null;
+  omTitle?: string | null;
 }
 
 export default function SimplifiedReportForm() {
@@ -75,7 +77,14 @@ export default function SimplifiedReportForm() {
   } : null;
 
   // Tabs management - only for create mode, not edit mode
-  const tabsHook = useReportTabs(projectId || '', dateFromUrl);
+  const tabsHook = useReportTabs(
+    projectId || '', 
+    dateFromUrl, 
+    navigationState?.omNumber || navigationState?.omTitle ? { 
+      omNumber: navigationState.omNumber, 
+      omTitle: navigationState.omTitle 
+    } : undefined
+  );
   const showTabs = !isEditMode && !!projectId;
 
   // Navigation blocker state
