@@ -65,7 +65,7 @@ export interface ReportFormData {
   aiSummary: string;
 }
 
-const initialFormData: ReportFormData = {
+const createInitialFormData = (): ReportFormData => ({
   date: new Date(),
   shift: 'morning',
   teamId: '',
@@ -99,7 +99,7 @@ const initialFormData: ReportFormData = {
   photos: [],
   comments: '',
   aiSummary: '',
-};
+});
 
 const steps = [
   { id: 1, title: 'Informações', shortTitle: 'Info' },
@@ -121,7 +121,7 @@ export default function ReportForm() {
   const isEditing = !!id;
 
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<ReportFormData>(initialFormData);
+  const [formData, setFormData] = useState<ReportFormData>(createInitialFormData());
   const [isSaving, setIsSaving] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
 
@@ -531,8 +531,6 @@ export default function ReportForm() {
           client_company: formData.clientCompany || null,
           maintenance_order_number: formData.maintenanceOrderNumber || null,
           maintenance_order_title: formData.maintenanceOrderTitle || null,
-          maintenance_order_number: formData.maintenanceOrderNumber || null,
-          maintenance_order_title: formData.maintenanceOrderTitle || null,
         })
         .eq('id', id);
 
@@ -675,8 +673,6 @@ export default function ReportForm() {
           planned_workforce: formData.plannedWorkforce || 0,
           actual_workforce: formData.attendance.filter(a => a.present).length,
           real_percentage: formData.realPercentage || null,
-          maintenance_order_number: formData.maintenanceOrderNumber || null,
-          maintenance_order_title: formData.maintenanceOrderTitle || null,
           maintenance_order_number: formData.maintenanceOrderNumber || null,
           maintenance_order_title: formData.maintenanceOrderTitle || null,
         })
