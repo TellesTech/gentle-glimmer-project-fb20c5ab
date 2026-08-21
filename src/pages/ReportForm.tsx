@@ -73,8 +73,8 @@ const initialFormData: ReportFormData = {
   activityLocation: '',
   startTime: '07:00',
   endTime: '17:00',
-  maintenanceOrderTitle: '',
-  maintenanceOrderNumber: '',
+        maintenanceOrderTitle: existingReport.maintenance_order_title || '',
+        maintenanceOrderNumber: existingReport.maintenance_order_number || '',
   contractNumber: '',
   technicalResponsibleName: '',
   technicalResponsibleRole: '',
@@ -531,6 +531,8 @@ export default function ReportForm() {
           client_company: formData.clientCompany || null,
           maintenance_order_number: formData.maintenanceOrderNumber || null,
           maintenance_order_title: formData.maintenanceOrderTitle || null,
+          maintenance_order_number: formData.maintenanceOrderNumber || null,
+          maintenance_order_title: formData.maintenanceOrderTitle || null,
         })
         .eq('id', id);
 
@@ -673,6 +675,8 @@ export default function ReportForm() {
           planned_workforce: formData.plannedWorkforce || 0,
           actual_workforce: formData.attendance.filter(a => a.present).length,
           real_percentage: formData.realPercentage || null,
+          maintenance_order_number: formData.maintenanceOrderNumber || null,
+          maintenance_order_title: formData.maintenanceOrderTitle || null,
           maintenance_order_number: formData.maintenanceOrderNumber || null,
           maintenance_order_title: formData.maintenanceOrderTitle || null,
         })
