@@ -65,7 +65,7 @@ export interface ReportFormData {
   aiSummary: string;
 }
 
-const initialFormData: ReportFormData = {
+const createInitialFormData = (): ReportFormData => ({
   date: new Date(),
   shift: 'morning',
   teamId: '',
@@ -99,7 +99,7 @@ const initialFormData: ReportFormData = {
   photos: [],
   comments: '',
   aiSummary: '',
-};
+});
 
 const steps = [
   { id: 1, title: 'Informações', shortTitle: 'Info' },
@@ -121,7 +121,7 @@ export default function ReportForm() {
   const isEditing = !!id;
 
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<ReportFormData>(initialFormData);
+  const [formData, setFormData] = useState<ReportFormData>(createInitialFormData());
   const [isSaving, setIsSaving] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
 
