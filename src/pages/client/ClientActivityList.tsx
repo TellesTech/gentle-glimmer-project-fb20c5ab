@@ -150,7 +150,9 @@ export default function ClientActivityList() {
           siteId: groupSiteId as string | null,
           siteName: group.siteName,
           companyId: (scoped.find((r: any) => group!.reportIds.includes(r.id))?.project as any)?.site?.company?.id || null,
-          companyName: group.companyName
+          companyName: group.companyName,
+          omNumber: group.omNumber,
+          omTitle: group.omTitle
         };
       }
 
@@ -158,7 +160,7 @@ export default function ClientActivityList() {
       const { data: proj } = await supabase.from('projects').select('id, name, site_id').eq('id', projectId!).maybeSingle();
       if (proj) {
         const { data: rds } = await supabase.from('reports').select('id').eq('project_id', proj.id).in('status', ['sent', 'signed', 'finalized']);
-        return { name: proj.name, reportIds: (rds || []).map(r => r.id), siteId: (proj as any).site_id ?? null };
+        return { name: proj.name, reportIds: (rds || []).map(r => r.id), siteId: (proj as any).site_id ?? null, omNumber: null, omTitle: null };
       }
 
       return null;
