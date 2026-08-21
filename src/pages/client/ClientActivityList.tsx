@@ -295,8 +295,8 @@ export default function ClientActivityList() {
                         companyName: activityInfo?.companyName,
                         siteId: activityInfo?.siteId,
                         siteName: activityInfo?.siteName,
-                        omNumber: activityInfo?.reportIds.length ? activityInfo.name.match(/OM (\d+)/)?.[1] : null,
-                        omTitle: activityInfo?.name,
+                        omNumber: activityInfo?.omNumber || null,
+                        omTitle: activityInfo?.omTitle || activityInfo?.name || null,
                       }
                     })
                   }
