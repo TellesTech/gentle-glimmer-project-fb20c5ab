@@ -29,6 +29,7 @@ export function usePortalResponsibles({ companyId, siteIds }: Params) {
     queryKey: ['portal-responsibles', companyId, (siteIds || []).join(',')],
     enabled: !!companyId,
     staleTime: 60_000,
+    refetchInterval: 30_000,
     queryFn: async (): Promise<{ wees: PortalPerson[]; client: PortalPerson[]; weesCompanyName: string; clientCompanyName: string | null }> => {
       if (!companyId) return { wees: [], client: [], weesCompanyName: 'WEES', clientCompanyName: null };
 
@@ -72,6 +73,28 @@ export function usePortalResponsibles({ companyId, siteIds }: Params) {
           .eq('is_active', true),
       ]);
 
+      const contactIds = ((contacts || []) as any[]).map((contact) => contact.id);
+      const clientIds = ((clients || []) as any[]).map((clientProfile) => clientProfile.id);
+      const [{ data: contactApprovals }, { data: clientApprovals }] = await Promise.all([
+        contactIds.length > 0
+          ? supabase
+              .from('report_company_approvers')
+              .select('contact_id, status, approved_at')
+              .in('contact_id', contactIds)
+              .or('status.eq.approved,approved_at.not.is.null')
+          : Promise.resolve({ data: [] }),
+        clientIds.length > 0
+          ? supabase
+              .from('report_client_approvers')
+              .select('client_id, status, approved_at')
+              .in('client_id', clientIds)
+              .or('status.eq.approved,approved_at.not.is.null')
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      const signedContactIds = new Set(((contactApprovals || []) as any[]).map((row) => row.contact_id));
+      const signedClientIds = new Set(((clientApprovals || []) as any[]).map((row) => row.client_id));
+
       const client: PortalPerson[] = [
         ...((contacts || []) as any[]).map((c) => ({
           id: `cc-${c.id}`,
@@ -79,7 +102,7 @@ export function usePortalResponsibles({ companyId, siteIds }: Params) {
           role: c.role || 'Cliente',
           email: c.email,
           avatar_url: c.avatar_url || null,
-          hasSignature: !!c.signature_data,
+          hasSignature: !!c.signature_data || signedContactIds.has(c.id),
           canApprove: !!c.can_approve,
           source: 'client' as const,
           companyName: clientCompanyName,
@@ -90,7 +113,7 @@ export function usePortalResponsibles({ companyId, siteIds }: Params) {
           role: c.role || 'Cliente',
           email: c.email,
           avatar_url: null,
-          hasSignature: !!c.signature_data,
+          hasSignature: !!c.signature_data || signedClientIds.has(c.id),
           canApprove: true,
           source: 'client' as const,
           companyName: clientCompanyName || c.company || null,
