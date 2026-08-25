@@ -1,9 +1,12 @@
 import { Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminSiteAccess } from '@/hooks/useAdminSiteAccess';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+
 
 export function HomeRedirect() {
   const { role, isLoading, user, roleResolved, logout } = useAuth();
