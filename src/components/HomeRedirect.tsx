@@ -19,7 +19,23 @@ export function HomeRedirect() {
     return () => clearTimeout(t);
   }, []);
 
+  // Acesso de portal (contato/cliente): usado como rede de segurança para não
+  // deixar um usuário do portal preso na área WEES vazia.
+  const { data: portalAccess, isLoading: portalLoading } = useQuery({
+    queryKey: ['home-portal-access', user?.id],
+    queryFn: async () => {
+      const [{ data: contact }, { data: client }] = await Promise.all([
+        supabase.from('company_contacts').select('id').eq('user_id', user!.id).eq('is_active', true).maybeSingle(),
+        supabase.from('client_profiles').select('id').eq('user_id', user!.id).maybeSingle(),
+      ]);
+      return !!contact || !!client;
+    },
+    enabled: !!user?.id,
+    staleTime: 60000,
+  });
+
   const roleResolving = isLoading || (!!user && !roleResolved);
+
 
   // No role assigned after resolution — do not spin forever.
   if (!isLoading && user && roleResolved && role === null) {
