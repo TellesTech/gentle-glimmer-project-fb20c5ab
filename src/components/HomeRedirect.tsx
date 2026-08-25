@@ -95,5 +95,9 @@ export function HomeRedirect() {
     );
   }
 
+  // Usuário de portal (contato/cliente) sem papel interno relevante vai para a Área do Cliente.
+  if (portalAccess) return <Navigate to="/client/dashboard" replace />;
+
   return <Navigate to="/reports" replace />;
+
 }
