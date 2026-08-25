@@ -107,6 +107,7 @@ export function BulkSignatureDialog({
       });
 
       queryClient.invalidateQueries({ queryKey: ['client-dashboard-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['portal-responsibles'] });
 
       onCompleted?.();
       onOpenChange(false);
