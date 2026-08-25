@@ -53,38 +53,53 @@ function isNetworkError(error: unknown): boolean {
   );
 }
 
-/** Centralized post-login resolver: queries profile/role once and navigates */
+/** Centralized post-login resolver: queries profile/role/portal access once and navigates */
 async function resolvePostLoginDestination(
   userId: string,
   navigate: (path: string) => void,
   onError: (err: unknown) => void,
 ) {
   try {
-    // Run both queries in parallel using Promise.allSettled for resilience
-    const [profileResult, clientResult] = await Promise.allSettled([
-      supabase.from('profiles').select('id').eq('id', userId).maybeSingle(),
+    const [profileResult, clientResult, contactResult, roleResult] = await Promise.allSettled([
+      supabase.from('profiles').select('id, company_id').eq('id', userId).maybeSingle(),
       supabase.from('client_profiles').select('id').eq('user_id', userId).maybeSingle(),
+      supabase
+        .from('company_contacts')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .maybeSingle(),
+      supabase.from('user_roles').select('role').eq('user_id', userId).maybeSingle(),
     ]);
 
-    const profileData = profileResult.status === 'fulfilled' ? profileResult.value.data : null;
+    const profileData: any = profileResult.status === 'fulfilled' ? profileResult.value.data : null;
     const clientData = clientResult.status === 'fulfilled' ? clientResult.value.data : null;
+    const contactData = contactResult.status === 'fulfilled' ? contactResult.value.data : null;
+    const roleData: any = roleResult.status === 'fulfilled' ? roleResult.value.data : null;
+    const role = roleData?.role as string | undefined;
 
-    if (profileData) {
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (roleData?.role === 'admin' || roleData?.role === 'super_admin') {
-        navigate('/super-admin');
-      } else {
-        navigate('/home');
-      }
+    if (role === 'admin' || role === 'super_admin') {
+      navigate('/super-admin');
       return true;
     }
 
-    if (clientData) {
+    const isPortalUser = !!clientData || !!contactData;
+    // Usuário interno "de verdade": tem empresa vinculada ou papel acima de collaborator.
+    const hasInternalRole =
+      !!profileData &&
+      (!!profileData.company_id || (!!role && role !== 'collaborator' && role !== 'client'));
+
+    if (isPortalUser && !hasInternalRole) {
+      navigate('/client/dashboard');
+      return true;
+    }
+
+    if (profileData) {
+      navigate('/home');
+      return true;
+    }
+
+    if (isPortalUser) {
       navigate('/client/dashboard');
       return true;
     }
@@ -95,6 +110,7 @@ async function resolvePostLoginDestination(
     return false;
   }
 }
+
 
 export default function Login() {
   const [loginMode, setLoginMode] = useState<LoginMode>('quick');
