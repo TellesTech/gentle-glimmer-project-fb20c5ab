@@ -52,7 +52,7 @@ export function HomeRedirect() {
     );
   }
 
-  if (roleResolving || (role === 'admin' && isAccessLoading)) {
+  if (roleResolving || (role === 'admin' && isAccessLoading) || (!!user && portalLoading)) {
     if (slowLoad) {
       return (
         <div className="min-h-[60vh] flex items-center justify-center">
