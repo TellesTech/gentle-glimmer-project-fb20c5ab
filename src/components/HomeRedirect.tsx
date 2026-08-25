@@ -1,9 +1,12 @@
 import { Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminSiteAccess } from '@/hooks/useAdminSiteAccess';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+
 
 export function HomeRedirect() {
   const { role, isLoading, user, roleResolved, logout } = useAuth();
@@ -16,7 +19,23 @@ export function HomeRedirect() {
     return () => clearTimeout(t);
   }, []);
 
+  // Acesso de portal (contato/cliente): usado como rede de segurança para não
+  // deixar um usuário do portal preso na área WEES vazia.
+  const { data: portalAccess, isLoading: portalLoading } = useQuery({
+    queryKey: ['home-portal-access', user?.id],
+    queryFn: async () => {
+      const [{ data: contact }, { data: client }] = await Promise.all([
+        supabase.from('company_contacts').select('id').eq('user_id', user!.id).eq('is_active', true).maybeSingle(),
+        supabase.from('client_profiles').select('id').eq('user_id', user!.id).maybeSingle(),
+      ]);
+      return !!contact || !!client;
+    },
+    enabled: !!user?.id,
+    staleTime: 60000,
+  });
+
   const roleResolving = isLoading || (!!user && !roleResolved);
+
 
   // No role assigned after resolution — do not spin forever.
   if (!isLoading && user && roleResolved && role === null) {
@@ -33,7 +52,7 @@ export function HomeRedirect() {
     );
   }
 
-  if (roleResolving || (role === 'admin' && isAccessLoading)) {
+  if (roleResolving || (role === 'admin' && isAccessLoading) || (!!user && portalLoading)) {
     if (slowLoad) {
       return (
         <div className="min-h-[60vh] flex items-center justify-center">
@@ -76,5 +95,9 @@ export function HomeRedirect() {
     );
   }
 
+  // Usuário de portal (contato/cliente) sem papel interno relevante vai para a Área do Cliente.
+  if (portalAccess) return <Navigate to="/client/dashboard" replace />;
+
   return <Navigate to="/reports" replace />;
+
 }
