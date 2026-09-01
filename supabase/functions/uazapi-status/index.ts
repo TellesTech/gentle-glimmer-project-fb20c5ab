@@ -1,4 +1,5 @@
 import { getUazapiConfig, getUazapiToken, saveInstanceToDb } from "../_shared/uazapiConfig.ts";
+// instanceName incluído no diagnóstico do GET
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
