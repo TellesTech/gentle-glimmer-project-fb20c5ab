@@ -65,7 +65,7 @@ serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     UAZAPI_BASE_URL = (await getUazapiConfig()).baseUrl;
-    const uazToken = getUazapiToken().token || "";
+    const uazToken = (await getUazapiToken()).token || "";
 
     const authHeader = req.headers.get("Authorization") || "";
     if (!authHeader) return json({ error: "Não autenticado" }, 401);

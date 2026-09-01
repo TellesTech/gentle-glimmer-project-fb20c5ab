@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     const config = await getUazapiConfig();
     UAZAPI_BASE_URL = config.baseUrl;
 
-    const tokenInfo = getUazapiToken();
+    const tokenInfo = await getUazapiToken();
     const token = tokenInfo.token;
     if (!token) {
       return new Response(JSON.stringify({ error: "Token UAZAPI não configurado (UAZAPI_INSTANCE_TOKEN/UAZAPI_TOKEN)" }), {
