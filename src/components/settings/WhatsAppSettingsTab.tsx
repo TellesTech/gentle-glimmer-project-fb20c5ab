@@ -305,7 +305,7 @@ export function WhatsAppSettingsTab() {
         </CardContent>
       </Card>
 
-      {/* Webhook URL */}
+      {/* Webhook URL — informação estática da integração (conexão gerenciada no card acima) */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -313,105 +313,15 @@ export function WhatsAppSettingsTab() {
             <CardTitle>WhatsApp → RDO</CardTitle>
           </div>
           <CardDescription>
-            Configure a integração UAZAPI (chatwees.uazapi.com) para receber RDOs automaticamente via WhatsApp.
+            Integração UAZAPI para receber RDOs automaticamente via WhatsApp. A conexão (status, QR Code e credenciais) é gerenciada no card "Conexão do WhatsApp" acima.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Alert className="border-warning/30 bg-warning/10">
-            <AlertCircle className="h-4 w-4 text-warning" />
-            <AlertDescription className="text-xs text-foreground">
-              Configure o <strong>Instance Token</strong> da UAZAPI (secret <code>UAZAPI_TOKEN</code>) para ativar a integração. O webhook é configurado automaticamente ao conectar.
-            </AlertDescription>
-          </Alert>
-
-          {credentialsDiagnostic && !credentialsDiagnostic.credentialsValid && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-xs space-y-1">
-                <p className="font-semibold">⛔ Credenciais UAZAPI inválidas — conexão bloqueada</p>
-                {credentialsDiagnostic.tokenLooksLikeUrl ? (
-                  <p>
-                    Você colou uma <strong>URL</strong> no lugar do <strong>Instance Token</strong>.
-                    Cole apenas o token (UUID, ex.: <code>0e93a34d-37d9-4c40-9ec5-8b465f3b8a03</code>).
-                  </p>
-                ) : (
-                  <p>
-                    O <strong>Instance Token</strong> da UAZAPI tem{' '}
-                    <strong>{credentialsDiagnostic.tokenLength} caracteres</strong>. Esperado: UUID
-                    com ~36 caracteres.
-                  </p>
-                )}
-                <p className="pt-1">
-                  No painel UAZAPI, copie o <strong>Instance Token</strong> da instância conectada
-                  e atualize o secret <code>UAZAPI_TOKEN</code>.
-                </p>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Test Connection */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={testConnection}
-              disabled={connectionStatus === 'loading'}
-            >
-              {connectionStatus === 'loading' ? (
-                <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <CheckCircle className="h-4 w-4 mr-1" />
-              )}
-              Testar Conexão
-            </Button>
-            <Button
-              id="whatsapp-connect-button"
-              variant="outline"
-              size="sm"
-              onClick={startQrFlow}
-              disabled={!!credentialsDiagnostic && !credentialsDiagnostic.credentialsValid}
-              className="border-green-600/30 text-green-700 hover:bg-green-50 dark:hover:bg-green-950/30"
-              title={
-                credentialsDiagnostic && !credentialsDiagnostic.credentialsValid
-                  ? 'Corrija o Token da instância antes de conectar'
-                  : undefined
-              }
-            >
-              <QrCode className="h-4 w-4 mr-1" />
-              Conectar WhatsApp
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setReconnectDialogOpen(true)}
-              disabled={!!credentialsDiagnostic && !credentialsDiagnostic.credentialsValid}
-              title={
-                credentialsDiagnostic && !credentialsDiagnostic.credentialsValid
-                  ? 'Corrija o Token da instância antes de reconectar'
-                  : 'Desconectar a sessão atual e escanear o QR do novo número'
-              }
-            >
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Trocar número / Reconectar
-            </Button>
-            {connectionStatus === 'connected' && (
-              <Badge variant="default" className="bg-green-600 text-white text-xs">
-                ✅ {connectionMessage}
-              </Badge>
-            )}
-            {connectionStatus === 'disconnected' && (
-              <Badge variant="destructive" className="text-xs">
-                ❌ {connectionMessage}
-              </Badge>
-            )}
-            {connectionStatus === 'error' && (
-              <Badge variant="destructive" className="text-xs">
-                ⚠️ {connectionMessage}
-              </Badge>
-            )}
-          </div>
+        <CardContent className="space-y-2">
+          <Label className="text-xs">URL do Webhook (configurada automaticamente ao conectar)</Label>
+          <code className="block text-xs bg-muted px-3 py-2 rounded break-all">{webhookUrl}</code>
         </CardContent>
       </Card>
+
 
       {/* Group Mappings */}
       <Card>
