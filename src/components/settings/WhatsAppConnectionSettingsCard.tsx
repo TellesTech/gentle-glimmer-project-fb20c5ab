@@ -285,6 +285,42 @@ export function WhatsAppConnectionSettingsCard() {
               />
             </div>
 
+            <div className="rounded-lg border p-3 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Smartphone className="w-4 h-4 text-muted-foreground" />
+                Instância
+                {instanceName ? (
+                  <Badge variant="secondary">{instanceName}</Badge>
+                ) : (
+                  <Badge variant="outline">nenhuma criada</Badge>
+                )}
+                {instanceStatus === 'connected' && <Badge className="bg-green-600 hover:bg-green-600">conectada</Badge>}
+                {instanceStatus === 'disconnected' && instanceName && <Badge variant="destructive">desconectada</Badge>}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Crie a instância aqui mesmo: o token é salvo automaticamente (mascarado {instanceTokenMasked ?? '—'}) e o
+                webhook é aplicado na criação. Depois use "Conectar WhatsApp" para escanear o QR Code.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {!instanceName && (
+                  <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)}>
+                    <PlusCircle className="w-4 h-4 mr-1" /> Criar instância
+                  </Button>
+                )}
+                {instanceName && (
+                  <>
+                    <Button size="sm" variant="outline" onClick={handleDisconnectInstance} disabled={disconnecting}>
+                      {disconnecting ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Power className="w-4 h-4 mr-1" />}
+                      Desconectar
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
+                      <Trash2 className="w-4 h-4 mr-1" /> Excluir instância
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+
             <div className="rounded-lg border p-3 space-y-1">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <KeyRound className="w-4 h-4 text-muted-foreground" />
