@@ -47,7 +47,9 @@ export function WhatsAppConnectionSettingsCard() {
   const [savedToken, setSavedToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown');
+  const [status, setStatus] = useState<'unknown' | 'connected' | 'disconnected' | 'error'>('unknown');
+  const [checking, setChecking] = useState(false);
+  const [instanceInfo, setInstanceInfo] = useState<{ name: string; phone: string }>({ name: '', phone: '' });
 
   const authHeaders = async () => {
     const session = await (supabase as any).auth.getSession();
@@ -58,12 +60,23 @@ export function WhatsAppConnectionSettingsCard() {
   };
 
   const refreshStatus = async () => {
+    setChecking(true);
     try {
       const res = await fetch(statusFnUrl, { headers: await authHeaders() });
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || data.error) {
+        setStatus('error');
+        return;
+      }
       setStatus(data?.connected ? 'connected' : 'disconnected');
+      setInstanceInfo({
+        name: String(data?.status?.instance?.name || data?.instanceName || '').trim(),
+        phone: formatPhone(data?.status?.status?.jid || data?.status?.instance?.owner),
+      });
     } catch {
-      setStatus('disconnected');
+      setStatus('error');
+    } finally {
+      setChecking(false);
     }
   };
 
@@ -87,7 +100,8 @@ export function WhatsAppConnectionSettingsCard() {
       setLoading(false);
       refreshStatus();
     })();
-    return () => { active = false; };
+    const timer = setInterval(() => { if (active) refreshStatus(); }, 20000);
+    return () => { active = false; clearInterval(timer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
