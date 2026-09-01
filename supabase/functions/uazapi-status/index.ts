@@ -207,6 +207,7 @@ Deno.serve(async (req) => {
         tokenSource: tokenInfo.source,
         instanceTokenMasked: tokenInfo.instanceTokenMasked,
         adminTokenMasked: tokenInfo.adminTokenMasked,
+        instanceName: tokenInfo.instanceName,
 
         diagnostics: {
           credentialsValid,
