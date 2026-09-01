@@ -1,4 +1,4 @@
-import { getUazapiConfig } from "../_shared/uazapiConfig.ts";
+import { getUazapiConfig, getUazapiToken } from "../_shared/uazapiConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,9 +26,10 @@ Deno.serve(async (req) => {
     const config = await getUazapiConfig();
     UAZAPI_BASE_URL = config.baseUrl;
 
-    const token = Deno.env.get("UAZAPI_TOKEN");
+    const tokenInfo = getUazapiToken();
+    const token = tokenInfo.token;
     if (!token) {
-      return new Response(JSON.stringify({ error: "UAZAPI_TOKEN não configurado" }), {
+      return new Response(JSON.stringify({ error: "Token UAZAPI não configurado (UAZAPI_INSTANCE_TOKEN/UAZAPI_TOKEN)" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -147,6 +148,9 @@ Deno.serve(async (req) => {
         baseUrl: UAZAPI_BASE_URL,
         expectedWebhookUrl,
         tokenMasked: token.length > 6 ? `••••${token.slice(-6)}` : "••••",
+        tokenSource: tokenInfo.source,
+        instanceTokenMasked: tokenInfo.instanceTokenMasked,
+        adminTokenMasked: tokenInfo.adminTokenMasked,
 
         diagnostics: {
           credentialsValid,
