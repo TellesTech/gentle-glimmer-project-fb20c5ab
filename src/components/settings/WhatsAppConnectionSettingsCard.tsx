@@ -202,12 +202,33 @@ export function WhatsAppConnectionSettingsCard() {
               <div className="flex items-center gap-2 text-sm font-medium">
                 <KeyRound className="w-4 h-4 text-muted-foreground" />
                 Admin Token
-                <Badge variant="secondary">{tokenMasked ? tokenMasked : 'no cofre de segredos'}</Badge>
+                <Badge variant="secondary">{adminTokenMasked ?? tokenMasked ?? 'no cofre de segredos'}</Badge>
               </div>
               <p className="text-xs text-muted-foreground">
                 Por segurança, o token fica no cofre de segredos (UAZAPI_TOKEN) e não é exibido aqui. Peça a troca no chat
                 para atualizá-lo.
               </p>
+            </div>
+
+            <div className="rounded-lg border p-3 space-y-1">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <KeyRound className="w-4 h-4 text-muted-foreground" />
+                Instance Token
+                {instanceTokenMasked ? (
+                  <Badge variant="secondary">{instanceTokenMasked}</Badge>
+                ) : (
+                  <Badge variant="outline">não configurado</Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Token da instância conectada (cofre de segredos: UAZAPI_INSTANCE_TOKEN). Quando configurado, tem
+                prioridade sobre o admin token. Peça no chat para cadastrar ou alterar.
+              </p>
+              {tokenSource && (
+                <p className="text-xs text-muted-foreground">
+                  Em uso agora: <span className="font-medium">{tokenSource === 'instance' ? 'Instance Token' : 'Admin Token (fallback)'}</span>
+                </p>
+              )}
             </div>
 
             {testResult && (
