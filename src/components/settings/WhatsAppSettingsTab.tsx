@@ -508,7 +508,10 @@ export function WhatsAppSettingsTab() {
 
   return (
     <div className="space-y-6">
+      <WhatsAppConnectionSettingsCard />
+
       {/* Pausar automação */}
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
