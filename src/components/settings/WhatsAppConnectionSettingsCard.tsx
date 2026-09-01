@@ -23,6 +23,16 @@ function maskToken(value: string | null | undefined): string {
   return value.length > 8 ? `${value.slice(0, 4)}••••${value.slice(-4)}` : '••••';
 }
 
+function formatPhone(jid: string | null | undefined): string {
+  if (!jid) return '';
+  const digits = String(jid).split('@')[0].split(':')[0].replace(/\D/g, '');
+  if (digits.length < 12) return digits ? `+${digits}` : '';
+  const cc = digits.slice(0, 2);
+  const ddd = digits.slice(2, 4);
+  const rest = digits.slice(4);
+  return `+${cc} ${ddd} ${rest.slice(0, rest.length - 4)}-${rest.slice(-4)}`;
+}
+
 export function WhatsAppConnectionSettingsCard() {
   const { toast } = useToast();
   const { role } = useAuth();
