@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Plus, Trash2, RefreshCw, CheckCircle, XCircle, Clock, AlertCircle, Search, ArrowUpRight, QrCode, Wifi } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, CheckCircle, XCircle, Clock, AlertCircle, Search, ArrowUpRight } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Pause, Play } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/shared/WhatsAppIcon';
