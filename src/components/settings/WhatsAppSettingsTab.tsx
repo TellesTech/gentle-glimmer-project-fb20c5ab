@@ -19,6 +19,8 @@ import { WhatsAppIcon } from '@/components/shared/WhatsAppIcon';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { WhatsAppConnectionSettingsCard } from '@/components/settings/WhatsAppConnectionSettingsCard';
+
 
 export function WhatsAppSettingsTab() {
   const { toast } = useToast();
