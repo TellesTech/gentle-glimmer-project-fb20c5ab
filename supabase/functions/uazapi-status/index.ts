@@ -128,16 +128,16 @@ Deno.serve(async (req) => {
       const res = await uaFetch("/webhook", freshToken, {
         method: "POST",
         body: JSON.stringify({
-          url: webhookUrl,
+          url: freshWebhookUrl,
           enabled: true,
-          events: config.webhookEvents,
+          events: freshConfig.webhookEvents,
           excludeEvents: ["wasSentByApi", "isGroupYes"],
         }),
       });
       const data = await res.json().catch(() => ({}));
       console.log("UAZAPI webhook config response:", JSON.stringify(data));
 
-      return new Response(JSON.stringify({ action: "webhook_configured", webhookUrl, result: data }), {
+      return new Response(JSON.stringify({ action: "webhook_configured", webhookUrl: freshWebhookUrl, result: data }), {
         status: res.ok ? 200 : 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
