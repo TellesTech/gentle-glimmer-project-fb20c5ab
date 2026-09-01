@@ -1,4 +1,5 @@
-import { getUazapiConfig, getUazapiToken } from "../_shared/uazapiConfig.ts";
+import { getUazapiConfig, getUazapiToken, saveInstanceToDb } from "../_shared/uazapiConfig.ts";
+// instanceName incluído no diagnóstico do GET
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,7 +27,7 @@ Deno.serve(async (req) => {
     const config = await getUazapiConfig();
     UAZAPI_BASE_URL = config.baseUrl;
 
-    const tokenInfo = getUazapiToken();
+    const tokenInfo = await getUazapiToken();
     const token = tokenInfo.token;
     if (!token) {
       return new Response(JSON.stringify({ error: "Token UAZAPI não configurado (UAZAPI_INSTANCE_TOKEN/UAZAPI_TOKEN)" }), {
@@ -42,8 +43,64 @@ Deno.serve(async (req) => {
     const action = url.searchParams.get("action");
 
 
-    // POST → configura/atualiza o webhook
+    // POST → configura/atualiza o webhook ou gerencia a instância
     if (req.method === "POST") {
+      const reqBody = await req.json().catch(() => ({}));
+
+      if (action === "create-instance") {
+        const name = String(reqBody?.name || "").trim();
+        if (!name) {
+          return new Response(JSON.stringify({ error: "Informe o nome da instância" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const adminToken = (Deno.env.get("UAZAPI_TOKEN") || "").trim();
+        if (!adminToken) {
+          return new Response(JSON.stringify({ error: "UAZAPI_TOKEN (admin) não configurado" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const res = await uaFetch("/instance/init", adminToken, {
+          method: "POST",
+          body: JSON.stringify({ name }),
+        });
+        const data = await res.json().catch(() => ({}));
+        console.log("UAZAPI create-instance response:", JSON.stringify(data).slice(0, 300));
+        const instanceToken: string = data?.token || data?.instance?.token || data?.hash?.token || "";
+        if (!res.ok || !instanceToken) {
+          return new Response(JSON.stringify({ error: "UAZAPI não retornou o token da instância", result: data }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const saved = await saveInstanceToDb(name, instanceToken);
+        // aplica webhook na nova instância
+        await uaFetch("/webhook", instanceToken, {
+          method: "POST",
+          body: JSON.stringify({
+            url: expectedWebhookUrl,
+            enabled: true,
+            events: config.webhookEvents,
+            excludeEvents: ["wasSentByApi", "isGroupYes"],
+          }),
+        }).catch(() => null);
+        return new Response(JSON.stringify({ created: true, saved, instanceName: name, tokenMasked: `••••${instanceToken.slice(-6)}` }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (action === "delete-instance") {
+        const res = await uaFetch("/instance", token, { method: "DELETE" });
+        const data = await res.json().catch(() => ({}));
+        await saveInstanceToDb(null, null);
+        return new Response(JSON.stringify({ deleted: res.ok, result: data }), {
+          status: res.ok ? 200 : 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       if (action === "disconnect") {
         const res = await uaFetch("/instance/disconnect", token, {
           method: "POST",
@@ -60,8 +117,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      const body = await req.json().catch(() => ({}));
-      const webhookUrl: string = body.webhookUrl || expectedWebhookUrl;
+      const webhookUrl: string = reqBody.webhookUrl || expectedWebhookUrl;
 
       const res = await uaFetch("/webhook", token, {
         method: "POST",
@@ -151,6 +207,7 @@ Deno.serve(async (req) => {
         tokenSource: tokenInfo.source,
         instanceTokenMasked: tokenInfo.instanceTokenMasked,
         adminTokenMasked: tokenInfo.adminTokenMasked,
+        instanceName: tokenInfo.instanceName,
 
         diagnostics: {
           credentialsValid,

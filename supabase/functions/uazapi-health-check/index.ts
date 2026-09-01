@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
 
   try {
     UAZAPI_BASE_URL = (await getUazapiConfig()).baseUrl;
-    const tokenInfo = getUazapiToken();
+    const tokenInfo = await getUazapiToken();
     const token = tokenInfo.token;
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

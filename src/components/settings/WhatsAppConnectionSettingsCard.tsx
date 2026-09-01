@@ -5,16 +5,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Save, PlugZap, KeyRound, Webhook } from 'lucide-react';
+import { Loader2, Save, PlugZap, KeyRound, Webhook, Smartphone, PlusCircle, Trash2, Power } from 'lucide-react';
 
 interface SettingsRow {
   id: string;
   base_url: string;
   webhook_url: string | null;
   webhook_events: string[] | null;
+  instance_name: string | null;
 }
 
 const DEFAULT_BASE_URL = 'https://chatwees.uazapi.com';
@@ -41,13 +44,21 @@ export function WhatsAppConnectionSettingsCard() {
   const [instanceTokenMasked, setInstanceTokenMasked] = useState<string | null>(null);
   const [adminTokenMasked, setAdminTokenMasked] = useState<string | null>(null);
   const [tokenSource, setTokenSource] = useState<string | null>(null);
+  const [instanceName, setInstanceName] = useState<string | null>(null);
+  const [instanceStatus, setInstanceStatus] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newInstanceName, setNewInstanceName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   useEffect(() => {
     let active = true;
     (async () => {
       const { data, error } = await (supabase as any)
         .from('whatsapp_integration_settings')
-        .select('id, base_url, webhook_url, webhook_events')
+        .select('id, base_url, webhook_url, webhook_events, instance_name')
         .order('created_at', { ascending: true })
         .limit(1)
         .maybeSingle();
@@ -58,6 +69,7 @@ export function WhatsAppConnectionSettingsCard() {
         setRow(data as SettingsRow);
         setBaseUrl(data.base_url || DEFAULT_BASE_URL);
         setWebhookUrl(data.webhook_url || '');
+        setInstanceName(data.instance_name || null);
         setEventsText((data.webhook_events || ['messages', 'messages_update', 'connection']).join(', '));
       }
       setLoading(false);
@@ -108,10 +120,12 @@ export function WhatsAppConnectionSettingsCard() {
       setInstanceTokenMasked(data?.instanceTokenMasked ?? null);
       setAdminTokenMasked(data?.adminTokenMasked ?? null);
       setTokenSource(data?.tokenSource ?? null);
+      if (data?.instanceName) setInstanceName(data.instanceName);
+      setInstanceStatus(data?.connected ? 'connected' : 'disconnected');
       if (data?.error) {
         setTestResult(`Erro: ${data.error}`);
       } else {
-        const sourceLabel = data?.tokenSource === 'instance' ? 'instance token' : data?.tokenSource === 'admin' ? 'admin token (fallback)' : 'nenhum';
+        const sourceLabel = data?.tokenSource === 'instance_db' ? 'instância (salva)' : data?.tokenSource === 'instance_env' ? 'instância (segredo)' : data?.tokenSource === 'admin' ? 'admin (fallback)' : 'nenhum';
         setTestResult(
           `${data?.connected ? 'Conectado' : 'Desconectado'} · servidor: ${data?.baseUrl ?? '—'} · token em uso: ${sourceLabel} · webhook esperado: ${data?.expectedWebhookUrl ?? '—'}`
         );
@@ -142,6 +156,79 @@ export function WhatsAppConnectionSettingsCard() {
       toast({ title: 'Erro', description: err?.message || 'Falha ao aplicar webhook', variant: 'destructive' });
     } finally {
       setApplying(false);
+    }
+  };
+
+  const handleCreateInstance = async () => {
+    const name = newInstanceName.trim();
+    if (!name) {
+      toast({ title: 'Informe o nome da instância', variant: 'destructive' });
+      return;
+    }
+    setCreating(true);
+    try {
+      const headers = await authHeaders();
+      const res = await fetch(`${statusFnUrl}?action=create-instance`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (!res.ok || data?.error) {
+        toast({ title: 'Falha ao criar instância', description: data?.error || 'Verifique o admin token e o servidor.', variant: 'destructive' });
+        return;
+      }
+      setInstanceName(data.instanceName || name);
+      setInstanceTokenMasked(data.tokenMasked || null);
+      setTokenSource('instance_db');
+      setCreateOpen(false);
+      setNewInstanceName('');
+      toast({ title: 'Instância criada', description: `"${data.instanceName || name}" salva e webhook aplicado. Agora conecte via QR Code.` });
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err?.message || 'Falha ao criar instância', variant: 'destructive' });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDisconnectInstance = async () => {
+    setDisconnecting(true);
+    try {
+      const headers = await authHeaders();
+      const res = await fetch(`${statusFnUrl}?action=disconnect`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: '{}' });
+      const data = await res.json();
+      if (res.ok && data?.disconnected) {
+        setInstanceStatus('disconnected');
+        toast({ title: 'Instância desconectada' });
+      } else {
+        toast({ title: 'Falha ao desconectar', description: data?.error || 'Tente novamente.', variant: 'destructive' });
+      }
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err?.message || 'Falha ao desconectar', variant: 'destructive' });
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  const handleDeleteInstance = async () => {
+    setDeleting(true);
+    try {
+      const headers = await authHeaders();
+      const res = await fetch(`${statusFnUrl}?action=delete-instance`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: '{}' });
+      const data = await res.json();
+      if (res.ok && data?.deleted !== false) {
+        setInstanceName(null);
+        setInstanceTokenMasked(null);
+        setInstanceStatus(null);
+        setDeleteOpen(false);
+        toast({ title: 'Instância excluída', description: 'Os dados da instância foram removidos do sistema.' });
+      } else {
+        toast({ title: 'Falha ao excluir', description: data?.error || 'Tente novamente.', variant: 'destructive' });
+      }
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err?.message || 'Falha ao excluir instância', variant: 'destructive' });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -196,6 +283,42 @@ export function WhatsAppConnectionSettingsCard() {
                 onChange={(e) => setEventsText(e.target.value)}
                 placeholder="messages, messages_update, connection"
               />
+            </div>
+
+            <div className="rounded-lg border p-3 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Smartphone className="w-4 h-4 text-muted-foreground" />
+                Instância
+                {instanceName ? (
+                  <Badge variant="secondary">{instanceName}</Badge>
+                ) : (
+                  <Badge variant="outline">nenhuma criada</Badge>
+                )}
+                {instanceStatus === 'connected' && <Badge className="bg-green-600 hover:bg-green-600">conectada</Badge>}
+                {instanceStatus === 'disconnected' && instanceName && <Badge variant="destructive">desconectada</Badge>}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Crie a instância aqui mesmo: o token é salvo automaticamente (mascarado {instanceTokenMasked ?? '—'}) e o
+                webhook é aplicado na criação. Depois use "Conectar WhatsApp" para escanear o QR Code.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {!instanceName && (
+                  <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)}>
+                    <PlusCircle className="w-4 h-4 mr-1" /> Criar instância
+                  </Button>
+                )}
+                {instanceName && (
+                  <>
+                    <Button size="sm" variant="outline" onClick={handleDisconnectInstance} disabled={disconnecting}>
+                      {disconnecting ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Power className="w-4 h-4 mr-1" />}
+                      Desconectar
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
+                      <Trash2 className="w-4 h-4 mr-1" /> Excluir instância
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="rounded-lg border p-3 space-y-1">
@@ -254,6 +377,53 @@ export function WhatsAppConnectionSettingsCard() {
           </>
         )}
       </CardContent>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Criar nova instância</DialogTitle>
+            <DialogDescription>
+              A instância será criada na UAZAPI usando o admin token. O token da instância é salvo automaticamente e o
+              webhook configurado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="new-instance-name">Nome da instância</Label>
+            <Input
+              id="new-instance-name"
+              value={newInstanceName}
+              onChange={(e) => setNewInstanceName(e.target.value)}
+              placeholder="ex.: wees-rdo"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
+            <Button onClick={handleCreateInstance} disabled={creating}>
+              {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Criar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir instância?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A instância "{instanceName}" será removida na UAZAPI e os dados apagados do sistema. O WhatsApp conectado
+              será desvinculado. Essa ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteInstance} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

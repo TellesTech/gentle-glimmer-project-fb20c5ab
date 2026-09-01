@@ -3425,6 +3425,8 @@ export type Database = {
           base_url: string
           created_at: string
           id: string
+          instance_name: string | null
+          instance_token: string | null
           updated_at: string
           updated_by: string | null
           webhook_events: string[]
@@ -3434,6 +3436,8 @@ export type Database = {
           base_url?: string
           created_at?: string
           id?: string
+          instance_name?: string | null
+          instance_token?: string | null
           updated_at?: string
           updated_by?: string | null
           webhook_events?: string[]
@@ -3443,6 +3447,8 @@ export type Database = {
           base_url?: string
           created_at?: string
           id?: string
+          instance_name?: string | null
+          instance_token?: string | null
           updated_at?: string
           updated_by?: string | null
           webhook_events?: string[]
@@ -3808,6 +3814,8 @@ export type Database = {
         Args: never
         Returns: {
           base_url: string
+          instance_name: string
+          instance_token: string
           webhook_events: string[]
           webhook_url: string
         }[]
