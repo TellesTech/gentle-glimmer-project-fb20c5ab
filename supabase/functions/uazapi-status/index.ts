@@ -144,6 +144,10 @@ Deno.serve(async (req) => {
         webhookConfig: webhookData,
         connected,
         smartPhoneConnected: connected,
+        baseUrl: UAZAPI_BASE_URL,
+        expectedWebhookUrl,
+        tokenMasked: token.length > 6 ? `••••${token.slice(-6)}` : "••••",
+
         diagnostics: {
           credentialsValid,
           tokenLooksLikeUrl,
