@@ -116,8 +116,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      const body = await req.json().catch(() => ({}));
-      const webhookUrl: string = body.webhookUrl || expectedWebhookUrl;
+      const webhookUrl: string = reqBody.webhookUrl || expectedWebhookUrl;
 
       const res = await uaFetch("/webhook", token, {
         method: "POST",
