@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-let UAZAPI_BASE_URL = "https://chatwees.uazapi.com";
+let UAZAPI_BASE_URL = "https://weeschat.uazapi.com";
 
 async function uaFetch(path: string, token: string, init: RequestInit = {}) {
   const headers = {
@@ -119,19 +119,25 @@ Deno.serve(async (req) => {
 
       const webhookUrl: string = reqBody.webhookUrl || expectedWebhookUrl;
 
-      const res = await uaFetch("/webhook", token, {
+      // Recarrega config/token sem cache para usar imediatamente o que acabou de ser salvo no banco
+      const freshConfig = await getUazapiConfig(true);
+      UAZAPI_BASE_URL = freshConfig.baseUrl;
+      const freshToken = (await getUazapiToken(freshConfig)).token || token;
+      const freshWebhookUrl: string = reqBody.webhookUrl || freshConfig.webhookUrl || webhookUrl;
+
+      const res = await uaFetch("/webhook", freshToken, {
         method: "POST",
         body: JSON.stringify({
-          url: webhookUrl,
+          url: freshWebhookUrl,
           enabled: true,
-          events: config.webhookEvents,
+          events: freshConfig.webhookEvents,
           excludeEvents: ["wasSentByApi", "isGroupYes"],
         }),
       });
       const data = await res.json().catch(() => ({}));
       console.log("UAZAPI webhook config response:", JSON.stringify(data));
 
-      return new Response(JSON.stringify({ action: "webhook_configured", webhookUrl, result: data }), {
+      return new Response(JSON.stringify({ action: "webhook_configured", webhookUrl: freshWebhookUrl, result: data }), {
         status: res.ok ? 200 : 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

@@ -612,6 +612,7 @@ export function WhatsAppSettingsTab() {
               Testar Conexão
             </Button>
             <Button
+              id="whatsapp-connect-button"
               variant="outline"
               size="sm"
               onClick={startQrFlow}
