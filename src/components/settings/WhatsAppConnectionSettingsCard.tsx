@@ -5,16 +5,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Save, PlugZap, KeyRound, Webhook } from 'lucide-react';
+import { Loader2, Save, PlugZap, KeyRound, Webhook, Smartphone, PlusCircle, Trash2, Power } from 'lucide-react';
 
 interface SettingsRow {
   id: string;
   base_url: string;
   webhook_url: string | null;
   webhook_events: string[] | null;
+  instance_name: string | null;
 }
 
 const DEFAULT_BASE_URL = 'https://chatwees.uazapi.com';
@@ -41,6 +44,14 @@ export function WhatsAppConnectionSettingsCard() {
   const [instanceTokenMasked, setInstanceTokenMasked] = useState<string | null>(null);
   const [adminTokenMasked, setAdminTokenMasked] = useState<string | null>(null);
   const [tokenSource, setTokenSource] = useState<string | null>(null);
+  const [instanceName, setInstanceName] = useState<string | null>(null);
+  const [instanceStatus, setInstanceStatus] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newInstanceName, setNewInstanceName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   useEffect(() => {
     let active = true;
