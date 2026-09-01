@@ -193,63 +193,6 @@ export function WhatsAppSettingsTab() {
     }
   };
 
-  const testConnection = async () => {
-    setConnectionStatus('loading');
-    setConnectionMessage('');
-    try {
-      const session = await (supabase as any).auth.getSession();
-      const res = await fetch(
-        `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/uazapi-status`,
-        {
-          method: 'GET',
-          headers: {
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            'Authorization': `Bearer ${session.data.session?.access_token}`,
-          },
-        }
-      );
-      const data = await res.json();
-      if (data?.diagnostics) setCredentialsDiagnostic(data.diagnostics);
-      if (!res.ok) throw new Error(data.error || 'Erro ao verificar conexão');
-      if (data?.diagnostics && !data.diagnostics.credentialsValid) {
-        setConnectionStatus('error');
-        let reason: string;
-        if (data.diagnostics.tokenLooksLikeInstanceId) {
-          reason = 'O Token da instância está com o mesmo valor do ID da instância';
-        } else if (data.diagnostics.tokenLooksLikeUrl) {
-          reason = 'Você colou a "API da instância" (URL completa) no lugar do Token da instância';
-        } else {
-          reason = `O Token da instância tem ${data.diagnostics.tokenLength} caracteres (esperado ${data.diagnostics.expectedTokenLength ?? '23 ou 24'})`;
-        }
-        setConnectionMessage(`Credenciais inválidas: ${reason}`);
-        return;
-      }
-      if (data?.connected) {
-        setConnectionStatus('connected');
-        setConnectionMessage(data?.smartPhoneConnected ? 'Instância online e celular conectado' : 'Instância online');
-      } else if (data?.error) {
-        setConnectionStatus('error');
-        setConnectionMessage(data.error);
-      } else {
-        setConnectionStatus('disconnected');
-        setConnectionMessage('Instância desconectada ou celular offline');
-      }
-    } catch (err: any) {
-      setConnectionStatus('error');
-      setConnectionMessage(err.message || 'Erro ao verificar conexão');
-    }
-  };
-
-  // Verifica o status ao abrir e mantém atualizado (evita badge preso em estado antigo)
-  useEffect(() => {
-    testConnection();
-    const timer = setInterval(() => testConnection(), 20000);
-    return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-
-
   const fetchGroups = async () => {
     setLoadingGroups(true);
     setGroupsDialogOpen(true);
