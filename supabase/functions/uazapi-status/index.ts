@@ -119,7 +119,13 @@ Deno.serve(async (req) => {
 
       const webhookUrl: string = reqBody.webhookUrl || expectedWebhookUrl;
 
-      const res = await uaFetch("/webhook", token, {
+      // Recarrega config/token sem cache para usar imediatamente o que acabou de ser salvo no banco
+      const freshConfig = await getUazapiConfig(true);
+      UAZAPI_BASE_URL = freshConfig.baseUrl;
+      const freshToken = (await getUazapiToken(freshConfig)).token || token;
+      const freshWebhookUrl: string = reqBody.webhookUrl || freshConfig.webhookUrl || webhookUrl;
+
+      const res = await uaFetch("/webhook", freshToken, {
         method: "POST",
         body: JSON.stringify({
           url: webhookUrl,
