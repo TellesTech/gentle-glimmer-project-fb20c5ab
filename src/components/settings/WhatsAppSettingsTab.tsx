@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, Trash2, RefreshCw, CheckCircle, XCircle, Clock, AlertCircle, Search, ArrowUpRight } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Pause, Play } from 'lucide-react';
@@ -217,7 +217,7 @@ export function WhatsAppSettingsTab() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const mappedGroupIds = new Set(mappings?.map((m: any) => m.group_id) || []);
+  
 
   const { data: waSettings, isLoading: settingsLoading } = useQuery({
     queryKey: ['whatsapp-automation-paused'],
