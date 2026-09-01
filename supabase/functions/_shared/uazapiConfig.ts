@@ -1,7 +1,7 @@
 // Resolve a configuração de runtime da integração UAZAPI.
 // Ordem de prioridade: banco (whatsapp_integration_settings) -> env -> padrão.
 
-export const DEFAULT_UAZAPI_BASE_URL = "https://chatwees.uazapi.com";
+export const DEFAULT_UAZAPI_BASE_URL = "https://weeschat.uazapi.com";
 
 export interface UazapiRuntimeConfig {
   baseUrl: string;
@@ -61,8 +61,8 @@ export async function getUazapiToken(config?: UazapiRuntimeConfig): Promise<Uaza
   };
 }
 
-export async function getUazapiConfig(): Promise<UazapiRuntimeConfig> {
-  if (cached && Date.now() - cached.at < CACHE_MS) return cached.value;
+export async function getUazapiConfig(force = false): Promise<UazapiRuntimeConfig> {
+  if (!force && cached && Date.now() - cached.at < CACHE_MS) return cached.value;
 
   const envBase = sanitizeBaseUrl(Deno.env.get("UAZAPI_BASE_URL"));
   const fallback: UazapiRuntimeConfig = {
