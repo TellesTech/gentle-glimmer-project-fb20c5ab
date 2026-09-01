@@ -159,6 +159,79 @@ export function WhatsAppConnectionSettingsCard() {
     }
   };
 
+  const handleCreateInstance = async () => {
+    const name = newInstanceName.trim();
+    if (!name) {
+      toast({ title: 'Informe o nome da instância', variant: 'destructive' });
+      return;
+    }
+    setCreating(true);
+    try {
+      const headers = await authHeaders();
+      const res = await fetch(`${statusFnUrl}?action=create-instance`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (!res.ok || data?.error) {
+        toast({ title: 'Falha ao criar instância', description: data?.error || 'Verifique o admin token e o servidor.', variant: 'destructive' });
+        return;
+      }
+      setInstanceName(data.instanceName || name);
+      setInstanceTokenMasked(data.tokenMasked || null);
+      setTokenSource('instance_db');
+      setCreateOpen(false);
+      setNewInstanceName('');
+      toast({ title: 'Instância criada', description: `"${data.instanceName || name}" salva e webhook aplicado. Agora conecte via QR Code.` });
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err?.message || 'Falha ao criar instância', variant: 'destructive' });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDisconnectInstance = async () => {
+    setDisconnecting(true);
+    try {
+      const headers = await authHeaders();
+      const res = await fetch(`${statusFnUrl}?action=disconnect`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: '{}' });
+      const data = await res.json();
+      if (res.ok && data?.disconnected) {
+        setInstanceStatus('disconnected');
+        toast({ title: 'Instância desconectada' });
+      } else {
+        toast({ title: 'Falha ao desconectar', description: data?.error || 'Tente novamente.', variant: 'destructive' });
+      }
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err?.message || 'Falha ao desconectar', variant: 'destructive' });
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  const handleDeleteInstance = async () => {
+    setDeleting(true);
+    try {
+      const headers = await authHeaders();
+      const res = await fetch(`${statusFnUrl}?action=delete-instance`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: '{}' });
+      const data = await res.json();
+      if (res.ok && data?.deleted !== false) {
+        setInstanceName(null);
+        setInstanceTokenMasked(null);
+        setInstanceStatus(null);
+        setDeleteOpen(false);
+        toast({ title: 'Instância excluída', description: 'Os dados da instância foram removidos do sistema.' });
+      } else {
+        toast({ title: 'Falha ao excluir', description: data?.error || 'Tente novamente.', variant: 'destructive' });
+      }
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err?.message || 'Falha ao excluir instância', variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (!isSuperAdmin) return null;
 
   return (
