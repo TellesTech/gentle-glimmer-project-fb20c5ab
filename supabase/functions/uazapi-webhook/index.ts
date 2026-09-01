@@ -1,7 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import {
 import { getUazapiConfig } from "../_shared/uazapiConfig.ts";
+import {
   buildProjectName as buildProjectNameShared,
+
   omKey,
   parseRdoDeterministic,
   projectOmKey,
