@@ -38,6 +38,9 @@ export function WhatsAppConnectionSettingsCard() {
   const [applying, setApplying] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
   const [tokenMasked, setTokenMasked] = useState<string | null>(null);
+  const [instanceTokenMasked, setInstanceTokenMasked] = useState<string | null>(null);
+  const [adminTokenMasked, setAdminTokenMasked] = useState<string | null>(null);
+  const [tokenSource, setTokenSource] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -102,11 +105,15 @@ export function WhatsAppConnectionSettingsCard() {
       const res = await fetch(statusFnUrl, { headers: await authHeaders() });
       const data = await res.json();
       setTokenMasked(data?.tokenMasked ?? null);
+      setInstanceTokenMasked(data?.instanceTokenMasked ?? null);
+      setAdminTokenMasked(data?.adminTokenMasked ?? null);
+      setTokenSource(data?.tokenSource ?? null);
       if (data?.error) {
         setTestResult(`Erro: ${data.error}`);
       } else {
+        const sourceLabel = data?.tokenSource === 'instance' ? 'instance token' : data?.tokenSource === 'admin' ? 'admin token (fallback)' : 'nenhum';
         setTestResult(
-          `${data?.connected ? 'Conectado' : 'Desconectado'} · servidor: ${data?.baseUrl ?? '—'} · webhook esperado: ${data?.expectedWebhookUrl ?? '—'}`
+          `${data?.connected ? 'Conectado' : 'Desconectado'} · servidor: ${data?.baseUrl ?? '—'} · token em uso: ${sourceLabel} · webhook esperado: ${data?.expectedWebhookUrl ?? '—'}`
         );
       }
     } catch (err: any) {
