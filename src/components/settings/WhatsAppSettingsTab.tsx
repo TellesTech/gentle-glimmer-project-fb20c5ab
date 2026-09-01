@@ -671,87 +671,6 @@ export function WhatsAppSettingsTab() {
         </DialogContent>
       </Dialog>
 
-      {/* QR Code Dialog */}
-      <Dialog open={qrDialogOpen} onOpenChange={(open) => {
-        setQrDialogOpen(open);
-        if (!open) {
-          setQrImageBase64(null);
-          setQrStatus('loading');
-          setQrAttempts(0);
-          setQrMessage('');
-        }
-      }}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <WhatsAppIcon className="h-5 w-5 text-green-600" />
-              Conectar WhatsApp
-            </DialogTitle>
-            <DialogDescription>
-              Escaneie o QR Code com o WhatsApp do celular para conectar.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex flex-col items-center gap-4 py-4">
-            {(qrStatus === 'loading' || qrLoading) && (
-              <div className="flex flex-col items-center gap-3 py-8">
-                <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Gerando QR Code...</p>
-              </div>
-            )}
-
-            {qrStatus === 'showing' && qrImageBase64 && (
-              <>
-                <div className="bg-white p-3 rounded-xl shadow-sm">
-                  <img
-                    src={qrImageBase64.startsWith('data:') ? qrImageBase64 : `data:image/png;base64,${qrImageBase64}`}
-                    alt="QR Code WhatsApp"
-                    className="w-64 h-64"
-                  />
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <RefreshCw className="h-3 w-3 animate-spin" />
-                  Aguardando leitura... (atualiza a cada 15s)
-                </div>
-                <Button variant="outline" size="sm" onClick={fetchQrCode}>
-                  <RefreshCw className="h-4 w-4 mr-1" />
-                  Gerar novo QR Code
-                </Button>
-              </>
-            )}
-
-            {qrStatus === 'configuring' && (
-              <div className="flex flex-col items-center gap-3 py-8">
-                <Wifi className="h-8 w-8 animate-pulse text-green-600" />
-                <p className="text-sm font-medium text-green-700">WhatsApp conectado!</p>
-                <p className="text-xs text-muted-foreground">Configurando webhook automaticamente...</p>
-              </div>
-            )}
-
-            {qrStatus === 'done' && (
-              <div className="flex flex-col items-center gap-3 py-8">
-                <CheckCircle className="h-10 w-10 text-green-600" />
-                <p className="text-sm font-medium text-center">{qrMessage}</p>
-                <Button size="sm" onClick={() => setQrDialogOpen(false)}>
-                  Fechar
-                </Button>
-              </div>
-            )}
-
-            {qrStatus === 'error' && (
-              <div className="flex flex-col items-center gap-3 py-8">
-                <XCircle className="h-10 w-10 text-destructive" />
-                <p className="text-sm text-center text-muted-foreground">{qrMessage}</p>
-                <Button variant="outline" size="sm" onClick={fetchQrCode}>
-                  <RefreshCw className="h-4 w-4 mr-1" />
-                  Tentar novamente
-                </Button>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={() => setDeleteId(null)}
@@ -760,17 +679,6 @@ export function WhatsAppSettingsTab() {
         onConfirm={() => deleteId && deleteMapping.mutate(deleteId)}
       />
 
-      <ConfirmDialog
-        open={reconnectDialogOpen}
-        onOpenChange={(open) => !reconnecting && setReconnectDialogOpen(open)}
-        title="Trocar número de WhatsApp?"
-        description="A sessão atual será encerrada na UAZAPI. Em seguida, abriremos o QR Code para você escanear com o novo número/aparelho. Os mapeamentos de grupos existentes continuam válidos para grupos cujo ID não mudou; grupos novos precisarão ser remapeados."
-        confirmText="Desconectar e reconectar"
-        cancelText="Cancelar"
-        variant="destructive"
-        isLoading={reconnecting}
-        onConfirm={handleReconnect}
-      />
     </div>
   );
 }
