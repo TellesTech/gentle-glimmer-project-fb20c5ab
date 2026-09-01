@@ -440,6 +440,16 @@ export function WhatsAppSettingsTab() {
     }
   };
 
+  // Verifica o status ao abrir e mantém atualizado (evita badge preso em estado antigo)
+  useEffect(() => {
+    testConnection();
+    const timer = setInterval(() => testConnection(), 20000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
+
   const fetchGroups = async () => {
     setLoadingGroups(true);
     setGroupsDialogOpen(true);

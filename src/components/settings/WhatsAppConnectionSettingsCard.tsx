@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Save, PlugZap, QrCode } from 'lucide-react';
+import { Loader2, Save, PlugZap, QrCode, RefreshCw } from 'lucide-react';
 
 interface SettingsRow {
   id: string;
@@ -21,6 +21,16 @@ const DEFAULT_BASE_URL = 'https://weeschat.uazapi.com';
 function maskToken(value: string | null | undefined): string {
   if (!value) return '';
   return value.length > 8 ? `${value.slice(0, 4)}••••${value.slice(-4)}` : '••••';
+}
+
+function formatPhone(jid: string | null | undefined): string {
+  if (!jid) return '';
+  const digits = String(jid).split('@')[0].split(':')[0].replace(/\D/g, '');
+  if (digits.length < 12) return digits ? `+${digits}` : '';
+  const cc = digits.slice(0, 2);
+  const ddd = digits.slice(2, 4);
+  const rest = digits.slice(4);
+  return `+${cc} ${ddd} ${rest.slice(0, rest.length - 4)}-${rest.slice(-4)}`;
 }
 
 export function WhatsAppConnectionSettingsCard() {
@@ -37,7 +47,9 @@ export function WhatsAppConnectionSettingsCard() {
   const [savedToken, setSavedToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown');
+  const [status, setStatus] = useState<'unknown' | 'connected' | 'disconnected' | 'error'>('unknown');
+  const [checking, setChecking] = useState(false);
+  const [instanceInfo, setInstanceInfo] = useState<{ name: string; phone: string }>({ name: '', phone: '' });
 
   const authHeaders = async () => {
     const session = await (supabase as any).auth.getSession();
@@ -48,12 +60,23 @@ export function WhatsAppConnectionSettingsCard() {
   };
 
   const refreshStatus = async () => {
+    setChecking(true);
     try {
       const res = await fetch(statusFnUrl, { headers: await authHeaders() });
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || data.error) {
+        setStatus('error');
+        return;
+      }
       setStatus(data?.connected ? 'connected' : 'disconnected');
+      setInstanceInfo({
+        name: String(data?.status?.instance?.name || data?.instanceName || '').trim(),
+        phone: formatPhone(data?.status?.status?.jid || data?.status?.instance?.owner),
+      });
     } catch {
-      setStatus('disconnected');
+      setStatus('error');
+    } finally {
+      setChecking(false);
     }
   };
 
@@ -77,7 +100,8 @@ export function WhatsAppConnectionSettingsCard() {
       setLoading(false);
       refreshStatus();
     })();
-    return () => { active = false; };
+    const timer = setInterval(() => { if (active) refreshStatus(); }, 20000);
+    return () => { active = false; clearInterval(timer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -178,11 +202,28 @@ export function WhatsAppConnectionSettingsCard() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm flex-wrap">
               <span className="text-muted-foreground">Status:</span>
-              {status === 'connected' && <Badge className="bg-green-600 hover:bg-green-600">conectada</Badge>}
+              {status === 'connected' && (
+                <Badge className="bg-green-600 hover:bg-green-600">
+                  conectada
+                  {instanceInfo.name ? ` — ${instanceInfo.name}` : ''}
+                  {instanceInfo.phone ? ` (${instanceInfo.phone})` : ''}
+                </Badge>
+              )}
               {status === 'disconnected' && <Badge variant="destructive">desconectada</Badge>}
+              {status === 'error' && <Badge variant="outline">não foi possível verificar</Badge>}
               {status === 'unknown' && <Badge variant="outline">verificando...</Badge>}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2"
+                onClick={refreshStatus}
+                disabled={checking}
+                title="Atualizar status"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${checking ? 'animate-spin' : ''}`} />
+              </Button>
             </div>
 
             <div className="flex flex-wrap gap-2">
