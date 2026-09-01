@@ -1,11 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getUazapiConfig } from "../_shared/uazapiConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const UAZAPI_BASE_URL = "https://chatwees.uazapi.com";
+let UAZAPI_BASE_URL = "https://chatwees.uazapi.com";
 
 async function uaFetch(path: string, token: string, init: RequestInit = {}) {
   const headers = { "Content-Type": "application/json", token, ...(init.headers || {}) };
@@ -24,6 +25,7 @@ Deno.serve(async (req) => {
   }
 
   try {
+    UAZAPI_BASE_URL = (await getUazapiConfig()).baseUrl;
     const token = Deno.env.get("UAZAPI_TOKEN");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

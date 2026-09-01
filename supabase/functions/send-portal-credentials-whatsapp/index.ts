@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { getUazapiConfig } from "../_shared/uazapiConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,7 +13,7 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const UAZAPI_BASE_URL = Deno.env.get("UAZAPI_BASE_URL") || "https://chatwees.uazapi.com";
+let UAZAPI_BASE_URL = Deno.env.get("UAZAPI_BASE_URL") || "https://chatwees.uazapi.com";
 
 /** Normaliza telefone BR para o formato E.164 sem "+" (ex.: 5585999998888). */
 function normalizePhone(raw: string): string | null {
@@ -63,6 +64,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    UAZAPI_BASE_URL = (await getUazapiConfig()).baseUrl;
     const uazToken = Deno.env.get("UAZAPI_TOKEN") || "";
 
     const authHeader = req.headers.get("Authorization") || "";

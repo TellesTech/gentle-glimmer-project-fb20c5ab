@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
+import { getUazapiConfig } from "../_shared/uazapiConfig.ts";
   buildProjectName as buildProjectNameShared,
   omKey,
   parseRdoDeterministic,
@@ -267,7 +268,7 @@ function matchCollaborator(
   return candidates[0];
 }
 
-const UAZAPI_BASE_URL = "https://chatwees.uazapi.com";
+let UAZAPI_BASE_URL = "https://chatwees.uazapi.com";
 
 /** Nome padronizado da atividade: "OM 900037786367 — Título". */
 function buildProjectName(omNumber: string | null, title: string | null): string | null {
@@ -902,6 +903,7 @@ Deno.serve(async (req) => {
   }
 
   try {
+    UAZAPI_BASE_URL = (await getUazapiConfig()).baseUrl;
     const UAZAPI_TOKEN = Deno.env.get("UAZAPI_TOKEN") || "";
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
