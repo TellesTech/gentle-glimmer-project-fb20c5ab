@@ -202,11 +202,28 @@ export function WhatsAppConnectionSettingsCard() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm flex-wrap">
               <span className="text-muted-foreground">Status:</span>
-              {status === 'connected' && <Badge className="bg-green-600 hover:bg-green-600">conectada</Badge>}
+              {status === 'connected' && (
+                <Badge className="bg-green-600 hover:bg-green-600">
+                  conectada
+                  {instanceInfo.name ? ` — ${instanceInfo.name}` : ''}
+                  {instanceInfo.phone ? ` (${instanceInfo.phone})` : ''}
+                </Badge>
+              )}
               {status === 'disconnected' && <Badge variant="destructive">desconectada</Badge>}
+              {status === 'error' && <Badge variant="outline">não foi possível verificar</Badge>}
               {status === 'unknown' && <Badge variant="outline">verificando...</Badge>}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2"
+                onClick={refreshStatus}
+                disabled={checking}
+                title="Atualizar status"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${checking ? 'animate-spin' : ''}`} />
+              </Button>
             </div>
 
             <div className="flex flex-wrap gap-2">
