@@ -905,7 +905,7 @@ Deno.serve(async (req) => {
 
   try {
     UAZAPI_BASE_URL = (await getUazapiConfig()).baseUrl;
-    const UAZAPI_TOKEN = Deno.env.get("UAZAPI_TOKEN") || "";
+    const UAZAPI_TOKEN = getUazapiToken().token || "";
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 

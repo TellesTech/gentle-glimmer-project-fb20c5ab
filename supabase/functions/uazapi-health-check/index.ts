@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getUazapiConfig } from "../_shared/uazapiConfig.ts";
+import { getUazapiConfig, getUazapiToken } from "../_shared/uazapiConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,12 +26,13 @@ Deno.serve(async (req) => {
 
   try {
     UAZAPI_BASE_URL = (await getUazapiConfig()).baseUrl;
-    const token = Deno.env.get("UAZAPI_TOKEN");
+    const tokenInfo = getUazapiToken();
+    const token = tokenInfo.token;
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     if (!token) {
-      return new Response(JSON.stringify({ error: "UAZAPI_TOKEN não configurado" }), {
+      return new Response(JSON.stringify({ error: "Token UAZAPI não configurado (UAZAPI_INSTANCE_TOKEN/UAZAPI_TOKEN)" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
