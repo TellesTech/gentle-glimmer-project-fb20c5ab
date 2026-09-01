@@ -120,10 +120,12 @@ export function WhatsAppConnectionSettingsCard() {
       setInstanceTokenMasked(data?.instanceTokenMasked ?? null);
       setAdminTokenMasked(data?.adminTokenMasked ?? null);
       setTokenSource(data?.tokenSource ?? null);
+      if (data?.instanceName) setInstanceName(data.instanceName);
+      setInstanceStatus(data?.connected ? 'connected' : 'disconnected');
       if (data?.error) {
         setTestResult(`Erro: ${data.error}`);
       } else {
-        const sourceLabel = data?.tokenSource === 'instance' ? 'instance token' : data?.tokenSource === 'admin' ? 'admin token (fallback)' : 'nenhum';
+        const sourceLabel = data?.tokenSource === 'instance_db' ? 'instância (salva)' : data?.tokenSource === 'instance_env' ? 'instância (segredo)' : data?.tokenSource === 'admin' ? 'admin (fallback)' : 'nenhum';
         setTestResult(
           `${data?.connected ? 'Conectado' : 'Desconectado'} · servidor: ${data?.baseUrl ?? '—'} · token em uso: ${sourceLabel} · webhook esperado: ${data?.expectedWebhookUrl ?? '—'}`
         );
