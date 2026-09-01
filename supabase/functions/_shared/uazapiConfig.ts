@@ -24,6 +24,32 @@ function sanitizeBaseUrl(value: unknown): string | null {
 let cached: { value: UazapiRuntimeConfig; at: number } | null = null;
 const CACHE_MS = 15_000;
 
+export type UazapiTokenSource = "instance" | "admin";
+
+export interface UazapiTokenInfo {
+  token: string | null;
+  source: UazapiTokenSource | null;
+  instanceTokenMasked: string | null;
+  adminTokenMasked: string | null;
+}
+
+function mask(value: string | undefined | null): string | null {
+  if (!value) return null;
+  return value.length > 6 ? `••••${value.slice(-6)}` : "••••";
+}
+
+// Resolve o token UAZAPI na ordem: instance token -> admin token.
+export function getUazapiToken(): UazapiTokenInfo {
+  const instanceToken = (Deno.env.get("UAZAPI_INSTANCE_TOKEN") || "").trim();
+  const adminToken = (Deno.env.get("UAZAPI_TOKEN") || "").trim();
+  return {
+    token: instanceToken || adminToken || null,
+    source: instanceToken ? "instance" : adminToken ? "admin" : null,
+    instanceTokenMasked: mask(instanceToken),
+    adminTokenMasked: mask(adminToken),
+  };
+}
+
 export async function getUazapiConfig(): Promise<UazapiRuntimeConfig> {
   if (cached && Date.now() - cached.at < CACHE_MS) return cached.value;
 

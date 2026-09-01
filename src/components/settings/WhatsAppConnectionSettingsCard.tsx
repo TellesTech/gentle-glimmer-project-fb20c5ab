@@ -38,6 +38,9 @@ export function WhatsAppConnectionSettingsCard() {
   const [applying, setApplying] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
   const [tokenMasked, setTokenMasked] = useState<string | null>(null);
+  const [instanceTokenMasked, setInstanceTokenMasked] = useState<string | null>(null);
+  const [adminTokenMasked, setAdminTokenMasked] = useState<string | null>(null);
+  const [tokenSource, setTokenSource] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -102,11 +105,15 @@ export function WhatsAppConnectionSettingsCard() {
       const res = await fetch(statusFnUrl, { headers: await authHeaders() });
       const data = await res.json();
       setTokenMasked(data?.tokenMasked ?? null);
+      setInstanceTokenMasked(data?.instanceTokenMasked ?? null);
+      setAdminTokenMasked(data?.adminTokenMasked ?? null);
+      setTokenSource(data?.tokenSource ?? null);
       if (data?.error) {
         setTestResult(`Erro: ${data.error}`);
       } else {
+        const sourceLabel = data?.tokenSource === 'instance' ? 'instance token' : data?.tokenSource === 'admin' ? 'admin token (fallback)' : 'nenhum';
         setTestResult(
-          `${data?.connected ? 'Conectado' : 'Desconectado'} · servidor: ${data?.baseUrl ?? '—'} · webhook esperado: ${data?.expectedWebhookUrl ?? '—'}`
+          `${data?.connected ? 'Conectado' : 'Desconectado'} · servidor: ${data?.baseUrl ?? '—'} · token em uso: ${sourceLabel} · webhook esperado: ${data?.expectedWebhookUrl ?? '—'}`
         );
       }
     } catch (err: any) {
@@ -195,12 +202,33 @@ export function WhatsAppConnectionSettingsCard() {
               <div className="flex items-center gap-2 text-sm font-medium">
                 <KeyRound className="w-4 h-4 text-muted-foreground" />
                 Admin Token
-                <Badge variant="secondary">{tokenMasked ? tokenMasked : 'no cofre de segredos'}</Badge>
+                <Badge variant="secondary">{adminTokenMasked ?? tokenMasked ?? 'no cofre de segredos'}</Badge>
               </div>
               <p className="text-xs text-muted-foreground">
                 Por segurança, o token fica no cofre de segredos (UAZAPI_TOKEN) e não é exibido aqui. Peça a troca no chat
                 para atualizá-lo.
               </p>
+            </div>
+
+            <div className="rounded-lg border p-3 space-y-1">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <KeyRound className="w-4 h-4 text-muted-foreground" />
+                Instance Token
+                {instanceTokenMasked ? (
+                  <Badge variant="secondary">{instanceTokenMasked}</Badge>
+                ) : (
+                  <Badge variant="outline">não configurado</Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Token da instância conectada (cofre de segredos: UAZAPI_INSTANCE_TOKEN). Quando configurado, tem
+                prioridade sobre o admin token. Peça no chat para cadastrar ou alterar.
+              </p>
+              {tokenSource && (
+                <p className="text-xs text-muted-foreground">
+                  Em uso agora: <span className="font-medium">{tokenSource === 'instance' ? 'Instance Token' : 'Admin Token (fallback)'}</span>
+                </p>
+              )}
             </div>
 
             {testResult && (

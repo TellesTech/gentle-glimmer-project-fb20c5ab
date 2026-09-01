@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { getUazapiConfig } from "../_shared/uazapiConfig.ts";
+import { getUazapiConfig, getUazapiToken } from "../_shared/uazapiConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -65,7 +65,7 @@ serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     UAZAPI_BASE_URL = (await getUazapiConfig()).baseUrl;
-    const uazToken = Deno.env.get("UAZAPI_TOKEN") || "";
+    const uazToken = getUazapiToken().token || "";
 
     const authHeader = req.headers.get("Authorization") || "";
     if (!authHeader) return json({ error: "Não autenticado" }, 401);
@@ -84,7 +84,7 @@ serve(async (req) => {
     const allowed = (roles || []).some((r: any) => ["admin", "super_admin"].includes(r.role));
     if (!allowed) return json({ error: "Sem permissão para enviar credenciais" }, 403);
 
-    if (!uazToken) return json({ error: "WhatsApp não configurado (UAZAPI_TOKEN ausente)" }, 400);
+    if (!uazToken) return json({ error: "WhatsApp não configurado (token UAZAPI ausente)" }, 400);
 
     const body = await req.json().catch(() => ({}));
     const name = String(body.name || "").trim();
