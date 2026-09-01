@@ -28,43 +28,10 @@ export function WhatsAppSettingsTab() {
   const [newGroupName, setNewGroupName] = useState('');
   const [selectedSiteId, setSelectedSiteId] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'loading' | 'connected' | 'disconnected' | 'error'>('idle');
-  const [connectionMessage, setConnectionMessage] = useState('');
-  const [credentialsDiagnostic, setCredentialsDiagnostic] = useState<null | {
-    credentialsValid: boolean;
-    tokenLooksLikeInstanceId: boolean;
-    tokenLooksLikeUrl?: boolean;
-    tokenLengthInvalid: boolean;
-    tokenLength: number;
-    expectedTokenLength: number | string;
-    instanceIdLength: number;
-  }>(null);
   const [groupsDialogOpen, setGroupsDialogOpen] = useState(false);
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [availableGroups, setAvailableGroups] = useState<{ id: string; name: string }[]>([]);
 
-  // QR Code state
-  const [qrDialogOpen, setQrDialogOpen] = useState(false);
-  const [qrImageBase64, setQrImageBase64] = useState<string | null>(null);
-  const [qrLoading, setQrLoading] = useState(false);
-  const [qrAttempts, setQrAttempts] = useState(0);
-  const [qrStatus, setQrStatus] = useState<'loading' | 'showing' | 'connected' | 'configuring' | 'done' | 'error'>('loading');
-  const [qrMessage, setQrMessage] = useState('');
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Reconnect / change number
-  const [reconnectDialogOpen, setReconnectDialogOpen] = useState(false);
-  const [reconnecting, setReconnecting] = useState(false);
-
-  const getAuthHeaders = useCallback(async () => {
-    const session = await (supabase as any).auth.getSession();
-    return {
-      'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-      'Authorization': `Bearer ${session.data.session?.access_token}`,
-    };
-  }, []);
-
-  const edgeFnUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/uazapi-status`;
 
   // Fetch QR Code
   const fetchQrCode = useCallback(async () => {
