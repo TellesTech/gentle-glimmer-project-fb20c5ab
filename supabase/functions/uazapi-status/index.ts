@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           url: webhookUrl,
           enabled: true,
-          events: ["messages", "messages_update", "connection"],
+          events: config.webhookEvents,
           excludeEvents: ["wasSentByApi", "isGroupYes"],
         }),
       });
