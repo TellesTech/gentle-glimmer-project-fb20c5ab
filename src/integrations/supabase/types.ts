@@ -3420,6 +3420,36 @@ export type Database = {
           },
         ]
       }
+      whatsapp_integration_settings: {
+        Row: {
+          base_url: string
+          created_at: string
+          id: string
+          updated_at: string
+          updated_by: string | null
+          webhook_events: string[]
+          webhook_url: string | null
+        }
+        Insert: {
+          base_url?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+          webhook_events?: string[]
+          webhook_url?: string | null
+        }
+        Update: {
+          base_url?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+          webhook_events?: string[]
+          webhook_url?: string | null
+        }
+        Relationships: []
+      }
       whatsapp_rdo_logs: {
         Row: {
           created_at: string | null
@@ -3774,6 +3804,14 @@ export type Database = {
       }
       get_user_site_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_team_ids: { Args: { _user_id: string }; Returns: string[] }
+      get_whatsapp_runtime_config: {
+        Args: never
+        Returns: {
+          base_url: string
+          webhook_events: string[]
+          webhook_url: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["user_role"]
