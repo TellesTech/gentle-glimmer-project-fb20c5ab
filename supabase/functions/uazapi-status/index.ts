@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-let UAZAPI_BASE_URL = "https://chatwees.uazapi.com";
+let UAZAPI_BASE_URL = "https://weeschat.uazapi.com";
 
 async function uaFetch(path: string, token: string, init: RequestInit = {}) {
   const headers = {
