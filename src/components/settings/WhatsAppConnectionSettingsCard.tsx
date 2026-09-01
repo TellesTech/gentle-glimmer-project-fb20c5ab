@@ -58,7 +58,7 @@ export function WhatsAppConnectionSettingsCard() {
     (async () => {
       const { data, error } = await (supabase as any)
         .from('whatsapp_integration_settings')
-        .select('id, base_url, webhook_url, webhook_events')
+        .select('id, base_url, webhook_url, webhook_events, instance_name')
         .order('created_at', { ascending: true })
         .limit(1)
         .maybeSingle();
@@ -69,6 +69,7 @@ export function WhatsAppConnectionSettingsCard() {
         setRow(data as SettingsRow);
         setBaseUrl(data.base_url || DEFAULT_BASE_URL);
         setWebhookUrl(data.webhook_url || '');
+        setInstanceName(data.instance_name || null);
         setEventsText((data.webhook_events || ['messages', 'messages_update', 'connection']).join(', '));
       }
       setLoading(false);
