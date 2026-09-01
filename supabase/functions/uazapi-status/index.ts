@@ -1,10 +1,12 @@
+import { getUazapiConfig } from "../_shared/uazapiConfig.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const UAZAPI_BASE_URL = "https://chatwees.uazapi.com";
+let UAZAPI_BASE_URL = "https://chatwees.uazapi.com";
 
 async function uaFetch(path: string, token: string, init: RequestInit = {}) {
   const headers = {
@@ -21,6 +23,9 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const config = await getUazapiConfig();
+    UAZAPI_BASE_URL = config.baseUrl;
+
     const token = Deno.env.get("UAZAPI_TOKEN");
     if (!token) {
       return new Response(JSON.stringify({ error: "UAZAPI_TOKEN não configurado" }), {
@@ -30,10 +35,11 @@ Deno.serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const expectedWebhookUrl = `${supabaseUrl}/functions/v1/uazapi-webhook`;
+    const expectedWebhookUrl = config.webhookUrl || `${supabaseUrl}/functions/v1/uazapi-webhook`;
 
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
+
 
     // POST → configura/atualiza o webhook
     if (req.method === "POST") {
@@ -61,7 +67,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           url: webhookUrl,
           enabled: true,
-          events: ["messages", "messages_update", "connection"],
+          events: config.webhookEvents,
           excludeEvents: ["wasSentByApi", "isGroupYes"],
         }),
       });
@@ -138,6 +144,10 @@ Deno.serve(async (req) => {
         webhookConfig: webhookData,
         connected,
         smartPhoneConnected: connected,
+        baseUrl: UAZAPI_BASE_URL,
+        expectedWebhookUrl,
+        tokenMasked: token.length > 6 ? `••••${token.slice(-6)}` : "••••",
+
         diagnostics: {
           credentialsValid,
           tokenLooksLikeUrl,

@@ -19,6 +19,8 @@ import { WhatsAppIcon } from '@/components/shared/WhatsAppIcon';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { WhatsAppConnectionSettingsCard } from '@/components/settings/WhatsAppConnectionSettingsCard';
+
 
 export function WhatsAppSettingsTab() {
   const { toast } = useToast();
@@ -508,7 +510,10 @@ export function WhatsAppSettingsTab() {
 
   return (
     <div className="space-y-6">
+      <WhatsAppConnectionSettingsCard />
+
       {/* Pausar automação */}
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
