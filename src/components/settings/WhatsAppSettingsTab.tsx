@@ -45,7 +45,22 @@ export function WhatsAppSettingsTab() {
     },
   });
 
+  // Fetch projects (activities) for default-activity selection
+  const { data: projectsForDefault } = useQuery({
+    queryKey: ['projects-for-whatsapp-default'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, name, site_id, status')
+        .not('status', 'in', '("completed","suspended")')
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Fetch mappings
+
   const { data: mappings, isLoading: loadingMappings } = useQuery({
     queryKey: ['whatsapp-group-mappings'],
     queryFn: async () => {
