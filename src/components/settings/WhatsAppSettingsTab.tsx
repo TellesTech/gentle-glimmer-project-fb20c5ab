@@ -447,6 +447,8 @@ export function WhatsAppSettingsTab() {
                 <TableRow>
                   <TableHead className="text-xs">Grupo</TableHead>
                   <TableHead className="text-xs">Unidade</TableHead>
+                  <TableHead className="text-xs">Atividade padrão</TableHead>
+
                   <TableHead className="text-xs">Automação</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
                   <TableHead className="text-xs w-10"></TableHead>
