@@ -469,6 +469,27 @@ export function WhatsAppSettingsTab() {
                         )}
                       </div>
                     </TableCell>
+                    <TableCell className="text-xs">
+                      <Select
+                        value={m.project_id || 'none'}
+                        onValueChange={(v) =>
+                          setDefaultProject.mutate({ id: m.id, projectId: v === 'none' ? null : v })
+                        }
+                      >
+                        <SelectTrigger className="h-8 text-xs w-[190px]">
+                          <SelectValue placeholder="Sem atividade padrão" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none" className="text-xs">Sem atividade padrão</SelectItem>
+                          {(projectsForDefault || [])
+                            .filter((p: any) => p.site_id === m.site_id)
+                            .map((p: any) => (
+                              <SelectItem key={p.id} value={p.id} className="text-xs">{p.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Switch
