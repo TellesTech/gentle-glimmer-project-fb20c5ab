@@ -737,13 +737,13 @@ export default function ClientDashboard() {
       if (!folderReportIds.length) return new Map<string, string>();
       const { data, error } = await supabase
         .from('report_photos')
-        .select('report_id, photo_url, created_at')
+        .select('report_id, url, created_at')
         .in('report_id', folderReportIds.slice(0, 100))
         .order('created_at', { ascending: true });
       if (error) return new Map<string, string>();
       const m = new Map<string, string>();
       (data || []).forEach((row: any) => {
-        if (!m.has(row.report_id) && row.photo_url) m.set(row.report_id, row.photo_url);
+        if (!m.has(row.report_id) && row.url) m.set(row.report_id, row.url);
       });
       return m;
     },

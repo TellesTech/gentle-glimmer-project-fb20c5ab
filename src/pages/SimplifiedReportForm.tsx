@@ -901,6 +901,7 @@ export default function SimplifiedReportForm() {
           isSubmitting={isSubmitting}
           initialData={currentFormData}
           isEditMode={isEditMode}
+          reportId={reportId}
           tabId={showTabs ? tabsHook.activeTabId : undefined}
           onFormDataChange={showTabs ? handleFormDataChange : undefined}
         />

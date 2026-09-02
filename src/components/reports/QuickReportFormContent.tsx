@@ -82,6 +82,7 @@ interface QuickReportFormContentProps {
   initialData?: ReportFormData;
   isEditMode?: boolean;
   tabId?: string;
+  reportId?: string;
   onFormDataChange?: (data: Partial<ReportFormData>) => void;
 }
 
@@ -164,7 +165,7 @@ const RECENT_LOCATIONS = [
   'Almoxarifado',
 ];
 
-export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitting, initialData, isEditMode, tabId, onFormDataChange }: QuickReportFormContentProps) {
+export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitting, initialData, isEditMode, tabId, reportId, onFormDataChange }: QuickReportFormContentProps) {
   const { user } = useAuth();
   
   // Determine default shift based on current time
