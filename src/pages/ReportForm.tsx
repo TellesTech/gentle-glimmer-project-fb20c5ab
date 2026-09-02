@@ -631,21 +631,31 @@ export default function ReportForm() {
         }
       }
 
-      // Handle photos - same pattern
-      const existingPhotoUrls = existingReport?.photos?.map((p: any) => p.url) || [];
-      const currentPhotoUrls = formData.photos;
-      const photosToDelete = existingReport?.photos?.filter((p: any) => !currentPhotoUrls.includes(p.url)).map((p: any) => p.id) || [];
+      // Handle photos - sincroniza pelo estado atual do banco
+      const { data: dbPhotos, error: photosFetchError } = await supabase
+        .from('report_photos')
+        .select('id, url')
+        .eq('report_id', reportId);
+      if (photosFetchError) throw new Error('Erro ao carregar fotos: ' + photosFetchError.message);
 
-      if (photosToDelete.length > 0) {
-        await supabase.from('report_photos').delete().in('id', photosToDelete);
-      }
+      const existingPhotoUrls = (dbPhotos || []).map((p: any) => p.url);
+      const currentPhotoUrls = formData.photos;
+      const photosToDelete = (dbPhotos || [])
+        .filter((p: any) => !currentPhotoUrls.includes(p.url))
+        .map((p: any) => p.id);
 
       // Insert new photos only
       const newPhotos = currentPhotoUrls.filter(url => !existingPhotoUrls.includes(url));
       if (newPhotos.length > 0) {
-        await supabase.from('report_photos').insert(
+        const { error: photoInsertError } = await supabase.from('report_photos').insert(
           newPhotos.map(url => ({ report_id: reportId, url, description: null }))
         );
+        if (photoInsertError) throw new Error('Não foi possível salvar as fotos: ' + photoInsertError.message);
+      }
+
+      if (photosToDelete.length > 0) {
+        const { error: photoDeleteError } = await supabase.from('report_photos').delete().in('id', photosToDelete);
+        if (photoDeleteError) throw new Error('Não foi possível remover as fotos: ' + photoDeleteError.message);
       }
 
       return { id: reportId };
@@ -737,7 +747,8 @@ export default function ReportForm() {
           description: null,
         }));
 
-        await supabase.from('report_photos').insert(photosData);
+        const { error: photoInsertError } = await supabase.from('report_photos').insert(photosData);
+        if (photoInsertError) throw new Error('Não foi possível salvar as fotos: ' + photoInsertError.message);
       }
 
       return report;
