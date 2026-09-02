@@ -1755,8 +1755,14 @@ Deno.serve(async (req) => {
     // Update log
     await supabase
       .from("whatsapp_rdo_logs")
-      .update({ status: "success", report_id: reportId, report_date: reportDate })
+      .update({
+        status: "success",
+        report_id: reportId,
+        report_date: reportDate,
+        error_message: `roteamento: ${routeReason}${autoCreatedProject ? " (atividade criada)" : ""}`,
+      })
       .eq("id", logEntry.id);
+
 
     // Attach any pending photos that arrived before the RDO was processed
     const rdoCodeForPhotos = reportInfo?.rdo_number || rdoCode || "?";
