@@ -60,6 +60,8 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useDelayReasons, DelayCategory } from '@/hooks/useDelayReasons';
 import { DelayControlSection } from './DelayControlSection';
+import { syncReportPhotosNow } from '@/lib/reportPhotosSync';
+
 
 interface SelectionData {
   companyId: string | null;
