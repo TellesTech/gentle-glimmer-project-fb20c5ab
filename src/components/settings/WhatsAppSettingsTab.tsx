@@ -45,7 +45,22 @@ export function WhatsAppSettingsTab() {
     },
   });
 
+  // Fetch projects (activities) for default-activity selection
+  const { data: projectsForDefault } = useQuery({
+    queryKey: ['projects-for-whatsapp-default'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, name, site_id, status')
+        .not('status', 'in', '("completed","suspended")')
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Fetch mappings
+
   const { data: mappings, isLoading: loadingMappings } = useQuery({
     queryKey: ['whatsapp-group-mappings'],
     queryFn: async () => {
@@ -149,6 +164,24 @@ export function WhatsAppSettingsTab() {
     },
   });
 
+  // Default activity for a group (used when the message has no OM/title)
+  const setDefaultProject = useMutation({
+    mutationFn: async ({ id, projectId }: { id: string; projectId: string | null }) => {
+      const { error } = await (supabase as any)
+        .from('whatsapp_group_projects')
+        .update({ project_id: projectId })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-group-mappings'] });
+      toast({ title: 'Atividade padrão atualizada' });
+    },
+    onError: (err: any) => {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    },
+  });
+
   // Pause/resume automation per unit (group mapping)
   const toggleGroupPause = useMutation({
     mutationFn: async ({ id, paused }: { id: string; paused: boolean }) => {
@@ -161,6 +194,7 @@ export function WhatsAppSettingsTab() {
     },
     onSuccess: (paused) => {
       queryClient.invalidateQueries({ queryKey: ['whatsapp-group-mappings'] });
+
       toast({
         title: paused ? 'Automação pausada nesta unidade' : 'Automação reativada nesta unidade',
         description: paused
@@ -413,6 +447,8 @@ export function WhatsAppSettingsTab() {
                 <TableRow>
                   <TableHead className="text-xs">Grupo</TableHead>
                   <TableHead className="text-xs">Unidade</TableHead>
+                  <TableHead className="text-xs">Atividade padrão</TableHead>
+
                   <TableHead className="text-xs">Automação</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
                   <TableHead className="text-xs w-10"></TableHead>
@@ -435,6 +471,27 @@ export function WhatsAppSettingsTab() {
                         )}
                       </div>
                     </TableCell>
+                    <TableCell className="text-xs">
+                      <Select
+                        value={m.project_id || 'none'}
+                        onValueChange={(v) =>
+                          setDefaultProject.mutate({ id: m.id, projectId: v === 'none' ? null : v })
+                        }
+                      >
+                        <SelectTrigger className="h-8 text-xs w-[190px]">
+                          <SelectValue placeholder="Sem atividade padrão" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none" className="text-xs">Sem atividade padrão</SelectItem>
+                          {(projectsForDefault || [])
+                            .filter((p: any) => p.site_id === m.site_id)
+                            .map((p: any) => (
+                              <SelectItem key={p.id} value={p.id} className="text-xs">{p.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Switch
