@@ -747,7 +747,8 @@ export default function ReportForm() {
           description: null,
         }));
 
-        await supabase.from('report_photos').insert(photosData);
+        const { error: photoInsertError } = await supabase.from('report_photos').insert(photosData);
+        if (photoInsertError) throw new Error('Não foi possível salvar as fotos: ' + photoInsertError.message);
       }
 
       return report;
