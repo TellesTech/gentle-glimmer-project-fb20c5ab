@@ -457,8 +457,23 @@ export default function ReportForm() {
   }, [formData, isEditing]);
 
   const updateFormData = (data: Partial<ReportFormData>) => {
+    // Ao editar um RDO existente, grava as fotos imediatamente para que elas
+    // não dependam do clique em "Salvar" (evita fotos órfãs no storage).
+    if (isEditing && id && data.photos) {
+      const prev = formData.photos || [];
+      const next = data.photos;
+      syncReportPhotosNow(id, prev, next).catch((err) => {
+        console.error('[report_photos] sync error', err);
+        toast({
+          title: 'Não foi possível salvar as fotos',
+          description: err instanceof Error ? err.message : 'Erro desconhecido',
+          variant: 'destructive',
+        });
+      });
+    }
     setFormData(prev => ({ ...prev, ...data }));
   };
+
 
   const handleNext = () => {
     if (currentStep < steps.length) {
