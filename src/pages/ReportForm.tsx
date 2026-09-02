@@ -535,7 +535,11 @@ export default function ReportForm() {
           end_time: formData.endTime || null,
           comments: formData.comments || null,
           ai_summary: formData.aiSummary || null,
-          status: status,
+          // Não rebaixa RDOs já enviados/assinados ao editar
+          status: ['sent', 'signed', 'finalized'].includes((existingReport as any)?.status)
+            ? (existingReport as any).status
+            : status,
+
           contract_number: formData.contractNumber || null,
           technical_responsible_name: formData.technicalResponsibleName || null,
           technical_responsible_role: formData.technicalResponsibleRole || null,
