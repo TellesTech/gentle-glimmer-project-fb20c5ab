@@ -17,6 +17,8 @@ import { supabase } from '@/integrations/supabase/loose-client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { getValidProfileIds } from '@/lib/sanitizeAttendanceUserIds';
+import { syncReportPhotosNow } from '@/lib/reportPhotosSync';
+
 import type { Activity, Deviation, Attendance, Shift } from '@/types';
 import { format, parseISO } from 'date-fns';
 
