@@ -707,8 +707,20 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
   };
 
   const handlePhotosChange = useCallback((photos: string[]) => {
-    setFormData(prev => ({ ...prev, photos }));
-  }, []);
+    setFormData(prev => {
+      // Em edição de RDO existente, persiste na hora (não depende do "Salvar")
+      if (isEditMode && reportId) {
+        syncReportPhotosNow(reportId, prev.photos || [], photos).catch((err) => {
+          console.error('[report_photos] sync error', err);
+          toast.error('Não foi possível salvar as fotos', {
+            description: err instanceof Error ? err.message : 'Erro desconhecido',
+          });
+        });
+      }
+      return { ...prev, photos };
+    });
+  }, [isEditMode, reportId]);
+
 
   const handleLocationChange = (location: string) => {
     setFormData(prev => ({ ...prev, location }));
