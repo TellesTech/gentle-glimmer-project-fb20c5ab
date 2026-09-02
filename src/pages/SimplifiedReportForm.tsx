@@ -632,7 +632,6 @@ export default function SimplifiedReportForm() {
         supabase.from('report_activities').delete().eq('report_id', reportId),
         supabase.from('report_attendance').delete().eq('report_id', reportId),
         supabase.from('report_deviations').delete().eq('report_id', reportId),
-        supabase.from('report_photos').delete().eq('report_id', reportId),
         supabase.from('report_activity_steps').delete().eq('report_id', reportId),
       ]);
       const deleteError = deleteResults.find(r => r.error);
