@@ -1197,16 +1197,20 @@ Deno.serve(async (req) => {
     let siteId: string | null = null;
     let mappedGroupName: string | null = null;
 
+    let groupDefaultProjectId: string | null = null;
+
     if (isGroup && groupId) {
       const { data: mapping } = await supabase
         .from("whatsapp_group_projects")
-        .select("site_id, group_name")
+        .select("site_id, group_name, project_id")
         .eq("group_id", groupId)
         .eq("is_active", true)
         .maybeSingle();
       siteId = mapping?.site_id || null;
       mappedGroupName = mapping?.group_name || null;
+      groupDefaultProjectId = mapping?.project_id || null;
     }
+
 
     if (!siteId && senderPhone) {
       const cleanPhone = senderPhone.replace(/\D/g, "");
