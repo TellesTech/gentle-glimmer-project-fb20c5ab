@@ -704,15 +704,34 @@ export default function SimplifiedReportForm() {
         }
       }
 
-      // Re-insert photos
-      if (data.photos.length > 0) {
-        const photosData = data.photos.map(url => ({
-          report_id: reportId,
-          url,
-        }));
+      // Sincronizar fotos (diff: remove só o que saiu, insere só o que entrou)
+      {
+        const { data: existingPhotos, error: photosFetchError } = await supabase
+          .from('report_photos')
+          .select('id, url')
+          .eq('report_id', reportId);
+        if (photosFetchError) throw new Error('Erro ao carregar fotos: ' + photosFetchError.message);
 
-        const { error: photoError } = await supabase.from('report_photos').insert(photosData);
-        if (photoError) throw new Error('Erro ao salvar fotos: ' + photoError.message);
+        const currentUrls = data.photos || [];
+        const existingUrls = (existingPhotos || []).map((p: any) => p.url);
+        const idsToDelete = (existingPhotos || [])
+          .filter((p: any) => !currentUrls.includes(p.url))
+          .map((p: any) => p.id);
+        const urlsToInsert = currentUrls.filter(url => !existingUrls.includes(url));
+
+        if (urlsToInsert.length > 0) {
+          const { error: photoError } = await supabase
+            .from('report_photos')
+            .insert(urlsToInsert.map(url => ({ report_id: reportId, url })));
+          if (photoError) throw new Error('Erro ao salvar fotos: ' + photoError.message);
+        }
+        if (idsToDelete.length > 0) {
+          const { error: photoDelError } = await supabase
+            .from('report_photos')
+            .delete()
+            .in('id', idsToDelete);
+          if (photoDelError) throw new Error('Erro ao remover fotos: ' + photoDelError.message);
+        }
       }
 
       // Sincronizar atrasos adicionais (workforce_delays)
