@@ -17,6 +17,8 @@ import { supabase } from '@/integrations/supabase/loose-client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { getValidProfileIds } from '@/lib/sanitizeAttendanceUserIds';
+import { syncReportPhotosNow } from '@/lib/reportPhotosSync';
+
 import type { Activity, Deviation, Attendance, Shift } from '@/types';
 import { format, parseISO } from 'date-fns';
 
@@ -457,8 +459,23 @@ export default function ReportForm() {
   }, [formData, isEditing]);
 
   const updateFormData = (data: Partial<ReportFormData>) => {
+    // Ao editar um RDO existente, grava as fotos imediatamente para que elas
+    // não dependam do clique em "Salvar" (evita fotos órfãs no storage).
+    if (isEditing && id && data.photos) {
+      const prev = formData.photos || [];
+      const next = data.photos;
+      syncReportPhotosNow(id, prev, next).catch((err) => {
+        console.error('[report_photos] sync error', err);
+        toast({
+          title: 'Não foi possível salvar as fotos',
+          description: err instanceof Error ? err.message : 'Erro desconhecido',
+          variant: 'destructive',
+        });
+      });
+    }
     setFormData(prev => ({ ...prev, ...data }));
   };
+
 
   const handleNext = () => {
     if (currentStep < steps.length) {
@@ -518,7 +535,11 @@ export default function ReportForm() {
           end_time: formData.endTime || null,
           comments: formData.comments || null,
           ai_summary: formData.aiSummary || null,
-          status: status,
+          // Não rebaixa RDOs já enviados/assinados ao editar
+          status: ['sent', 'signed', 'finalized'].includes((existingReport as any)?.status)
+            ? (existingReport as any).status
+            : status,
+
           contract_number: formData.contractNumber || null,
           technical_responsible_name: formData.technicalResponsibleName || null,
           technical_responsible_role: formData.technicalResponsibleRole || null,

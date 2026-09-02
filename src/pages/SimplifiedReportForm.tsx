@@ -592,7 +592,11 @@ export default function SimplifiedReportForm() {
           comments: data.comments || null,
           ai_summary: data.aiSummary || null,
           routine: data.routine || null,
-          status: status === 'draft' ? 'draft' : 'completed',
+          // Não rebaixa RDOs já enviados/assinados ao editar
+          status: ['sent', 'signed', 'finalized'].includes((existingReport as any)?.status)
+            ? (existingReport as any).status
+            : (status === 'draft' ? 'draft' : 'completed'),
+
           actual_workforce: data.attendance.filter(a => a.present).length,
           planned_workforce: data.plannedWorkforce || data.attendance.length,
           real_percentage: data.realPercentage ?? null,
@@ -901,6 +905,7 @@ export default function SimplifiedReportForm() {
           isSubmitting={isSubmitting}
           initialData={currentFormData}
           isEditMode={isEditMode}
+          reportId={reportId}
           tabId={showTabs ? tabsHook.activeTabId : undefined}
           onFormDataChange={showTabs ? handleFormDataChange : undefined}
         />

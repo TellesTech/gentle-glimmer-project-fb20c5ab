@@ -60,6 +60,8 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useDelayReasons, DelayCategory } from '@/hooks/useDelayReasons';
 import { DelayControlSection } from './DelayControlSection';
+import { syncReportPhotosNow } from '@/lib/reportPhotosSync';
+
 
 interface SelectionData {
   companyId: string | null;
@@ -80,6 +82,7 @@ interface QuickReportFormContentProps {
   initialData?: ReportFormData;
   isEditMode?: boolean;
   tabId?: string;
+  reportId?: string;
   onFormDataChange?: (data: Partial<ReportFormData>) => void;
 }
 
@@ -162,7 +165,7 @@ const RECENT_LOCATIONS = [
   'Almoxarifado',
 ];
 
-export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitting, initialData, isEditMode, tabId, onFormDataChange }: QuickReportFormContentProps) {
+export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitting, initialData, isEditMode, tabId, reportId, onFormDataChange }: QuickReportFormContentProps) {
   const { user } = useAuth();
   
   // Determine default shift based on current time
@@ -707,8 +710,31 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
   };
 
   const handlePhotosChange = useCallback((photos: string[]) => {
-    setFormData(prev => ({ ...prev, photos }));
-  }, []);
+    setFormData(prev => {
+      // Em edição de RDO existente, persiste na hora (não depende do "Salvar")
+      if (isEditMode && reportId) {
+        syncReportPhotosNow(reportId, prev.photos || [], photos).catch((err) => {
+          console.error('[report_photos] sync error', err);
+          toast.error('Não foi possível salvar as fotos', {
+            description: err instanceof Error ? err.message : 'Erro desconhecido',
+          });
+        });
+      }
+      return { ...prev, photos };
+    });
+  }, [isEditMode, reportId]);
+
+  // RDO novo: fotos só são gravadas ao salvar — avisa antes de sair da página
+  useEffect(() => {
+    if (isEditMode || formData.photos.length === 0) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isEditMode, formData.photos.length]);
+
 
   const handleLocationChange = (location: string) => {
     setFormData(prev => ({ ...prev, location }));
