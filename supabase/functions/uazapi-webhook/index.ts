@@ -1574,7 +1574,18 @@ Deno.serve(async (req) => {
 
     // Build report data using correct field mapping (needed early to know resolved shift)
     const reportData = buildReportData(parsedData, projectId, createdBy);
+    // Padroniza o número da OM com o formato já usado na unidade, para que o RDO
+    // caia no mesmo card de "Meus RDOs" (que agrupa pelo texto da OM).
+    {
+      const digits = omKey(reportData.maintenance_order_number);
+      const canonical = digits ? canonicalOmByDigits.get(digits) : null;
+      if (canonical && canonical !== reportData.maintenance_order_number) {
+        console.log(`[OM] normalizando "${reportData.maintenance_order_number}" -> "${canonical}"`);
+        reportData.maintenance_order_number = canonical;
+      }
+    }
     const resolvedShift = reportData.shift;
+
 
     // Check for existing report (same PROJECT + date + shift)
     // We check PROJECT instead of SENDER/GROUP to avoid duplicates when multiple people
