@@ -860,12 +860,45 @@ export function significantTokens(s: string): string[] {
     .filter((w) => w.length >= 4 && !GENERIC_WORDS.has(w));
 }
 
+/** Stopwords usadas no agrupamento de cards (src/lib/rdoActivityGroups.ts). */
+const TITLE_STOPWORDS = new Set([
+  "e", "de", "da", "do", "das", "dos", "no", "na", "nos", "nas", "em", "a", "o", "as", "os",
+  "com", "para", "por", "um", "uma", "the", "s",
+]);
+
+/**
+ * Tokens do título usados na comparação de atividades — mesma regra dos cards
+ * de "Meus RDOs": sem acento, sem pontuação, sem plural simples e sem stopwords.
+ */
+export function activityTitleTokens(value: string | null | undefined): Set<string> {
+  return new Set(
+    normKey(value || "")
+      .split(" ")
+      .map((t) => t.replace(/s$/, ""))
+      .filter((t) => t.length > 1 && !TITLE_STOPWORDS.has(t))
+  );
+}
+
+/** Similaridade de Jaccard entre conjuntos de tokens. */
+export function jaccard(a: Set<string>, b: Set<string>): number {
+  if (!a.size || !b.size) return 0;
+  let inter = 0;
+  a.forEach((t) => { if (b.has(t)) inter++; });
+  return inter / (a.size + b.size - inter);
+}
+
+export const TITLE_MERGE_THRESHOLD = 0.8;
+
 export interface RouteInput {
   omNumber: string | null;
   omTitle: string | null;
   projects: RoutableProject[];
   /** map projectId -> conjunto de OMs já usadas em reports desse projeto */
   projectOmNumbers?: Record<string, string[]>;
+  /** map projectId -> títulos de OM já usados em reports desse projeto */
+  projectOmTitles?: Record<string, string[]>;
+  /** atividade padrão do grupo de WhatsApp (usada quando não há OM nem título) */
+  defaultProjectId?: string | null;
 }
 
 export interface RouteResult {
@@ -902,17 +935,45 @@ export function routeProject(input: RouteInput): RouteResult {
   const title = input.omTitle;
   if (title) {
     const tKey = normKey(title);
+
+    // 3a. Igualdade exata com o nome do projeto ou com um título de OM já usado
     for (const p of projects) {
       if (projectTitleKey(p.name) === tKey) return { projectId: p.id, reason: "title_exact" };
     }
-    const tTokens = significantTokens(title);
-    if (tTokens.length >= 2) {
+    for (const [pid, titles] of Object.entries(input.projectOmTitles || {})) {
+      if (!projects.some((p) => p.id === pid)) continue;
+      if (titles.some((t) => normKey(t) === tKey)) return { projectId: pid, reason: "title_exact_report" };
+    }
+
+    // 3b. Similaridade de Jaccard (mesma métrica dos cards) contra nome do
+    //     projeto e contra os títulos de OM já registrados nos relatórios.
+    const tTokens = activityTitleTokens(title);
+    if (tTokens.size >= 1) {
+      let best: { id: string; score: number; reason: string } | null = null;
+      for (const p of projects) {
+        const candidates: Array<{ text: string; reason: string }> = [
+          { text: projectTitleKey(p.name), reason: "title_similar_project" },
+          ...((input.projectOmTitles || {})[p.id] || []).map((t) => ({ text: t, reason: "title_similar_report" })),
+        ];
+        for (const c of candidates) {
+          const score = jaccard(tTokens, activityTitleTokens(c.text));
+          if (score >= TITLE_MERGE_THRESHOLD && (!best || score > best.score)) {
+            best = { id: p.id, score, reason: c.reason };
+          }
+        }
+      }
+      if (best) return { projectId: best.id, reason: best.reason };
+    }
+
+    // 3c. Fallback antigo: alta sobreposição de tokens significativos
+    const sTokens = significantTokens(title);
+    if (sTokens.length >= 2) {
       let best: { id: string; score: number } | null = null;
       for (const p of projects) {
         const pTokens = significantTokens(projectTitleKey(p.name));
         if (!pTokens.length) continue;
-        const inter = tTokens.filter((t) => pTokens.includes(t)).length;
-        const score = inter / Math.max(tTokens.length, pTokens.length);
+        const inter = sTokens.filter((t) => pTokens.includes(t)).length;
+        const score = inter / Math.max(sTokens.length, pTokens.length);
         if (score >= 0.7 && (!best || score > best.score)) best = { id: p.id, score };
       }
       if (best) return { projectId: best.id, reason: "title_strong" };
@@ -920,10 +981,15 @@ export function routeProject(input: RouteInput): RouteResult {
     return { projectId: null, reason: "title_no_match" };
   }
 
-  // 4. Sem OM e sem título: só usa quando há exatamente uma atividade ativa
+  // 4. Sem OM e sem título: atividade padrão do grupo, ou única atividade ativa
+  if (input.defaultProjectId && projects.some((p) => p.id === input.defaultProjectId)) {
+    return { projectId: input.defaultProjectId, reason: "grupo_atividade_padrao" };
+  }
+  if (input.defaultProjectId) return { projectId: input.defaultProjectId, reason: "grupo_atividade_padrao" };
   if (projects.length === 1) return { projectId: projects[0].id, reason: "single_project" };
   return { projectId: null, reason: "ambiguous" };
 }
+
 
 /** Nome padronizado da atividade. */
 export function buildProjectName(omNumber: string | null, title: string | null): string | null {
