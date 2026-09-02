@@ -724,6 +724,17 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
     });
   }, [isEditMode, reportId]);
 
+  // RDO novo: fotos só são gravadas ao salvar — avisa antes de sair da página
+  useEffect(() => {
+    if (isEditMode || formData.photos.length === 0) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isEditMode, formData.photos.length]);
+
 
   const handleLocationChange = (location: string) => {
     setFormData(prev => ({ ...prev, location }));
