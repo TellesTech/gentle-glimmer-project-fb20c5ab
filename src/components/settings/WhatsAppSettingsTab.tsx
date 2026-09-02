@@ -164,6 +164,24 @@ export function WhatsAppSettingsTab() {
     },
   });
 
+  // Default activity for a group (used when the message has no OM/title)
+  const setDefaultProject = useMutation({
+    mutationFn: async ({ id, projectId }: { id: string; projectId: string | null }) => {
+      const { error } = await (supabase as any)
+        .from('whatsapp_group_projects')
+        .update({ project_id: projectId })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-group-mappings'] });
+      toast({ title: 'Atividade padrão atualizada' });
+    },
+    onError: (err: any) => {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    },
+  });
+
   // Pause/resume automation per unit (group mapping)
   const toggleGroupPause = useMutation({
     mutationFn: async ({ id, paused }: { id: string; paused: boolean }) => {
@@ -176,6 +194,7 @@ export function WhatsAppSettingsTab() {
     },
     onSuccess: (paused) => {
       queryClient.invalidateQueries({ queryKey: ['whatsapp-group-mappings'] });
+
       toast({
         title: paused ? 'Automação pausada nesta unidade' : 'Automação reativada nesta unidade',
         description: paused
