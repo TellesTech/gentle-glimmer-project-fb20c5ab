@@ -1254,26 +1254,46 @@ Deno.serve(async (req) => {
     const omNumberEarly = detEarly.numeroOM;
     const omTitleEarly = detEarly.tituloOM || detEarly.atividade || null;
 
+    // Atividades da unidade: ativas + concluídas/suspensas recentes (evita recriar
+    // card só porque a atividade mudou de status).
     const { data: activeProjectsRaw } = await supabase
       .from("projects")
-      .select("id, name, description, code, contract_number")
+      .select("id, name, description, code, contract_number, status, updated_at")
       .eq("site_id", siteId)
-      .not("status", "in", '("completed","suspended")')
       .order("created_at", { ascending: false });
+    const recentCutoff = Date.now() - 120 * 24 * 60 * 60 * 1000;
     const activeProjects: Array<{ id: string; name: string; description: string | null; code: string | null; contract_number: string | null }> =
-      activeProjectsRaw || [];
+      (activeProjectsRaw || []).filter((p: any) => {
+        if (p.status !== "completed" && p.status !== "suspended") return true;
+        const ts = p.updated_at ? Date.parse(p.updated_at) : 0;
+        return ts >= recentCutoff;
+      });
 
-    // OMs já usadas em relatórios das atividades desta unidade
+    // OMs e títulos já usados em relatórios das atividades desta unidade
     const projectOmNumbers: Record<string, string[]> = {};
+    const projectOmTitles: Record<string, string[]> = {};
+    const canonicalOmByDigits = new Map<string, string>();
     if (activeProjects.length) {
       const { data: omRows } = await supabase
         .from("reports")
-        .select("project_id, maintenance_order_number")
-        .in("project_id", activeProjects.map((p) => p.id))
-        .not("maintenance_order_number", "is", null);
+        .select("project_id, maintenance_order_number, maintenance_order_title")
+        .in("project_id", activeProjects.map((p) => p.id));
       for (const row of omRows || []) {
-        if (!row.maintenance_order_number) continue;
-        (projectOmNumbers[row.project_id] ||= []).push(row.maintenance_order_number);
+        if (row.maintenance_order_number) {
+          (projectOmNumbers[row.project_id] ||= []).push(row.maintenance_order_number);
+          const digits = omKey(row.maintenance_order_number);
+          if (digits && !canonicalOmByDigits.has(digits)) {
+            canonicalOmByDigits.set(digits, String(row.maintenance_order_number).trim());
+          } else if (digits) {
+            // Preferimos o formato mais completo (com prefixo) como canônico
+            const current = canonicalOmByDigits.get(digits)!;
+            const candidate = String(row.maintenance_order_number).trim();
+            if (candidate.length > current.length) canonicalOmByDigits.set(digits, candidate);
+          }
+        }
+        if (row.maintenance_order_title) {
+          (projectOmTitles[row.project_id] ||= []).push(row.maintenance_order_title);
+        }
       }
     }
 
@@ -1282,8 +1302,12 @@ Deno.serve(async (req) => {
       omTitle: omTitleEarly,
       projects: activeProjects,
       projectOmNumbers,
+      projectOmTitles,
+      defaultProjectId: groupDefaultProjectId,
     });
     console.log(`[ROUTE] om=${omNumberEarly ?? "-"} titulo="${omTitleEarly ?? "-"}" -> ${route.projectId ?? "novo"} (${route.reason})`);
+    const routeReason = route.reason;
+
 
     let routedId: string | null = route.projectId;
     let autoCreatedProject = false;
