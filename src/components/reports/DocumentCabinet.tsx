@@ -1616,12 +1616,14 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                     <FolderKanban className="h-5 w-5 text-foreground/70" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    {projectFolder.omNumber ? (
+                    {projectFolder.omNumbers.length > 0 ? (
                       <span
-                        title={`OM ${projectFolder.omNumber}`}
+                        title={projectFolder.omNumbers.map(n => `OM ${n}`).join(' · ')}
                         className="inline-block mb-0.5 px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold tracking-wide"
                       >
-                        OM {projectFolder.omNumber}
+                        {projectFolder.omNumbers.length === 1
+                          ? `OM ${projectFolder.omNumbers[0]}`
+                          : `${projectFolder.omNumbers.length} OMs`}
                       </span>
                     ) : (
                       <span className="inline-block mb-0.5 px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground text-[10px] font-bold tracking-wide">
@@ -1631,6 +1633,12 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                     <p className="text-sm font-semibold text-foreground break-words leading-snug" title={projectFolder.name}>
                       {projectFolder.name}
                     </p>
+                    {projectFolder.omNumbers.length > 1 && (
+                      <p className="text-[11px] text-muted-foreground break-words leading-snug mt-0.5" title={projectFolder.omNumbers.join(', ')}>
+                        {projectFolder.omNumbers.slice(0, 3).map(n => `OM ${n}`).join(' · ')}
+                        {projectFolder.omNumbers.length > 3 ? ` +${projectFolder.omNumbers.length - 3}` : ''}
+                      </p>
+                    )}
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-foreground group-hover:translate-x-0.5 transition-transform" />
                 </div>
