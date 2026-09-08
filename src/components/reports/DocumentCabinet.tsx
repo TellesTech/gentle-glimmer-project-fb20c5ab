@@ -933,6 +933,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
       }
       const rawOmNum = sanitizeOmNumber(report.maintenance_order_number);
       if (rawOmNum && !projectFolder.omNumbers.includes(rawOmNum)) projectFolder.omNumbers.push(rawOmNum);
+      if (!projectFolder.omNumber && omNum) projectFolder.omNumber = omNum;
       if (omTitle) {
         if (!projectFolder.omTitles.includes(omTitle)) projectFolder.omTitles.push(omTitle);
         const tc = projectFolder.titleCounts!;
