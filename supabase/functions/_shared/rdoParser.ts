@@ -991,7 +991,7 @@ export function routeProject(input: RouteInput): RouteResult {
           .map((t) => t.slice(0, 5)),
       );
     const tStems = stems(title);
-    if (tStems.size >= 1) {
+    if (tStems.size >= 2) {
       let best: { id: string; score: number; reason: string } | null = null;
       for (const p of projects) {
         const candidates: Array<{ text: string; reason: string }> = [
