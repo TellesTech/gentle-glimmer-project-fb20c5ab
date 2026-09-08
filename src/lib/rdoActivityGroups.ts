@@ -88,6 +88,10 @@ export interface ActivityGroup {
   name: string;
   omNumber: string | null;
   omTitle: string | null;
+  /** Todas as OMs (número) presentes nesta atividade. */
+  omNumbers: string[];
+  /** Todos os títulos de OM presentes nesta atividade. */
+  omTitles: string[];
   reportIds: string[];
   projectIds: string[];
   siteIds: string[];
@@ -101,8 +105,6 @@ export interface ActivityGroup {
 interface InternalGroup extends ActivityGroup {
   titleCounts: Record<string, { label: string; count: number }>;
   locations: string[];
-  omNumbers: string[];
-  omTitles: string[];
   projectNames: string[];
 }
 
