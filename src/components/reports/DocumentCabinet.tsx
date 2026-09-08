@@ -1041,53 +1041,12 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
         site.years.forEach(year => {
           year.months.sort((a, b) => b.month - a.month);
           year.months.forEach(month => {
-            // Mescla pastas SEM número de OM cujos títulos são variações do mesmo serviço
-            // (ex.: "Inspeção e reparo chaminé e FEA" / "Inspeção e reparo na chaminé").
-            const merged: ProjectFolder[] = [];
-            const tokensOf = new Map<ProjectFolder, Set<string>>();
-            month.projects.forEach(pf => {
-              if (pf.omNumber) { merged.push(pf); return; }
-              const tks = omTitleTokens(pf.omTitle || pf.name);
-              // Compara sempre com o conjunto ORIGINAL de tokens da pasta destino.
-              // (Unir tokens gerava efeito cascata: um título "ponte" acabava
-              // juntando serviços totalmente distintos no mesmo card.)
-              const target = merged.find(m =>
-                !m.omNumber && tokenSimilarity(tokensOf.get(m) || new Set(), tks) >= TITLE_MERGE_THRESHOLD
-              );
-              if (!target) {
-                tokensOf.set(pf, tks);
-                merged.push(pf);
-                return;
-              }
-              target.reports.push(...pf.reports);
-              target.count += pf.count;
-              target.totalWorkforce += pf.totalWorkforce;
-              target.progress = Math.min(Math.round((target.progress + pf.progress) * 10) / 10, 100);
-              if (!target.lastDate || (pf.lastDate && pf.lastDate > target.lastDate)) target.lastDate = pf.lastDate;
-              pf.omNumbers.forEach(n => { if (!target.omNumbers.includes(n)) target.omNumbers.push(n); });
-              pf.omTitles.forEach(t => { if (!target.omTitles.includes(t)) target.omTitles.push(t); });
-              pf.sourceProjects.forEach(sp => {
-                if (!target.sourceProjects.some(s => s.id === sp.id)) target.sourceProjects.push(sp);
-              });
-              const tc = target.titleCounts || (target.titleCounts = {});
-              Object.entries(pf.titleCounts || {}).forEach(([k, v]) => {
-                tc[k] = { label: v.label, count: (tc[k]?.count || 0) + v.count };
-              });
-            });
-            month.projects = merged;
-
-            // Nome final do card: OM <número> — <título mais frequente>
+            // Nome final do card: nome da atividade (as OMs ficam listadas dentro)
             month.projects.forEach(pf => {
               const best = Object.values(pf.titleCounts || {}).sort((a, b) => b.count - a.count)[0];
               const bestTitle = best?.label || pf.omTitle || null;
               pf.omTitle = bestTitle;
-              if (pf.omNumber) {
-                pf.name = bestTitle ? `OM ${pf.omNumber} — ${bestTitle}` : `OM ${pf.omNumber}`;
-              } else if (bestTitle) {
-                pf.name = bestTitle;
-              } else if (pf.count > 0) {
-                pf.name = `${pf.sourceProjects[0]?.name || 'Atividade'} — Sem OM`;
-              }
+              pf.name = pf.sourceProjects[0]?.name || bestTitle || pf.name || 'Atividade';
               // Nome personalizado (renomeado aqui ou no portal do cliente)
               const custom = activityNamesBySite.get(`${site.id}::${pf.id}`);
               if (custom) pf.name = custom;
