@@ -978,6 +978,41 @@ export function routeProject(input: RouteInput): RouteResult {
       }
       if (best) return { projectId: best.id, reason: "title_strong" };
     }
+    // 3d. Correspondência parcial por radical de palavra-chave específica
+    //     (ex.: "telha" ~ "telhado"), ignorando palavras genéricas.
+    const GENERIC = new Set([
+      "manutencao", "servico", "reparo", "reparos", "emergencia", "emergencial",
+      "obra", "atividade", "geral", "area", "diversos", "rdo", "om",
+    ]);
+    const stems = (text: string) =>
+      new Set(
+        Array.from(activityTitleTokens(text))
+          .filter((t) => !GENERIC.has(t) && t.length >= 4)
+          .map((t) => t.slice(0, 5)),
+      );
+    const tStems = stems(title);
+    if (tStems.size >= 1) {
+      let best: { id: string; score: number; reason: string } | null = null;
+      for (const p of projects) {
+        const candidates: Array<{ text: string; reason: string }> = [
+          { text: projectTitleKey(p.name), reason: "title_keyword_project" },
+          ...((input.projectOmTitles || {})[p.id] || []).map((t) => ({ text: t, reason: "title_keyword_report" })),
+        ];
+        for (const c of candidates) {
+          const cStems = stems(c.text);
+          if (!cStems.size) continue;
+          let inter = 0;
+          tStems.forEach((s) => { if (cStems.has(s)) inter++; });
+          if (!inter) continue;
+          const score = inter / Math.min(tStems.size, cStems.size);
+          if (score >= 0.5 && (!best || score > best.score)) {
+            best = { id: p.id, score, reason: c.reason };
+          }
+        }
+      }
+      if (best) return { projectId: best.id, reason: best.reason };
+    }
+
     return { projectId: null, reason: "title_no_match" };
   }
 
