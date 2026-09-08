@@ -108,7 +108,10 @@ interface InternalGroup extends ActivityGroup {
   projectNames: string[];
 }
 
-/** Constrói os grupos de atividade (cards) a partir de uma lista de RDOs. */
+/**
+ * Constrói os grupos de atividade (cards) a partir de uma lista de RDOs.
+ * Um card = uma atividade (projeto). As OMs ficam listadas dentro do card.
+ */
 export function buildActivityGroups(
   reports: ActivityGroupInputReport[],
   customNames?: Map<string, string> | Record<string, string>,
@@ -123,19 +126,17 @@ export function buildActivityGroups(
       ? (report.location || omTitle || report.project_name || 'Atividade')
       : (report.project_name as string);
 
-    const key = omNum
-      ? `om:${omNum}`
-      : omTitleKey
-        ? `title:${omTitleKey}`
-        : `project:${report.project_id}`;
+    const key = `project:${report.project_id}`;
 
     let group = byKey.get(key);
     if (!group) {
       group = {
         id: key,
-        name: omNum ? `OM ${omNum}` : (omTitle || projectDisplayName),
+        name: projectDisplayName,
         omNumber: omNum,
         omTitle: omTitle || null,
+        omNumbers: [],
+        omTitles: [],
         reportIds: [],
         projectIds: [],
         siteIds: [],
@@ -146,8 +147,6 @@ export function buildActivityGroups(
         searchString: '',
         titleCounts: {},
         locations: [],
-        omNumbers: [],
-        omTitles: [],
         projectNames: [],
       };
       byKey.set(key, group);
@@ -163,6 +162,7 @@ export function buildActivityGroups(
     if (projectDisplayName && !group.projectNames.includes(projectDisplayName)) group.projectNames.push(projectDisplayName);
     const rawOmNum = sanitizeOmNumber(report.maintenance_order_number);
     if (rawOmNum && !group.omNumbers.includes(rawOmNum)) group.omNumbers.push(rawOmNum);
+    if (!group.omNumber && omNum) group.omNumber = omNum;
     if (omTitle) {
       if (!group.omTitles.includes(omTitle)) group.omTitles.push(omTitle);
       const k = omTitleKey || omTitle;
@@ -171,51 +171,18 @@ export function buildActivityGroups(
     if (!group.lastDate || report.date > group.lastDate) group.lastDate = report.date;
   });
 
-  // Mescla grupos SEM número de OM cujos títulos são variações do mesmo serviço
-  const merged: InternalGroup[] = [];
-  const tokensOf = new Map<InternalGroup, Set<string>>();
-  Array.from(byKey.values()).forEach((g) => {
-    if (g.omNumber) { merged.push(g); return; }
-    const tks = omTitleTokens(g.omTitle || g.name);
-    const target = merged.find(m => !m.omNumber && tokenSimilarity(tokensOf.get(m) || new Set(), tks) >= TITLE_MERGE_THRESHOLD);
-    if (!target) {
-      tokensOf.set(g, tks);
-      merged.push(g);
-      return;
-    }
-    target.reportIds.push(...g.reportIds);
-    target.count += g.count;
-    g.projectIds.forEach(id => { if (!target.projectIds.includes(id)) target.projectIds.push(id); });
-    g.siteIds.forEach(id => { if (!target.siteIds.includes(id)) target.siteIds.push(id); });
-    g.locations.forEach(l => { if (!target.locations.includes(l)) target.locations.push(l); });
-    g.omNumbers.forEach(n => { if (!target.omNumbers.includes(n)) target.omNumbers.push(n); });
-    g.omTitles.forEach(t => { if (!target.omTitles.includes(t)) target.omTitles.push(t); });
-    g.projectNames.forEach(n => { if (!target.projectNames.includes(n)) target.projectNames.push(n); });
-    Object.entries(g.titleCounts).forEach(([k, v]) => {
-      target.titleCounts[k] = { label: v.label, count: (target.titleCounts[k]?.count || 0) + v.count };
-    });
-    if (!target.lastDate || (g.lastDate && g.lastDate > target.lastDate)) target.lastDate = g.lastDate;
-    if (!target.siteName && g.siteName) target.siteName = g.siteName;
-    if (!target.companyName && g.companyName) target.companyName = g.companyName;
-  });
+  const groups = Array.from(byKey.values());
 
-  // Nome final: OM <número> — <título mais frequente>
-  merged.forEach((g) => {
+  // Nome final: nome da atividade (fallback: título de OM mais frequente)
+  groups.forEach((g) => {
     const best = Object.values(g.titleCounts).sort((a, b) => b.count - a.count)[0];
     const bestTitle = best?.label || g.omTitle || null;
     g.omTitle = bestTitle;
-    if (g.omNumber) {
-      g.name = bestTitle ? `OM ${g.omNumber} — ${bestTitle}` : `OM ${g.omNumber}`;
-    } else if (bestTitle) {
-      g.name = bestTitle;
-    } else {
-      g.name = g.projectNames[0] || 'Atividade';
-    }
+    g.name = g.projectNames[0] || bestTitle || 'Atividade';
 
     g.searchString = [
       g.name,
-      g.omNumber ? `OM ${g.omNumber}` : '',
-      ...g.omNumbers,
+      ...g.omNumbers.map(n => `OM ${n}`),
       ...g.omTitles,
       ...g.locations,
       ...g.projectNames,
@@ -229,14 +196,14 @@ export function buildActivityGroups(
       .toLowerCase();
   });
 
-  return merged
+  return groups
     .sort((a, b) => {
       const da = a.lastDate || '';
       const db = b.lastDate || '';
       if (da !== db) return db.localeCompare(da);
       return b.count - a.count;
     })
-    .map(({ titleCounts, locations, omNumbers, omTitles, projectNames, ...rest }) => {
+    .map(({ titleCounts, locations, projectNames, ...rest }) => {
       const custom = customNames
         ? (customNames instanceof Map ? customNames.get(rest.id) : customNames[rest.id])
         : undefined;
