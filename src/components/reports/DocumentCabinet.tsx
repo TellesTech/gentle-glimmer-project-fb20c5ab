@@ -894,7 +894,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
       monthFolder.reports.push(report);
       monthFolder.count++;
       
-      // Agrupamento por OM: número da OM > título da OM > atividade (fallback "Sem OM")
+      // Agrupamento por ATIVIDADE (um card por atividade). As OMs ficam listadas dentro.
       const omNum = normalizeOmKeyNumber(report.maintenance_order_number);
       const omTitle = (report.maintenance_order_title || '').trim();
       const omTitleKey = normalizeOmTitle(omTitle);
@@ -903,17 +903,13 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
         ? (report.location || omTitle || project.name || 'Atividade')
         : project.name;
 
-      const omKey = omNum
-        ? `om:${omNum}`
-        : omTitleKey
-          ? `title:${omTitleKey}`
-          : `project:${project.id}`;
+      const omKey = `project:${project.id}`;
 
       let projectFolder = monthFolder.projects.find(p => p.id === omKey);
       if (!projectFolder) {
         projectFolder = {
           id: omKey,
-          name: omNum ? `OM ${omNum}` : (omTitle || projectDisplayName),
+          name: projectDisplayName,
           code: project.code || null,
           reports: [],
           count: 0,
