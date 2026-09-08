@@ -894,7 +894,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
       monthFolder.reports.push(report);
       monthFolder.count++;
       
-      // Agrupamento por OM: número da OM > título da OM > atividade (fallback "Sem OM")
+      // Agrupamento por ATIVIDADE (um card por atividade). As OMs ficam listadas dentro.
       const omNum = normalizeOmKeyNumber(report.maintenance_order_number);
       const omTitle = (report.maintenance_order_title || '').trim();
       const omTitleKey = normalizeOmTitle(omTitle);
@@ -903,17 +903,13 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
         ? (report.location || omTitle || project.name || 'Atividade')
         : project.name;
 
-      const omKey = omNum
-        ? `om:${omNum}`
-        : omTitleKey
-          ? `title:${omTitleKey}`
-          : `project:${project.id}`;
+      const omKey = `project:${project.id}`;
 
       let projectFolder = monthFolder.projects.find(p => p.id === omKey);
       if (!projectFolder) {
         projectFolder = {
           id: omKey,
-          name: omNum ? `OM ${omNum}` : (omTitle || projectDisplayName),
+          name: projectDisplayName,
           code: project.code || null,
           reports: [],
           count: 0,
@@ -937,6 +933,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
       }
       const rawOmNum = sanitizeOmNumber(report.maintenance_order_number);
       if (rawOmNum && !projectFolder.omNumbers.includes(rawOmNum)) projectFolder.omNumbers.push(rawOmNum);
+      if (!projectFolder.omNumber && omNum) projectFolder.omNumber = omNum;
       if (omTitle) {
         if (!projectFolder.omTitles.includes(omTitle)) projectFolder.omTitles.push(omTitle);
         const tc = projectFolder.titleCounts!;
@@ -1044,53 +1041,12 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
         site.years.forEach(year => {
           year.months.sort((a, b) => b.month - a.month);
           year.months.forEach(month => {
-            // Mescla pastas SEM número de OM cujos títulos são variações do mesmo serviço
-            // (ex.: "Inspeção e reparo chaminé e FEA" / "Inspeção e reparo na chaminé").
-            const merged: ProjectFolder[] = [];
-            const tokensOf = new Map<ProjectFolder, Set<string>>();
-            month.projects.forEach(pf => {
-              if (pf.omNumber) { merged.push(pf); return; }
-              const tks = omTitleTokens(pf.omTitle || pf.name);
-              // Compara sempre com o conjunto ORIGINAL de tokens da pasta destino.
-              // (Unir tokens gerava efeito cascata: um título "ponte" acabava
-              // juntando serviços totalmente distintos no mesmo card.)
-              const target = merged.find(m =>
-                !m.omNumber && tokenSimilarity(tokensOf.get(m) || new Set(), tks) >= TITLE_MERGE_THRESHOLD
-              );
-              if (!target) {
-                tokensOf.set(pf, tks);
-                merged.push(pf);
-                return;
-              }
-              target.reports.push(...pf.reports);
-              target.count += pf.count;
-              target.totalWorkforce += pf.totalWorkforce;
-              target.progress = Math.min(Math.round((target.progress + pf.progress) * 10) / 10, 100);
-              if (!target.lastDate || (pf.lastDate && pf.lastDate > target.lastDate)) target.lastDate = pf.lastDate;
-              pf.omNumbers.forEach(n => { if (!target.omNumbers.includes(n)) target.omNumbers.push(n); });
-              pf.omTitles.forEach(t => { if (!target.omTitles.includes(t)) target.omTitles.push(t); });
-              pf.sourceProjects.forEach(sp => {
-                if (!target.sourceProjects.some(s => s.id === sp.id)) target.sourceProjects.push(sp);
-              });
-              const tc = target.titleCounts || (target.titleCounts = {});
-              Object.entries(pf.titleCounts || {}).forEach(([k, v]) => {
-                tc[k] = { label: v.label, count: (tc[k]?.count || 0) + v.count };
-              });
-            });
-            month.projects = merged;
-
-            // Nome final do card: OM <número> — <título mais frequente>
+            // Nome final do card: nome da atividade (as OMs ficam listadas dentro)
             month.projects.forEach(pf => {
               const best = Object.values(pf.titleCounts || {}).sort((a, b) => b.count - a.count)[0];
               const bestTitle = best?.label || pf.omTitle || null;
               pf.omTitle = bestTitle;
-              if (pf.omNumber) {
-                pf.name = bestTitle ? `OM ${pf.omNumber} — ${bestTitle}` : `OM ${pf.omNumber}`;
-              } else if (bestTitle) {
-                pf.name = bestTitle;
-              } else if (pf.count > 0) {
-                pf.name = `${pf.sourceProjects[0]?.name || 'Atividade'} — Sem OM`;
-              }
+              pf.name = pf.sourceProjects[0]?.name || bestTitle || pf.name || 'Atividade';
               // Nome personalizado (renomeado aqui ou no portal do cliente)
               const custom = activityNamesBySite.get(`${site.id}::${pf.id}`);
               if (custom) pf.name = custom;
@@ -1660,12 +1616,14 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                     <FolderKanban className="h-5 w-5 text-foreground/70" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    {projectFolder.omNumber ? (
+                    {projectFolder.omNumbers.length > 0 ? (
                       <span
-                        title={`OM ${projectFolder.omNumber}`}
+                        title={projectFolder.omNumbers.map(n => `OM ${n}`).join(' · ')}
                         className="inline-block mb-0.5 px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold tracking-wide"
                       >
-                        OM {projectFolder.omNumber}
+                        {projectFolder.omNumbers.length === 1
+                          ? `OM ${projectFolder.omNumbers[0]}`
+                          : `${projectFolder.omNumbers.length} OMs`}
                       </span>
                     ) : (
                       <span className="inline-block mb-0.5 px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground text-[10px] font-bold tracking-wide">
@@ -1675,6 +1633,12 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                     <p className="text-sm font-semibold text-foreground break-words leading-snug" title={projectFolder.name}>
                       {projectFolder.name}
                     </p>
+                    {projectFolder.omNumbers.length > 1 && (
+                      <p className="text-[11px] text-muted-foreground break-words leading-snug mt-0.5" title={projectFolder.omNumbers.join(', ')}>
+                        {projectFolder.omNumbers.slice(0, 3).map(n => `OM ${n}`).join(' · ')}
+                        {projectFolder.omNumbers.length > 3 ? ` +${projectFolder.omNumbers.length - 3}` : ''}
+                      </p>
+                    )}
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-foreground group-hover:translate-x-0.5 transition-transform" />
                 </div>
