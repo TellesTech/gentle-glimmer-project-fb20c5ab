@@ -94,6 +94,13 @@ export default function ClientReports() {
         return [];
       }
 
+      // RDOs ocultos/removidos do portal pela WEES não aparecem para o cliente
+      const { data: hiddenRows } = await supabase
+        .from('portal_hidden_reports')
+        .select('report_id')
+        .in('report_id', reportIds);
+      const hiddenIds = new Set<string>((hiddenRows || []).map((h: any) => h.report_id));
+
       const seen = new Set<string>();
       const result: SignedReport[] = [];
       for (const r of (docs || []) as any[]) {
