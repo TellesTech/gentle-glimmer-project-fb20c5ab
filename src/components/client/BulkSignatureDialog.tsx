@@ -52,10 +52,19 @@ export function BulkSignatureDialog({
 }: BulkSignatureDialogProps) {
   const [signatureData, setSignatureData] = useState<string | null>(initialSignature ?? null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [forceManual, setForceManual] = useState(false);
+  const [saveToProfile, setSaveToProfile] = useState(true);
   const queryClient = useQueryClient();
 
+  const hasSaved = !!initialSignature;
+  const useOneClick = hasSaved && !forceManual;
+
   useEffect(() => {
-    if (open) setSignatureData(initialSignature ?? null);
+    if (open) {
+      setSignatureData(initialSignature ?? null);
+      setForceManual(false);
+      setSaveToProfile(true);
+    }
   }, [open, initialSignature]);
 
   const handleSubmit = async () => {
