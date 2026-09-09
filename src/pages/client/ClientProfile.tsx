@@ -41,10 +41,18 @@ export default function ClientProfile() {
   } | null>(null);
 
   useEffect(() => {
-    if (window.location.hash === '#seguranca') {
-      setTimeout(() => document.getElementById('seguranca')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    const hash = window.location.hash.replace('#', '');
+    if (hash === 'seguranca' || hash === 'pin') {
+      setTimeout(() => document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
     }
   }, []);
+
+  // Verifica se o cliente autenticado já possui PIN
+  useEffect(() => {
+    if (isInternalUser || !user?.id) return;
+    supabase.from('company_contacts').select('pin_hash').eq('user_id', user.id).maybeSingle()
+      .then(({ data }: any) => setHasPin(!!data?.pin_hash));
+  }, [isInternalUser, user?.id]);
 
   useEffect(() => {
     if (isInternalUser && user?.id) {
