@@ -131,7 +131,12 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, pin_hash: pinHash, message: 'PIN configurado com sucesso' }),
+      JSON.stringify({
+        success: true,
+        pin_hash: pinHash,
+        removed: !!remove,
+        message: remove ? 'PIN removido com sucesso' : 'PIN configurado com sucesso',
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
