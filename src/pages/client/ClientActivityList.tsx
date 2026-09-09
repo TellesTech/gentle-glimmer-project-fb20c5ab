@@ -244,13 +244,24 @@ export default function ClientActivityList() {
     },
   });
 
+  // ===== Ocultar / remover RDOs do portal do cliente (WEES) =====
+  const { canManage: canManagePortalVisibility, hiddenReportIds, setReportHidden } = usePortalHidden({
+    companyId: (activityInfo as any)?.companyId ?? null,
+    siteId: activityInfo?.siteId ?? null,
+  });
+
+  const visibleReports = useMemo(() => {
+    if (canManagePortalVisibility) return reports;
+    return reports.filter((r) => !hiddenReportIds.has(r.id));
+  }, [reports, hiddenReportIds, canManagePortalVisibility]);
+
   const stats = useMemo(() => {
-    const total = reports.length;
-    const completed = reports.filter((r) => r.approverStatus === 'completed').length;
-    const partial = reports.filter((r) => r.approverStatus === 'partial').length;
-    const pending = reports.filter((r) => r.approverStatus === 'pending').length;
+    const total = visibleReports.length;
+    const completed = visibleReports.filter((r) => r.approverStatus === 'completed').length;
+    const partial = visibleReports.filter((r) => r.approverStatus === 'partial').length;
+    const pending = visibleReports.filter((r) => r.approverStatus === 'pending').length;
     return { total, completed, partial, pending };
-  }, [reports]);
+  }, [visibleReports]);
 
   const getStatusBadge = (s: string) => {
     if (s === 'completed') return <Badge className="bg-emerald-500 hover:bg-emerald-500 text-white border-transparent gap-1"><CheckCircle2 className="h-3 w-3" />Assinado</Badge>;
