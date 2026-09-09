@@ -342,40 +342,30 @@ export default function ClientDashboard() {
   const reportsData = isAdminView ? adminReportsData : clientReportsData;
   const reportsLoading = isAdminView ? adminReportsLoading : clientReportsLoading;
 
-  // ===== Pastas de mês ocultas (somente super admin gerencia) =====
-  const isSuperAdmin = role === 'super_admin' && !isClientPreview;
+  // ===== Pastas de mês e RDOs ocultos/removidos (WEES admin/super admin) =====
   const hiddenScopeCompanyId = adminCompanyId || clientProfile?.company_id || null;
 
-  const { data: hiddenMonths } = useQuery({
-    queryKey: ['portal-hidden-months', hiddenScopeCompanyId, adminSiteId],
-    queryFn: async () => {
-      let q = supabase.from('portal_hidden_months').select('id, company_id, site_id, year, month');
-      if (adminSiteId) q = q.eq('site_id', adminSiteId);
-      else if (hiddenScopeCompanyId) q = q.eq('company_id', hiddenScopeCompanyId);
-      const { data } = await q;
-      return (data || []) as { id: string; company_id: string; site_id: string; year: number; month: number }[];
-    },
-    enabled: !!hiddenScopeCompanyId || !!adminSiteId,
-  });
+  const { canManage: canManagePortalVisibility, hiddenMonthKeys, hiddenReportIds, setMonthHidden, setReportHidden } =
+    usePortalHidden({ companyId: hiddenScopeCompanyId, siteId: adminSiteId, disabled: isClientPreview });
 
-  const hiddenMonthKeys = useMemo(
-    () => new Set((hiddenMonths || []).map(h => `${h.year}-${h.month}`)),
-    [hiddenMonths],
-  );
+  // Usuário interno que enxerga os itens ocultos (esmaecidos, com selo)
+  const isSuperAdmin = canManagePortalVisibility;
 
-  const canToggleHiddenMonth = isSuperAdmin && !!adminSiteId && !!adminCompanyId;
+  const canToggleHiddenMonth = canManagePortalVisibility && !!adminSiteId;
 
-  // Relatórios visíveis: o cliente não conta os meses ocultos nas métricas.
-  // O super admin continua vendo os números totais (ele enxerga as pastas ocultas).
+  // Relatórios visíveis: o cliente não conta os meses/RDOs ocultos nas métricas.
+  // A WEES continua vendo os números totais (ela enxerga os itens ocultos).
   const visibleReports = useMemo(() => {
     const all = reportsData || [];
-    if (isSuperAdmin || hiddenMonthKeys.size === 0) return all;
+    if (isSuperAdmin) return all;
+    if (hiddenMonthKeys.size === 0 && hiddenReportIds.size === 0) return all;
     return all.filter(r => {
+      if (hiddenReportIds.has(r.report_id)) return false;
       if (!r.report?.date) return true;
       const d = parseISO(r.report.date);
       return !hiddenMonthKeys.has(`${getYear(d)}-${getMonth(d)}`);
     });
-  }, [reportsData, hiddenMonthKeys, isSuperAdmin]);
+  }, [reportsData, hiddenMonthKeys, hiddenReportIds, isSuperAdmin]);
 
   // Photo count
   const reportIds = useMemo(() => (reportsData || []).map(r => r.report_id).filter(Boolean), [reportsData]);
