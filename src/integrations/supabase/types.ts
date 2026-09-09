@@ -982,6 +982,7 @@ export type Database = {
           created_at: string
           hidden_by: string | null
           id: string
+          mode: string
           month: number
           site_id: string
           year: number
@@ -991,6 +992,7 @@ export type Database = {
           created_at?: string
           hidden_by?: string | null
           id?: string
+          mode?: string
           month: number
           site_id: string
           year: number
@@ -1000,6 +1002,7 @@ export type Database = {
           created_at?: string
           hidden_by?: string | null
           id?: string
+          mode?: string
           month?: number
           site_id?: string
           year?: number
@@ -1020,6 +1023,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      portal_hidden_reports: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          hidden_by: string | null
+          id: string
+          mode: string
+          report_id: string
+          site_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          hidden_by?: string | null
+          id?: string
+          mode?: string
+          report_id: string
+          site_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          hidden_by?: string | null
+          id?: string
+          mode?: string
+          report_id?: string
+          site_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
