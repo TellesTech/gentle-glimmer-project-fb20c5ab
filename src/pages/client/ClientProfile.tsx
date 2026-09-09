@@ -434,7 +434,7 @@ export default function ClientProfile() {
                 <CardDescription>
                   {isInternalUser
                     ? 'Sua assinatura será usada no Portal do Cliente para aprovar relatórios com um clique'
-                    : 'Sua assinatura digital para aprovar relatórios com um clique'}
+                    : 'Digite seu nome ou envie uma imagem: a assinatura fica salva e você aprova relatórios com um clique'}
                 </CardDescription>
               </div>
               {!isEditingSignature && effectiveProfile.signature_data && (
