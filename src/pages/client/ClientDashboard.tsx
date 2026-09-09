@@ -44,8 +44,9 @@ import { format, parseISO, subDays, startOfDay, endOfDay, isWithinInterval, diff
 import { ptBR } from 'date-fns/locale';
 import { buildActivityGroups, type ActivityGroupInputReport } from '@/lib/rdoActivityGroups';
 import { useActivityNames } from '@/hooks/useActivityNames';
+import { usePortalHidden } from '@/hooks/usePortalHidden';
 import { RenameActivityDialog, type RenameActivityTarget } from '@/components/reports/RenameActivityDialog';
-import { Pencil } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import JSZip from 'jszip';
@@ -342,40 +343,30 @@ export default function ClientDashboard() {
   const reportsData = isAdminView ? adminReportsData : clientReportsData;
   const reportsLoading = isAdminView ? adminReportsLoading : clientReportsLoading;
 
-  // ===== Pastas de mês ocultas (somente super admin gerencia) =====
-  const isSuperAdmin = role === 'super_admin' && !isClientPreview;
+  // ===== Pastas de mês e RDOs ocultos/removidos (WEES admin/super admin) =====
   const hiddenScopeCompanyId = adminCompanyId || clientProfile?.company_id || null;
 
-  const { data: hiddenMonths } = useQuery({
-    queryKey: ['portal-hidden-months', hiddenScopeCompanyId, adminSiteId],
-    queryFn: async () => {
-      let q = supabase.from('portal_hidden_months').select('id, company_id, site_id, year, month');
-      if (adminSiteId) q = q.eq('site_id', adminSiteId);
-      else if (hiddenScopeCompanyId) q = q.eq('company_id', hiddenScopeCompanyId);
-      const { data } = await q;
-      return (data || []) as { id: string; company_id: string; site_id: string; year: number; month: number }[];
-    },
-    enabled: !!hiddenScopeCompanyId || !!adminSiteId,
-  });
+  const { canManage: canManagePortalVisibility, hiddenMonthKeys, hiddenReportIds, setMonthHidden, setReportHidden } =
+    usePortalHidden({ companyId: hiddenScopeCompanyId, siteId: adminSiteId, disabled: isClientPreview });
 
-  const hiddenMonthKeys = useMemo(
-    () => new Set((hiddenMonths || []).map(h => `${h.year}-${h.month}`)),
-    [hiddenMonths],
-  );
+  // Usuário interno que enxerga os itens ocultos (esmaecidos, com selo)
+  const isSuperAdmin = canManagePortalVisibility;
 
-  const canToggleHiddenMonth = isSuperAdmin && !!adminSiteId && !!adminCompanyId;
+  const canToggleHiddenMonth = canManagePortalVisibility && !!adminSiteId;
 
-  // Relatórios visíveis: o cliente não conta os meses ocultos nas métricas.
-  // O super admin continua vendo os números totais (ele enxerga as pastas ocultas).
+  // Relatórios visíveis: o cliente não conta os meses/RDOs ocultos nas métricas.
+  // A WEES continua vendo os números totais (ela enxerga os itens ocultos).
   const visibleReports = useMemo(() => {
     const all = reportsData || [];
-    if (isSuperAdmin || hiddenMonthKeys.size === 0) return all;
+    if (isSuperAdmin) return all;
+    if (hiddenMonthKeys.size === 0 && hiddenReportIds.size === 0) return all;
     return all.filter(r => {
+      if (hiddenReportIds.has(r.report_id)) return false;
       if (!r.report?.date) return true;
       const d = parseISO(r.report.date);
       return !hiddenMonthKeys.has(`${getYear(d)}-${getMonth(d)}`);
     });
-  }, [reportsData, hiddenMonthKeys, isSuperAdmin]);
+  }, [reportsData, hiddenMonthKeys, hiddenReportIds, isSuperAdmin]);
 
   // Photo count
   const reportIds = useMemo(() => (reportsData || []).map(r => r.report_id).filter(Boolean), [reportsData]);
@@ -529,31 +520,20 @@ export default function ClientDashboard() {
   ) => {
     e.stopPropagation();
     if (!canToggleHiddenMonth) return;
-    try {
-      if (hidden) {
-        const { error } = await supabase
-          .from('portal_hidden_months')
-          .delete()
-          .eq('site_id', adminSiteId!)
-          .eq('year', month.year)
-          .eq('month', month.month);
-        if (error) throw error;
-        toast({ title: 'Pasta reexibida', description: `${month.monthName} ${month.year} voltou a aparecer para o cliente.` });
-      } else {
-        const { error } = await supabase.from('portal_hidden_months').insert({
-          company_id: adminCompanyId!,
-          site_id: adminSiteId!,
-          year: month.year,
-          month: month.month,
-          hidden_by: user?.id ?? null,
-        });
-        if (error) throw error;
-        toast({ title: 'Pasta ocultada', description: `${month.monthName} ${month.year} não aparece mais para o cliente.` });
-      }
-      queryClient.invalidateQueries({ queryKey: ['portal-hidden-months'] });
-    } catch (err: any) {
-      toast({ title: 'Erro', description: err?.message || 'Não foi possível alterar a visibilidade.', variant: 'destructive' });
-    }
+    await setMonthHidden(month.year, month.month, hidden ? null : 'hidden');
+  };
+
+  const removeMonthFromPortal = async (
+    e: React.MouseEvent,
+    month: { year: number; month: number; monthName: string },
+  ) => {
+    e.stopPropagation();
+    if (!canToggleHiddenMonth) return;
+    const ok = window.confirm(
+      `Remover ${month.monthName} ${month.year} do portal do cliente? Os RDOs continuam na área WEES.`,
+    );
+    if (!ok) return;
+    await setMonthHidden(month.year, month.month, 'removed');
   };
   
   // Unidades presentes nos RDOs visíveis (para nomes personalizados de pastas)
@@ -951,7 +931,8 @@ export default function ClientDashboard() {
             {!selectedMonthId ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 sm:gap-10 py-4">
                 {visibleMonthFolders.map((month) => {
-                  const isHidden = hiddenMonthKeys.has(`${month.year}-${month.month}`);
+                  const hiddenMode = hiddenMonthKeys.get(`${month.year}-${month.month}`);
+                  const isHidden = !!hiddenMode;
                   return (
                   <div
                     key={month.id}
@@ -986,23 +967,37 @@ export default function ClientDashboard() {
                         )}
                       </button>
 
-                      {/* Ocultar/reexibir pasta do mês (somente super admin) */}
+                      {/* Ocultar / reexibir / remover pasta do mês (WEES) */}
                       {canToggleHiddenMonth && (
-                        <button
-                          type="button"
-                          title={isHidden ? 'Reexibir pasta para o cliente' : 'Ocultar pasta do cliente'}
-                          onClick={(e) => toggleHiddenMonth(e, month, isHidden)}
-                          className="absolute -top-2 -left-2 z-30 rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-primary hover:border-primary transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                        >
-                          {isHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                        </button>
+                        <div className="absolute -top-2 -left-2 z-30 flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                          <button
+                            type="button"
+                            title={isHidden ? 'Reexibir pasta para o cliente' : 'Ocultar pasta do cliente'}
+                            onClick={(e) => toggleHiddenMonth(e, month, isHidden)}
+                            className="rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+                          >
+                            {isHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                          </button>
+                          {hiddenMode !== 'removed' && (
+                            <button
+                              type="button"
+                              title="Remover pasta do portal do cliente"
+                              onClick={(e) => removeMonthFromPortal(e, month)}
+                              className="rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-destructive hover:border-destructive transition-colors"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                     <div className="text-center min-w-0 px-1">
                       <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">{month.monthName}</p>
                       <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-tight">{month.year}</p>
                       {isHidden && (
-                        <Badge variant="secondary" className="mt-1 h-4 px-1.5 text-[10px]">Oculto</Badge>
+                        <Badge variant="secondary" className="mt-1 h-4 px-1.5 text-[10px]">
+                          {hiddenMode === 'removed' ? 'Removido' : 'Oculto'}
+                        </Badge>
                       )}
                       {downloadingMonthId === month.id && downloadProgress && (
                         <p className="text-[10px] text-primary font-semibold mt-0.5">

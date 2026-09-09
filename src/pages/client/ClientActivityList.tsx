@@ -3,9 +3,10 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format, parseISO, getYear, getMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronRight, CheckCircle2, Clock, Wrench, Pencil, Plus } from 'lucide-react';
+import { ChevronRight, CheckCircle2, Clock, Wrench, Pencil, Plus, Eye, EyeOff, Trash2 } from 'lucide-react';
 import { buildActivityGroups, type ActivityGroupInputReport } from '@/lib/rdoActivityGroups';
 import { useActivityNames } from '@/hooks/useActivityNames';
+import { usePortalHidden } from '@/hooks/usePortalHidden';
 import { RenameActivityDialog, type RenameActivityTarget } from '@/components/reports/RenameActivityDialog';
 
 import { ClientLayout } from '@/components/client/ClientLayout';
@@ -243,13 +244,24 @@ export default function ClientActivityList() {
     },
   });
 
+  // ===== Ocultar / remover RDOs do portal do cliente (WEES) =====
+  const { canManage: canManagePortalVisibility, hiddenReportIds, setReportHidden } = usePortalHidden({
+    companyId: (activityInfo as any)?.companyId ?? null,
+    siteId: activityInfo?.siteId ?? null,
+  });
+
+  const visibleReports = useMemo(() => {
+    if (canManagePortalVisibility) return reports;
+    return reports.filter((r) => !hiddenReportIds.has(r.id));
+  }, [reports, hiddenReportIds, canManagePortalVisibility]);
+
   const stats = useMemo(() => {
-    const total = reports.length;
-    const completed = reports.filter((r) => r.approverStatus === 'completed').length;
-    const partial = reports.filter((r) => r.approverStatus === 'partial').length;
-    const pending = reports.filter((r) => r.approverStatus === 'pending').length;
+    const total = visibleReports.length;
+    const completed = visibleReports.filter((r) => r.approverStatus === 'completed').length;
+    const partial = visibleReports.filter((r) => r.approverStatus === 'partial').length;
+    const pending = visibleReports.filter((r) => r.approverStatus === 'pending').length;
     return { total, completed, partial, pending };
-  }, [reports]);
+  }, [visibleReports]);
 
   const getStatusBadge = (s: string) => {
     if (s === 'completed') return <Badge className="bg-emerald-500 hover:bg-emerald-500 text-white border-transparent gap-1"><CheckCircle2 className="h-3 w-3" />Assinado</Badge>;
@@ -342,7 +354,7 @@ export default function ClientActivityList() {
               <Skeleton key={i} className="w-24 h-32 sm:w-32 sm:h-40 rounded-lg" />
             ))}
           </div>
-        ) : reports.length === 0 ? (
+        ) : visibleReports.length === 0 ? (
           <Card>
             <CardContent className="text-center py-16 text-muted-foreground text-sm">
               <p>Nenhum RDO desta atividade está disponível para você.</p>
@@ -350,13 +362,47 @@ export default function ClientActivityList() {
           </Card>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 sm:gap-10 pt-1 pb-4">
-            {reports.map((r) => (
+            {visibleReports.map((r) => {
+              const hiddenMode = hiddenReportIds.get(r.id);
+              return (
               <div
                 key={r.id}
-                className="flex flex-col items-center gap-3 group cursor-pointer"
+                className={cn('flex flex-col items-center gap-3 group cursor-pointer', hiddenMode && 'opacity-50')}
                 onClick={() => navigate(`/client/reports/${r.id}?${searchParams.toString()}`)}
               >
                 <div className="relative w-20 h-[6.5rem] sm:w-24 sm:h-32 transition-transform duration-200 group-hover:-translate-y-1 group-hover:scale-105 group-active:scale-95">
+                  {/* Ocultar / reexibir / remover do portal (WEES) */}
+                  {canManagePortalVisibility && (
+                    <div className="absolute -top-2 -left-2 z-40 flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                      <button
+                        type="button"
+                        title={hiddenMode ? 'Reexibir RDO para o cliente' : 'Ocultar RDO do cliente'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setReportHidden(r.id, hiddenMode ? null : 'hidden', activityInfo?.siteId ?? null);
+                        }}
+                        className="rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+                      >
+                        {hiddenMode ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                      </button>
+                      {hiddenMode !== 'removed' && (
+                        <button
+                          type="button"
+                          title="Remover RDO do portal do cliente"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const ok = window.confirm(
+                              `Remover o RDO #${(r.rdo_number ?? 0).toString().padStart(3, '0')} do portal do cliente? Ele continua na área WEES.`,
+                            );
+                            if (ok) setReportHidden(r.id, 'removed', activityInfo?.siteId ?? null);
+                          }}
+                          className="rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-destructive hover:border-destructive transition-colors"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                   {/* Paper sheet */}
                   <div className="absolute inset-0 bg-white border border-border rounded-sm shadow-md overflow-hidden">
                     {/* Status stripe */}
@@ -406,9 +452,15 @@ export default function ClientActivityList() {
                   <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">
                     {format(parseISO(r.date), "dd/MM/yyyy", { locale: ptBR })}
                   </p>
+                  {hiddenMode && (
+                    <Badge variant="secondary" className="mt-1 h-4 px-1.5 text-[10px]">
+                      {hiddenMode === 'removed' ? 'Removido' : 'Oculto'}
+                    </Badge>
+                  )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
