@@ -4,11 +4,12 @@ Hoje o cliente até consegue entrar com PIN, mas só se alguém da WEES criar o 
 
 O plano resolve os dois pontos.
 
-## 1. O cliente cria e gerencia o próprio PIN
+## 1. PIN criado pela WEES e trocado pelo cliente
 
+- A WEES continua criando o PIN do cliente ao gerar o acesso (tela "Membros da Unidade"), como já funciona hoje.
 - Novo bloco **"Acesso rápido (PIN)"** na página Perfil do cliente:
-  - quando não há PIN: campo para definir um PIN de 4 dígitos com confirmação;
-  - quando já existe: botões "Alterar PIN" e "Remover PIN";
+  - quando já existe PIN: botão **"Alterar PIN"** (o cliente define um novo PIN de 4 dígitos, com confirmação) e "Remover PIN";
+  - quando ainda não há PIN: campo para o próprio cliente criar o dele;
   - aviso claro de que o PIN serve para entrar direto pela tela da unidade, sem senha nem e-mail.
 - Atalho **"Acesso rápido"** no menu do usuário do portal, levando a esse bloco.
 - O convite de primeiro acesso continua funcionando; o aviso para criar o PIN logo após o primeiro login permanece, com o texto apontando para o Perfil caso o cliente adie.
