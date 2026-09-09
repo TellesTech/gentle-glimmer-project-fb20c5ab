@@ -104,7 +104,7 @@ export default function ClientReports() {
       const seen = new Set<string>();
       const result: SignedReport[] = [];
       for (const r of (docs || []) as any[]) {
-        if (seen.has(r.id)) continue;
+        if (seen.has(r.id) || hiddenIds.has(r.id)) continue;
         seen.add(r.id);
         result.push({
           reportId: r.id,
