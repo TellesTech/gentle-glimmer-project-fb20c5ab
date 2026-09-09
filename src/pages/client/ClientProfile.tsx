@@ -490,10 +490,72 @@ export default function ClientProfile() {
                 <p className="text-sm text-muted-foreground text-center">
                   Esta assinatura será usada automaticamente ao aprovar relatórios.
                 </p>
+                {effectiveProfile.signature_data && (
+                  <div className="flex justify-center">
+                    <Button variant="outline" size="sm" onClick={handleSignatureRemove} disabled={isSaving}>
+                      {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Remover assinatura
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Acesso rápido por PIN */}
+        {!isInternalUser && (
+          <Card id="pin">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Acesso rápido (PIN)
+              </CardTitle>
+              <CardDescription>
+                {hasPin
+                  ? 'Você já possui um PIN de 4 dígitos. Pode alterá-lo ou removê-lo quando quiser.'
+                  : 'Defina um PIN de 4 dígitos para entrar no portal sem digitar a senha.'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="newPin">{hasPin ? 'Novo PIN' : 'PIN'}</Label>
+                  <Input
+                    id="newPin"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={newPin}
+                    onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    placeholder="4 dígitos"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPin">Confirmar PIN</Label>
+                  <Input
+                    id="confirmPin"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={confirmPin}
+                    onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    placeholder="Repita o PIN"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={handlePinSave} disabled={savingPin || newPin.length !== 4 || confirmPin.length !== 4}>
+                  {savingPin && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {hasPin ? 'Alterar PIN' : 'Criar PIN'}
+                </Button>
+                {hasPin && (
+                  <Button variant="outline" onClick={handlePinRemove} disabled={savingPin}>
+                    Remover PIN
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Security - Password Change */}
         <Card id="seguranca" className={clientProfile?.must_change_password ? 'border-amber-500/60 order-first' : ''}>

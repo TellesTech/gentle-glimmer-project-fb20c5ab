@@ -320,6 +320,16 @@ Atenciosamente,
             </Button>
             <Button
               variant="ghost"
+              size="sm"
+              className="hidden sm:inline-flex"
+              onClick={() => navigate(`/client/profile${preservedSearch}#pin`)}
+              aria-label="Acesso rápido por PIN"
+              title="Acesso rápido (PIN)"
+            >
+              Acesso rápido
+            </Button>
+            <Button
+              variant="ghost"
               size="icon"
               onClick={toggleTheme}
               aria-label="Alternar tema"
