@@ -21,13 +21,19 @@ interface OneClickSignatureCardProps {
   /**
    * Called with the signature data URL to actually submit.
    * The card already handles "use saved" vs "use a new one" internally.
+   * `options.saveToProfile` indica que o usuário pediu para guardar esta firma.
    */
-  onSign: (signatureData: string) => void | Promise<void>;
+  onSign: (
+    signatureData: string,
+    options?: { saveToProfile?: boolean },
+  ) => void | Promise<void>;
   isSubmitting?: boolean;
   /** Optional title override. Defaults to "Assinar Relatório". */
   title?: string;
   /** Optional cadastrar-firma callback. If provided, shows a CTA when no saved signature exists. */
   onRegisterSignature?: () => void;
+  /** Mostra a opção "Salvar esta assinatura no meu perfil" no modo manual. */
+  allowSaveSignature?: boolean;
 }
 
 /**
@@ -41,23 +47,25 @@ export function OneClickSignatureCard({
   isSubmitting = false,
   title = 'Assinar Relatório',
   onRegisterSignature,
+  allowSaveSignature = false,
 }: OneClickSignatureCardProps) {
   const hasSaved = !!identity.savedSignature;
   // When the user explicitly chooses "use a different signature this time",
   // we toggle into manual mode for this single signing.
   const [forceManual, setForceManual] = useState(false);
   const [manualSignature, setManualSignature] = useState<string | null>(null);
+  const [saveToProfile, setSaveToProfile] = useState(true);
 
   const useOneClick = hasSaved && !forceManual;
 
   const handleClickSign = async () => {
     if (useOneClick && identity.savedSignature) {
       const safeSignature = await normalizeSignatureImage(identity.savedSignature, identity.name);
-      await onSign(safeSignature || identity.savedSignature);
+      await onSign(safeSignature || identity.savedSignature, { saveToProfile: false });
       return;
     }
     if (!manualSignature) return;
-    await onSign(manualSignature);
+    await onSign(manualSignature, { saveToProfile: allowSaveSignature && saveToProfile });
   };
 
   return (
