@@ -154,6 +154,23 @@ export function OneClickSignatureCard({
               disabled={isSubmitting}
             />
 
+            {allowSaveSignature && (
+              <label className="flex items-start gap-2 text-sm text-muted-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 accent-primary"
+                  checked={saveToProfile}
+                  onChange={(e) => setSaveToProfile(e.target.checked)}
+                  disabled={isSubmitting}
+                />
+                <span>
+                  Salvar esta assinatura no meu perfil para assinar com 1 clique nas próximas vezes
+                </span>
+              </label>
+            )}
+
+
+
             <Button
               className="w-full"
               size="lg"
