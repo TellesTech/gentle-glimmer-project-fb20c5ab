@@ -173,11 +173,67 @@ export function BulkSignatureDialog({
         {/* Signature capture */}
         <div className="space-y-2">
           <p className="text-sm font-medium">Sua assinatura</p>
-          <SignatureInput
-            onSignatureChange={setSignatureData}
-            initialSignature={initialSignature}
-            disabled={isSubmitting}
-          />
+
+          {useOneClick ? (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                Sua assinatura cadastrada será aplicada a todos os RDOs selecionados
+              </p>
+              <div className="w-full bg-white rounded-lg border-2 border-primary/30 flex items-center justify-center p-1">
+                <SignatureImage
+                  value={initialSignature}
+                  signerName={signerName}
+                  alt="Sua assinatura cadastrada"
+                  className="h-24 w-full"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setForceManual(true);
+                  setSignatureData(null);
+                }}
+                disabled={isSubmitting}
+                className="w-full text-xs text-muted-foreground hover:text-primary underline-offset-2 hover:underline transition-colors"
+              >
+                Usar outra assinatura desta vez
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <SignatureInput
+                onSignatureChange={setSignatureData}
+                signerName={signerName}
+                disabled={isSubmitting}
+              />
+              <label className="flex items-start gap-2 text-sm text-muted-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 accent-primary"
+                  checked={saveToProfile}
+                  onChange={(e) => setSaveToProfile(e.target.checked)}
+                  disabled={isSubmitting}
+                />
+                <span>
+                  Salvar esta assinatura no meu perfil para assinar com 1 clique nas próximas vezes
+                </span>
+              </label>
+              {hasSaved && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForceManual(false);
+                    setSignatureData(initialSignature ?? null);
+                  }}
+                  disabled={isSubmitting}
+                  className="w-full text-xs text-muted-foreground hover:text-primary underline-offset-2 hover:underline transition-colors"
+                >
+                  ← Voltar para minha assinatura cadastrada
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2">
