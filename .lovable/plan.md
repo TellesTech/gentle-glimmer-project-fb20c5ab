@@ -14,10 +14,12 @@ O plano resolve os dois pontos.
 - Atalho **"Acesso rápido"** no menu do usuário do portal, levando a esse bloco.
 - O convite de primeiro acesso continua funcionando; o aviso para criar o PIN logo após o primeiro login permanece, com o texto apontando para o Perfil caso o cliente adie.
 
-## 2. Assinatura registrada e reaproveitada
+## 2. Assinatura do cliente não fica salva — correção
 
-- Ao assinar um RDO desenhando/enviando a assinatura, aparece a opção **"Salvar esta assinatura para os próximos relatórios"**, marcada por padrão.
-- Salvando, a assinatura vai para o perfil do cliente e, do próximo RDO em diante, ele vê o botão de assinar com um clique.
+Hoje, quando o cliente desenha a assinatura na hora de assinar um RDO, ela é usada apenas naquele relatório e não é guardada no perfil dele. Por isso ele precisa desenhar tudo de novo no RDO seguinte, e o card "Equipe" mostra "sem assinatura".
+
+- Ao assinar desenhando/enviando a assinatura, aparece a opção **"Salvar esta assinatura para os próximos relatórios"**, marcada por padrão, e a assinatura passa a ser gravada no perfil do cliente.
+- A partir daí, ele vê o botão de assinar com um clique, e o perfil aparece como "assinatura ativa".
 - No Perfil, o bloco de assinatura ganha o botão "Remover assinatura" e a indicação de quando ela foi registrada.
 - Na tela de assinatura em lote, o texto passa a indicar quando a assinatura salva está sendo usada.
 
