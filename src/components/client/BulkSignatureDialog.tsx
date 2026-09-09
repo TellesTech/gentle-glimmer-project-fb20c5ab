@@ -115,8 +115,25 @@ export function BulkSignatureDialog({
         duration: 5000,
       });
 
+      // Guarda a assinatura (digitada ou enviada) no perfil do cliente
+      if (!useOneClick && saveToProfile && signatureData) {
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData?.session) {
+            const { error: saveError } = await supabase.functions.invoke('save-client-signature', {
+              body: { signatureData },
+            });
+            if (saveError) throw saveError;
+            toast.success('Assinatura salva no seu perfil');
+          }
+        } catch (saveErr) {
+          console.error('Erro ao salvar assinatura no perfil:', saveErr);
+        }
+      }
+
       queryClient.invalidateQueries({ queryKey: ['client-dashboard-reports'] });
       queryClient.invalidateQueries({ queryKey: ['portal-responsibles'] });
+      queryClient.invalidateQueries({ queryKey: ['client-profile'] });
 
       onCompleted?.();
       onOpenChange(false);
