@@ -1110,7 +1110,28 @@ export default function ClientReportView() {
                     signerRole,
                     signerEmail,
                   });
+
+                  // Guarda a firma no perfil do cliente para assinatura com 1 clique
+                  if (options?.saveToProfile && !isWeesUser) {
+                    try {
+                      const { data: sessionData } = await supabase.auth.getSession();
+                      if (sessionData?.session) {
+                        const { error: saveError } = await supabase.functions.invoke(
+                          'save-client-signature',
+                          { body: { signatureData: sig } },
+                        );
+                        if (saveError) throw saveError;
+                        setLocalProfile((prev: any) =>
+                          prev ? { ...prev, signature_data: sig } : prev,
+                        );
+                        toast.success('Assinatura salva no seu perfil');
+                      }
+                    } catch (e) {
+                      console.error('Erro ao salvar assinatura no perfil:', e);
+                    }
+                  }
                 }}
+                allowSaveSignature={!isWeesUser}
                 isSubmitting={submitSignatureMutation.isPending}
                 onRegisterSignature={
                   isWeesUser
