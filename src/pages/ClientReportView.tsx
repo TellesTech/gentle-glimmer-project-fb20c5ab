@@ -1071,7 +1071,7 @@ export default function ClientReportView() {
                     localProfile?.signature_data ||
                     null,
                 }}
-                onSign={async (sig) => {
+                onSign={async (sig, options) => {
                   setSignatureData(sig);
                   // Submit immediately using resolved identity
                   const signerName =
