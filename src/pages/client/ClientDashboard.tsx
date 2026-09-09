@@ -46,7 +46,7 @@ import { buildActivityGroups, type ActivityGroupInputReport } from '@/lib/rdoAct
 import { useActivityNames } from '@/hooks/useActivityNames';
 import { usePortalHidden } from '@/hooks/usePortalHidden';
 import { RenameActivityDialog, type RenameActivityTarget } from '@/components/reports/RenameActivityDialog';
-import { Pencil } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import JSZip from 'jszip';
