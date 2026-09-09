@@ -73,6 +73,10 @@ export default function ClientProfile() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [savingPin, setSavingPin] = useState(false);
+  const [hasPin, setHasPin] = useState(false);
   
   const [formData, setFormData] = useState({
     name: effectiveProfile?.name || '',
@@ -168,6 +172,70 @@ export default function ClientProfile() {
         description: 'Ocorreu um erro ao atualizar sua assinatura',
         variant: 'destructive',
       });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePinSave = async () => {
+    if (!/^\d{4}$/.test(newPin)) {
+      toast({ title: 'PIN inválido', description: 'O PIN deve ter exatamente 4 dígitos', variant: 'destructive' });
+      return;
+    }
+    if (newPin !== confirmPin) {
+      toast({ title: 'PINs não coincidem', description: 'A confirmação deve ser igual ao novo PIN', variant: 'destructive' });
+      return;
+    }
+    setSavingPin(true);
+    try {
+      const { error } = await supabase.functions.invoke('set-pin', { body: { pin: newPin } });
+      if (error) throw error;
+      setNewPin('');
+      setConfirmPin('');
+      setHasPin(true);
+      await refreshProfile();
+      toast({ title: 'PIN salvo', description: 'Use seu PIN para acesso rápido ao portal' });
+    } catch (error: any) {
+      toast({ title: 'Erro ao salvar PIN', description: error?.message || 'Tente novamente', variant: 'destructive' });
+    } finally {
+      setSavingPin(false);
+    }
+  };
+
+  const handlePinRemove = async () => {
+    setSavingPin(true);
+    try {
+      const { error } = await supabase.functions.invoke('set-pin', { body: { remove: true } });
+      if (error) throw error;
+      setHasPin(false);
+      setNewPin('');
+      setConfirmPin('');
+      await refreshProfile();
+      toast({ title: 'PIN removido', description: 'O acesso rápido por PIN foi desativado' });
+    } catch (error: any) {
+      toast({ title: 'Erro ao remover PIN', description: error?.message || 'Tente novamente', variant: 'destructive' });
+    } finally {
+      setSavingPin(false);
+    }
+  };
+
+  const handleSignatureRemove = async () => {
+    setIsSaving(true);
+    try {
+      if (isInternalUser) {
+        const { error } = await supabase.from('profiles').update({ signature_data: null }).eq('id', effectiveProfile!.id);
+        if (error) throw error;
+        setAdminFullProfile((prev) => (prev ? { ...prev, signature_data: null } : prev));
+      } else {
+        const { error } = await supabase.functions.invoke('save-client-signature', { body: { remove: true } });
+        if (error) throw error;
+        await refreshProfile();
+      }
+      setNewSignature(null);
+      setIsEditingSignature(false);
+      toast({ title: 'Assinatura removida', description: 'Você poderá desenhar uma nova quando quiser' });
+    } catch (error: any) {
+      toast({ title: 'Erro ao remover assinatura', description: error?.message || 'Tente novamente', variant: 'destructive' });
     } finally {
       setIsSaving(false);
     }
