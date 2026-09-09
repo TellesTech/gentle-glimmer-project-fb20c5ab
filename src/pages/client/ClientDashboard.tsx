@@ -44,6 +44,7 @@ import { format, parseISO, subDays, startOfDay, endOfDay, isWithinInterval, diff
 import { ptBR } from 'date-fns/locale';
 import { buildActivityGroups, type ActivityGroupInputReport } from '@/lib/rdoActivityGroups';
 import { useActivityNames } from '@/hooks/useActivityNames';
+import { usePortalHidden } from '@/hooks/usePortalHidden';
 import { RenameActivityDialog, type RenameActivityTarget } from '@/components/reports/RenameActivityDialog';
 import { Pencil } from 'lucide-react';
 
