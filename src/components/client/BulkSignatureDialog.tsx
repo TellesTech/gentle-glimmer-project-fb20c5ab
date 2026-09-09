@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SignatureInput } from './SignatureInput';
+import { SignatureImage } from '@/components/signatures/SignatureImage';
 import { FileText, Loader2, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
