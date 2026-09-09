@@ -520,31 +520,20 @@ export default function ClientDashboard() {
   ) => {
     e.stopPropagation();
     if (!canToggleHiddenMonth) return;
-    try {
-      if (hidden) {
-        const { error } = await supabase
-          .from('portal_hidden_months')
-          .delete()
-          .eq('site_id', adminSiteId!)
-          .eq('year', month.year)
-          .eq('month', month.month);
-        if (error) throw error;
-        toast({ title: 'Pasta reexibida', description: `${month.monthName} ${month.year} voltou a aparecer para o cliente.` });
-      } else {
-        const { error } = await supabase.from('portal_hidden_months').insert({
-          company_id: adminCompanyId!,
-          site_id: adminSiteId!,
-          year: month.year,
-          month: month.month,
-          hidden_by: user?.id ?? null,
-        });
-        if (error) throw error;
-        toast({ title: 'Pasta ocultada', description: `${month.monthName} ${month.year} não aparece mais para o cliente.` });
-      }
-      queryClient.invalidateQueries({ queryKey: ['portal-hidden-months'] });
-    } catch (err: any) {
-      toast({ title: 'Erro', description: err?.message || 'Não foi possível alterar a visibilidade.', variant: 'destructive' });
-    }
+    await setMonthHidden(month.year, month.month, hidden ? null : 'hidden');
+  };
+
+  const removeMonthFromPortal = async (
+    e: React.MouseEvent,
+    month: { year: number; month: number; monthName: string },
+  ) => {
+    e.stopPropagation();
+    if (!canToggleHiddenMonth) return;
+    const ok = window.confirm(
+      `Remover ${month.monthName} ${month.year} do portal do cliente? Os RDOs continuam na área WEES.`,
+    );
+    if (!ok) return;
+    await setMonthHidden(month.year, month.month, 'removed');
   };
   
   // Unidades presentes nos RDOs visíveis (para nomes personalizados de pastas)
