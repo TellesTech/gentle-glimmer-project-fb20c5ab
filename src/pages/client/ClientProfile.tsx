@@ -41,10 +41,18 @@ export default function ClientProfile() {
   } | null>(null);
 
   useEffect(() => {
-    if (window.location.hash === '#seguranca') {
-      setTimeout(() => document.getElementById('seguranca')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    const hash = window.location.hash.replace('#', '');
+    if (hash === 'seguranca' || hash === 'pin') {
+      setTimeout(() => document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
     }
   }, []);
+
+  // Verifica se o cliente autenticado já possui PIN
+  useEffect(() => {
+    if (isInternalUser || !user?.id) return;
+    supabase.from('company_contacts').select('pin_hash').eq('user_id', user.id).maybeSingle()
+      .then(({ data }: any) => setHasPin(!!data?.pin_hash));
+  }, [isInternalUser, user?.id]);
 
   useEffect(() => {
     if (isInternalUser && user?.id) {
@@ -73,6 +81,10 @@ export default function ClientProfile() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [savingPin, setSavingPin] = useState(false);
+  const [hasPin, setHasPin] = useState(false);
   
   const [formData, setFormData] = useState({
     name: effectiveProfile?.name || '',
@@ -168,6 +180,70 @@ export default function ClientProfile() {
         description: 'Ocorreu um erro ao atualizar sua assinatura',
         variant: 'destructive',
       });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePinSave = async () => {
+    if (!/^\d{4}$/.test(newPin)) {
+      toast({ title: 'PIN inválido', description: 'O PIN deve ter exatamente 4 dígitos', variant: 'destructive' });
+      return;
+    }
+    if (newPin !== confirmPin) {
+      toast({ title: 'PINs não coincidem', description: 'A confirmação deve ser igual ao novo PIN', variant: 'destructive' });
+      return;
+    }
+    setSavingPin(true);
+    try {
+      const { error } = await supabase.functions.invoke('set-pin', { body: { pin: newPin } });
+      if (error) throw error;
+      setNewPin('');
+      setConfirmPin('');
+      setHasPin(true);
+      await refreshProfile();
+      toast({ title: 'PIN salvo', description: 'Use seu PIN para acesso rápido ao portal' });
+    } catch (error: any) {
+      toast({ title: 'Erro ao salvar PIN', description: error?.message || 'Tente novamente', variant: 'destructive' });
+    } finally {
+      setSavingPin(false);
+    }
+  };
+
+  const handlePinRemove = async () => {
+    setSavingPin(true);
+    try {
+      const { error } = await supabase.functions.invoke('set-pin', { body: { remove: true } });
+      if (error) throw error;
+      setHasPin(false);
+      setNewPin('');
+      setConfirmPin('');
+      await refreshProfile();
+      toast({ title: 'PIN removido', description: 'O acesso rápido por PIN foi desativado' });
+    } catch (error: any) {
+      toast({ title: 'Erro ao remover PIN', description: error?.message || 'Tente novamente', variant: 'destructive' });
+    } finally {
+      setSavingPin(false);
+    }
+  };
+
+  const handleSignatureRemove = async () => {
+    setIsSaving(true);
+    try {
+      if (isInternalUser) {
+        const { error } = await supabase.from('profiles').update({ signature_data: null }).eq('id', effectiveProfile!.id);
+        if (error) throw error;
+        setAdminFullProfile((prev) => (prev ? { ...prev, signature_data: null } : prev));
+      } else {
+        const { error } = await supabase.functions.invoke('save-client-signature', { body: { remove: true } });
+        if (error) throw error;
+        await refreshProfile();
+      }
+      setNewSignature(null);
+      setIsEditingSignature(false);
+      toast({ title: 'Assinatura removida', description: 'Você poderá desenhar uma nova quando quiser' });
+    } catch (error: any) {
+      toast({ title: 'Erro ao remover assinatura', description: error?.message || 'Tente novamente', variant: 'destructive' });
     } finally {
       setIsSaving(false);
     }
@@ -414,10 +490,72 @@ export default function ClientProfile() {
                 <p className="text-sm text-muted-foreground text-center">
                   Esta assinatura será usada automaticamente ao aprovar relatórios.
                 </p>
+                {effectiveProfile.signature_data && (
+                  <div className="flex justify-center">
+                    <Button variant="outline" size="sm" onClick={handleSignatureRemove} disabled={isSaving}>
+                      {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Remover assinatura
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Acesso rápido por PIN */}
+        {!isInternalUser && (
+          <Card id="pin">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Acesso rápido (PIN)
+              </CardTitle>
+              <CardDescription>
+                {hasPin
+                  ? 'Você já possui um PIN de 4 dígitos. Pode alterá-lo ou removê-lo quando quiser.'
+                  : 'Defina um PIN de 4 dígitos para entrar no portal sem digitar a senha.'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="newPin">{hasPin ? 'Novo PIN' : 'PIN'}</Label>
+                  <Input
+                    id="newPin"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={newPin}
+                    onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    placeholder="4 dígitos"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPin">Confirmar PIN</Label>
+                  <Input
+                    id="confirmPin"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={confirmPin}
+                    onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    placeholder="Repita o PIN"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={handlePinSave} disabled={savingPin || newPin.length !== 4 || confirmPin.length !== 4}>
+                  {savingPin && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {hasPin ? 'Alterar PIN' : 'Criar PIN'}
+                </Button>
+                {hasPin && (
+                  <Button variant="outline" onClick={handlePinRemove} disabled={savingPin}>
+                    Remover PIN
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Security - Password Change */}
         <Card id="seguranca" className={clientProfile?.must_change_password ? 'border-amber-500/60 order-first' : ''}>

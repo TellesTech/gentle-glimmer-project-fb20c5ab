@@ -35,10 +35,12 @@ serve(async (req) => {
   }
 
   try {
-    const { pin, contactId } = await req.json();
+    const body = await req.json();
+    const { pin, remove } = body;
+    let contactId: string | null = body.contactId ?? null;
 
-    // Validate PIN format (4 digits)
-    if (!pin || !/^\d{4}$/.test(pin)) {
+    // Validate PIN format (4 digits) — not needed when removing
+    if (!remove && (!pin || !/^\d{4}$/.test(pin))) {
       return new Response(
         JSON.stringify({ error: 'PIN deve ter exatamente 4 dígitos numéricos' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -46,13 +48,32 @@ serve(async (req) => {
     }
 
     // Hash the PIN using Web Crypto API
-    const pinHash = await hashPin(pin);
+    const pinHash = remove ? null : await hashPin(pin);
 
     // Create admin client to update the correct table
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Self-service: quando não vem contactId, resolve o contato do usuário autenticado
+    if (!contactId) {
+      const authHeaderSelf = req.headers.get('Authorization');
+      if (authHeaderSelf) {
+        const selfClient = createClient(supabaseUrl, supabaseAnonKey, {
+          global: { headers: { Authorization: authHeaderSelf } },
+        });
+        const { data: { user: selfUser } } = await selfClient.auth.getUser();
+        if (selfUser) {
+          const { data: ownContact } = await supabaseAdmin
+            .from('company_contacts')
+            .select('id')
+            .eq('user_id', selfUser.id)
+            .maybeSingle();
+          if (ownContact) contactId = ownContact.id;
+        }
+      }
+    }
 
     if (contactId) {
       // Save directly to company_contacts table
@@ -110,7 +131,12 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, pin_hash: pinHash, message: 'PIN configurado com sucesso' }),
+      JSON.stringify({
+        success: true,
+        pin_hash: pinHash,
+        removed: !!remove,
+        message: remove ? 'PIN removido com sucesso' : 'PIN configurado com sucesso',
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
