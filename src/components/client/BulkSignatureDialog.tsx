@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SignatureInput } from './SignatureInput';
+import { SignatureImage } from '@/components/signatures/SignatureImage';
 import { FileText, Loader2, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -52,10 +53,19 @@ export function BulkSignatureDialog({
 }: BulkSignatureDialogProps) {
   const [signatureData, setSignatureData] = useState<string | null>(initialSignature ?? null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [forceManual, setForceManual] = useState(false);
+  const [saveToProfile, setSaveToProfile] = useState(true);
   const queryClient = useQueryClient();
 
+  const hasSaved = !!initialSignature;
+  const useOneClick = hasSaved && !forceManual;
+
   useEffect(() => {
-    if (open) setSignatureData(initialSignature ?? null);
+    if (open) {
+      setSignatureData(initialSignature ?? null);
+      setForceManual(false);
+      setSaveToProfile(true);
+    }
   }, [open, initialSignature]);
 
   const handleSubmit = async () => {
@@ -106,8 +116,25 @@ export function BulkSignatureDialog({
         duration: 5000,
       });
 
+      // Guarda a assinatura (digitada ou enviada) no perfil do cliente
+      if (!useOneClick && saveToProfile && signatureData) {
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData?.session) {
+            const { error: saveError } = await supabase.functions.invoke('save-client-signature', {
+              body: { signatureData },
+            });
+            if (saveError) throw saveError;
+            toast.success('Assinatura salva no seu perfil');
+          }
+        } catch (saveErr) {
+          console.error('Erro ao salvar assinatura no perfil:', saveErr);
+        }
+      }
+
       queryClient.invalidateQueries({ queryKey: ['client-dashboard-reports'] });
       queryClient.invalidateQueries({ queryKey: ['portal-responsibles'] });
+      queryClient.invalidateQueries({ queryKey: ['client-profile'] });
 
       onCompleted?.();
       onOpenChange(false);
@@ -147,11 +174,67 @@ export function BulkSignatureDialog({
         {/* Signature capture */}
         <div className="space-y-2">
           <p className="text-sm font-medium">Sua assinatura</p>
-          <SignatureInput
-            onSignatureChange={setSignatureData}
-            initialSignature={initialSignature}
-            disabled={isSubmitting}
-          />
+
+          {useOneClick ? (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                Sua assinatura cadastrada será aplicada a todos os RDOs selecionados
+              </p>
+              <div className="w-full bg-white rounded-lg border-2 border-primary/30 flex items-center justify-center p-1">
+                <SignatureImage
+                  value={initialSignature}
+                  signerName={signerName}
+                  alt="Sua assinatura cadastrada"
+                  className="h-24 w-full"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setForceManual(true);
+                  setSignatureData(null);
+                }}
+                disabled={isSubmitting}
+                className="w-full text-xs text-muted-foreground hover:text-primary underline-offset-2 hover:underline transition-colors"
+              >
+                Usar outra assinatura desta vez
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <SignatureInput
+                onSignatureChange={setSignatureData}
+                signerName={signerName}
+                disabled={isSubmitting}
+              />
+              <label className="flex items-start gap-2 text-sm text-muted-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 accent-primary"
+                  checked={saveToProfile}
+                  onChange={(e) => setSaveToProfile(e.target.checked)}
+                  disabled={isSubmitting}
+                />
+                <span>
+                  Salvar esta assinatura no meu perfil para assinar com 1 clique nas próximas vezes
+                </span>
+              </label>
+              {hasSaved && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForceManual(false);
+                    setSignatureData(initialSignature ?? null);
+                  }}
+                  disabled={isSubmitting}
+                  className="w-full text-xs text-muted-foreground hover:text-primary underline-offset-2 hover:underline transition-colors"
+                >
+                  ← Voltar para minha assinatura cadastrada
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2">
