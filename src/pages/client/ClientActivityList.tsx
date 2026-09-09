@@ -452,9 +452,15 @@ export default function ClientActivityList() {
                   <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">
                     {format(parseISO(r.date), "dd/MM/yyyy", { locale: ptBR })}
                   </p>
+                  {hiddenMode && (
+                    <Badge variant="secondary" className="mt-1 h-4 px-1.5 text-[10px]">
+                      {hiddenMode === 'removed' ? 'Removido' : 'Oculto'}
+                    </Badge>
+                  )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
