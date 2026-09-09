@@ -931,7 +931,8 @@ export default function ClientDashboard() {
             {!selectedMonthId ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 sm:gap-10 py-4">
                 {visibleMonthFolders.map((month) => {
-                  const isHidden = hiddenMonthKeys.has(`${month.year}-${month.month}`);
+                  const hiddenMode = hiddenMonthKeys.get(`${month.year}-${month.month}`);
+                  const isHidden = !!hiddenMode;
                   return (
                   <div
                     key={month.id}
@@ -966,23 +967,37 @@ export default function ClientDashboard() {
                         )}
                       </button>
 
-                      {/* Ocultar/reexibir pasta do mês (somente super admin) */}
+                      {/* Ocultar / reexibir / remover pasta do mês (WEES) */}
                       {canToggleHiddenMonth && (
-                        <button
-                          type="button"
-                          title={isHidden ? 'Reexibir pasta para o cliente' : 'Ocultar pasta do cliente'}
-                          onClick={(e) => toggleHiddenMonth(e, month, isHidden)}
-                          className="absolute -top-2 -left-2 z-30 rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-primary hover:border-primary transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                        >
-                          {isHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                        </button>
+                        <div className="absolute -top-2 -left-2 z-30 flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                          <button
+                            type="button"
+                            title={isHidden ? 'Reexibir pasta para o cliente' : 'Ocultar pasta do cliente'}
+                            onClick={(e) => toggleHiddenMonth(e, month, isHidden)}
+                            className="rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+                          >
+                            {isHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                          </button>
+                          {hiddenMode !== 'removed' && (
+                            <button
+                              type="button"
+                              title="Remover pasta do portal do cliente"
+                              onClick={(e) => removeMonthFromPortal(e, month)}
+                              className="rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-destructive hover:border-destructive transition-colors"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                     <div className="text-center min-w-0 px-1">
                       <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">{month.monthName}</p>
                       <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-tight">{month.year}</p>
                       {isHidden && (
-                        <Badge variant="secondary" className="mt-1 h-4 px-1.5 text-[10px]">Oculto</Badge>
+                        <Badge variant="secondary" className="mt-1 h-4 px-1.5 text-[10px]">
+                          {hiddenMode === 'removed' ? 'Removido' : 'Oculto'}
+                        </Badge>
                       )}
                       {downloadingMonthId === month.id && downloadProgress && (
                         <p className="text-[10px] text-primary font-semibold mt-0.5">
