@@ -46,7 +46,8 @@ import { buildActivityGroups, type ActivityGroupInputReport } from '@/lib/rdoAct
 import { useActivityNames } from '@/hooks/useActivityNames';
 import { usePortalHidden } from '@/hooks/usePortalHidden';
 import { RenameActivityDialog, type RenameActivityTarget } from '@/components/reports/RenameActivityDialog';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, UserCheck } from 'lucide-react';
+import { SignersManagerDialog } from '@/components/client/SignersManagerDialog';
 
 import { cn } from '@/lib/utils';
 import JSZip from 'jszip';
@@ -279,19 +280,9 @@ export default function ClientDashboard() {
         (rca || []).forEach((r: any) => approverByReport.set(r.report_id, r));
       }
 
-      // 2) Todos os RDOs enviados/assinados das unidades do usuário (visibilidade
-      //    automática; RLS já exclui meses ocultados pela WEES).
-      const { data: siteRows } = await (supabase as any).rpc('portal_user_site_ids', {
-        _user_id: user?.id,
-      });
-      const siteIds: string[] = (siteRows || [])
-        .map((s: any) => (typeof s === 'string' ? s : s?.portal_user_site_ids))
-        .filter(Boolean);
-      if (!siteIds.length) return [];
-
-      const { data: projRows } = await supabase.from('projects').select('id').in('site_id', siteIds);
-      const projectIds = (projRows || []).map((p: any) => p.id);
-      if (!projectIds.length) return [];
+      // 2) Somente os RDOs em que ESTA pessoa foi indicada como signatária.
+      const allowedReportIds = Array.from(approverByReport.keys());
+      if (!allowedReportIds.length) return [];
 
       const { data: reports, error } = await supabase
         .from('reports')
@@ -299,7 +290,7 @@ export default function ClientDashboard() {
           id, date, shift, status, rdo_number, location, maintenance_order_number, maintenance_order_title,
           project:projects (id, name, site_id, company:companies (id, name))
         `)
-        .in('project_id', projectIds)
+        .in('id', allowedReportIds)
         .in('status', ['sent', 'signed', 'finalized'])
         .order('date', { ascending: false });
       if (error) throw error;
@@ -549,6 +540,7 @@ export default function ClientDashboard() {
   const { names: activityNames, rename: renameActivity, resetName: resetActivityName, isSaving: renamingActivity } =
     useActivityNames(reportSiteIds);
   const [renameTarget, setRenameTarget] = useState<RenameActivityTarget | null>(null);
+  const [signersScope, setSignersScope] = useState<{ reportIds: string[]; label: string; siteId: string | null } | null>(null);
 
   const monthFolders = useMemo(() => {
     const all = visibleReports;
@@ -988,6 +980,21 @@ export default function ClientDashboard() {
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
                           )}
+                          <button
+                            type="button"
+                            title="Definir quem assina os RDOs deste mês"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSignersScope({
+                                reportIds: month.activities.flatMap((a: any) => a.reports.map((r: any) => r.id)),
+                                label: `${month.monthName} ${month.year}`,
+                                siteId: adminSiteId || null,
+                              });
+                            }}
+                            className="rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+                          >
+                            <UserCheck className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                       )}
                     </div>
@@ -1092,6 +1099,23 @@ export default function ClientDashboard() {
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
+                            {canManagePortalVisibility && (
+                              <button
+                                type="button"
+                                title="Definir quem assina esta pasta"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSignersScope({
+                                    reportIds: a.reports.map((r) => r.id),
+                                    label: a.name,
+                                    siteId: a.siteId || adminSiteId || null,
+                                  });
+                                }}
+                                className="rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+                              >
+                                <UserCheck className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                           </div>
                           {/* Folder Rear Part */}
                           <div className={cn(
@@ -1159,6 +1183,15 @@ export default function ClientDashboard() {
           await resetActivityName({ siteId: renameTarget.siteId, groupKey: renameTarget.groupKey });
           setRenameTarget(null);
         }}
+      />
+
+      <SignersManagerDialog
+        open={!!signersScope}
+        onOpenChange={(open) => { if (!open) setSignersScope(null); }}
+        reportIds={signersScope?.reportIds || []}
+        siteId={signersScope?.siteId ?? adminSiteId ?? null}
+        companyId={adminCompanyId ?? null}
+        scopeLabel={signersScope?.label}
       />
     </ClientLayout>
   );

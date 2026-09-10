@@ -151,14 +151,9 @@ export function SendForSignatureDialog({
         }));
         setContacts(rows);
 
-        // Auto-select ALL contacts for the unit
+        // Ninguém vem marcado: a WEES escolhe quem deve assinar este RDO.
         if (cancelled) return;
-        const allContactIds = new Set<string>(
-          rows
-            .filter(r => normalize(r.name) !== 'alex manhaes')
-            .map((r) => r.id)
-        );
-        setSelectedIds(allContactIds);
+        setSelectedIds(new Set<string>());
       } catch (e) {
         console.error('Error loading client contacts:', e);
         if (!cancelled) setContacts([]);
@@ -571,14 +566,26 @@ export function SendForSignatureDialog({
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-medium flex items-center gap-2">
                     <Factory className="w-4 h-4" />
-                    Destinatários da unidade {site?.name}
+                    Quem deve assinar — unidade {site?.name}
                   </Label>
                   {contacts.length > 0 && (
                     <Badge variant="secondary" className="font-normal">
-                      {contacts.length} {contacts.length === 1 ? 'contato' : 'contatos'}
+                      {selectedIds.size} de {contacts.length} selecionado{selectedIds.size === 1 ? '' : 's'}
                     </Badge>
                   )}
                 </div>
+
+                {contacts.length > 3 && (
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Buscar contato…"
+                      className="pl-8 h-9"
+                    />
+                  </div>
+                )}
 
                 {contactsLoading ? (
                   <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
@@ -593,44 +600,89 @@ export function SendForSignatureDialog({
                     </p>
                   </div>
                 ) : (
-                  <Card className="border-dashed">
-                    <CardContent className="p-0">
-                      <div className="divide-y">
-                        {contacts.slice(0, 5).map((c) => (
-                          <div
-                            key={c.id}
-                            className="flex items-center gap-3 p-2.5"
-                          >
-                            <Avatar className="h-8 w-8 shrink-0">
-                              {c.avatar_url && <AvatarImage src={c.avatar_url} alt={c.name} />}
-                              <AvatarFallback className="text-xs bg-muted">
-                                {c.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{c.name}</p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {c.role || (c.preferred_channel === 'whatsapp' ? c.phone : c.email)}
-                              </p>
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => setSelectedIds(new Set(filteredContacts.map((c) => c.id)))}
+                      >
+                        Marcar todos
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => setSelectedIds(new Set())}
+                      >
+                        Limpar
+                      </Button>
+                    </div>
+
+                    <Card className="border-dashed">
+                      <CardContent className="p-0">
+                        <div className="divide-y max-h-64 overflow-y-auto">
+                          {filteredContacts.map((c) => {
+                            const checked = selectedIds.has(c.id);
+                            return (
+                              <button
+                                type="button"
+                                key={c.id}
+                                onClick={() => {
+                                  setSelectedIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(c.id)) next.delete(c.id);
+                                    else next.add(c.id);
+                                    return next;
+                                  });
+                                }}
+                                className={cn(
+                                  'w-full flex items-center gap-3 p-2.5 text-left transition-colors',
+                                  checked ? 'bg-primary/5' : 'hover:bg-muted/50',
+                                )}
+                              >
+                                <Avatar className="h-8 w-8 shrink-0">
+                                  {c.avatar_url && <AvatarImage src={c.avatar_url} alt={c.name} />}
+                                  <AvatarFallback className="text-xs bg-muted">
+                                    {c.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate">{c.name}</p>
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {c.role || (c.preferred_channel === 'whatsapp' ? c.phone : c.email)}
+                                  </p>
+                                </div>
+                                <span
+                                  className={cn(
+                                    'h-5 w-5 rounded-md border flex items-center justify-center shrink-0',
+                                    checked ? 'bg-primary border-primary text-primary-foreground' : 'border-muted-foreground/30',
+                                  )}
+                                >
+                                  {checked && <Check className="h-3.5 w-3.5" />}
+                                </span>
+                              </button>
+                            );
+                          })}
+                          {filteredContacts.length === 0 && (
+                            <div className="p-3 text-center text-xs text-muted-foreground">
+                              Nenhum contato encontrado.
                             </div>
-                            <Check className="h-4 w-4 text-green-600 shrink-0" />
-                          </div>
-                        ))}
-                        {contacts.length > 5 && (
-                          <div className="p-2 text-center text-xs text-muted-foreground bg-muted/30">
-                            + {contacts.length - 5} outros contatos da unidade
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </>
                 )}
 
                 {contacts.length > 0 && (
                   <div className="flex items-start gap-2 p-2 rounded-lg bg-blue-50/50 border border-blue-100/50">
                     <UserCheck className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
                     <p className="text-[11px] text-blue-700 leading-relaxed">
-                      Este RDO será enviado automaticamente para todos os contatos ativos desta unidade no portal do cliente.
+                      Somente as pessoas marcadas verão e poderão assinar este RDO no portal do cliente.
                     </p>
                   </div>
                 )}
@@ -639,10 +691,14 @@ export function SendForSignatureDialog({
               <Button 
                 className="w-full h-12 text-sm font-bold shadow-lg shadow-primary/20" 
                 onClick={handleSubmit} 
-                disabled={isSending || contacts.length === 0 || !weesSigner?.signatureData}
+                disabled={isSending || selectedIds.size === 0 || !weesSigner?.signatureData}
               >
                 {isSending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
-                {weesSigner?.signatureData ? 'Assinar e Enviar para o Cliente' : 'Cadastre sua firma para enviar'}
+                {!weesSigner?.signatureData
+                  ? 'Cadastre sua firma para enviar'
+                  : selectedIds.size === 0
+                    ? 'Selecione quem deve assinar'
+                    : `Assinar e Enviar para ${selectedIds.size} pessoa${selectedIds.size > 1 ? 's' : ''}`}
               </Button>
             </div>
           )}

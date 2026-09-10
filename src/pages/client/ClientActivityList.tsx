@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format, parseISO, getYear, getMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronRight, CheckCircle2, Clock, Wrench, Pencil, Plus, Eye, EyeOff, Trash2 } from 'lucide-react';
+import { ChevronRight, CheckCircle2, Clock, Wrench, Pencil, Plus, Eye, EyeOff, Trash2, UserCheck } from 'lucide-react';
 import { buildActivityGroups, type ActivityGroupInputReport } from '@/lib/rdoActivityGroups';
 import { useActivityNames } from '@/hooks/useActivityNames';
 import { usePortalHidden } from '@/hooks/usePortalHidden';
@@ -11,6 +11,7 @@ import { RenameActivityDialog, type RenameActivityTarget } from '@/components/re
 
 import { ClientLayout } from '@/components/client/ClientLayout';
 import { PageBackHeader } from '@/components/client/PageBackHeader';
+import { SignersManagerDialog } from '@/components/client/SignersManagerDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -172,8 +173,28 @@ export default function ClientActivityList() {
     queryKey: ['client-activity-reports', projectId, clientProfile?.id, isAdminView, activityInfo?.reportIds],
     enabled: !!projectId && (!!clientProfile?.id || isAdminView) && !!activityInfo,
     queryFn: async (): Promise<ActivityReport[]> => {
-      const reportIds = activityInfo?.reportIds || [];
+      let reportIds = activityInfo?.reportIds || [];
       if (!reportIds.length) return [];
+
+      // Cliente vê apenas os RDOs em que foi indicado como signatário.
+      if (!isAdminView && clientProfile?.id) {
+        const isContact = (clientProfile as any)._source === 'company_contacts';
+        const { data: mine } = isContact
+          ? await supabase
+              .from('report_company_approvers')
+              .select('report_id')
+              .eq('contact_id', clientProfile.id)
+              .in('report_id', reportIds)
+          : await supabase
+              .from('report_client_approvers')
+              .select('report_id')
+              .eq('client_id', clientProfile.id)
+              .in('report_id', reportIds);
+        const allowed = new Set<string>(((mine || []) as any[]).map((r) => r.report_id));
+        reportIds = reportIds.filter((id: string) => allowed.has(id));
+        if (!reportIds.length) return [];
+      }
+
 
       // 2) Fetch report data + approver counts
       const { data: rs } = await supabase
@@ -276,6 +297,7 @@ export default function ClientActivityList() {
   const { names: activityNames, rename: renameActivity, resetName: resetActivityName, isSaving: renamingActivity } =
     useActivityNames(activitySiteIds);
   const [renameOpen, setRenameOpen] = useState(false);
+  const [signersScope, setSignersScope] = useState<{ reportIds: string[]; label: string } | null>(null);
   const customName = projectId ? activityNames.get(projectId) : undefined;
   const displayName = customName || activityInfo?.name || 'Atividade';
 
@@ -317,6 +339,19 @@ export default function ClientActivityList() {
                 >
                   <Plus className="h-3.5 w-3.5" />
                   Novo Relatório
+                </Button>
+              )}
+              {canManagePortalVisibility && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => setSignersScope({ reportIds: reports.map((r) => r.id), label: displayName })}
+                  disabled={reports.length === 0}
+                >
+                  <UserCheck className="h-3.5 w-3.5" />
+                  Definir signatários
                 </Button>
               )}
               <Button
@@ -401,6 +436,20 @@ export default function ClientActivityList() {
                           <Trash2 className="h-3 w-3" />
                         </button>
                       )}
+                      <button
+                        type="button"
+                        title="Definir quem assina este RDO"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSignersScope({
+                            reportIds: [r.id],
+                            label: `RDO #${(r.rdo_number ?? 0).toString().padStart(3, '0')}`,
+                          });
+                        }}
+                        className="rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+                      >
+                        <UserCheck className="h-3 w-3" />
+                      </button>
                     </div>
                   )}
                   {/* Paper sheet */}
@@ -488,6 +537,15 @@ export default function ClientActivityList() {
           await resetActivityName({ siteId: activityInfo.siteId, groupKey: projectId });
           setRenameOpen(false);
         }}
+      />
+
+      <SignersManagerDialog
+        open={!!signersScope}
+        onOpenChange={(open) => !open && setSignersScope(null)}
+        reportIds={signersScope?.reportIds || []}
+        siteId={activityInfo?.siteId ?? null}
+        companyId={activityInfo?.companyId ?? null}
+        scopeLabel={signersScope?.label}
       />
     </ClientLayout>
   );
