@@ -172,8 +172,28 @@ export default function ClientActivityList() {
     queryKey: ['client-activity-reports', projectId, clientProfile?.id, isAdminView, activityInfo?.reportIds],
     enabled: !!projectId && (!!clientProfile?.id || isAdminView) && !!activityInfo,
     queryFn: async (): Promise<ActivityReport[]> => {
-      const reportIds = activityInfo?.reportIds || [];
+      let reportIds = activityInfo?.reportIds || [];
       if (!reportIds.length) return [];
+
+      // Cliente vê apenas os RDOs em que foi indicado como signatário.
+      if (!isAdminView && clientProfile?.id) {
+        const isContact = (clientProfile as any)._source === 'company_contacts';
+        const { data: mine } = isContact
+          ? await supabase
+              .from('report_company_approvers')
+              .select('report_id')
+              .eq('contact_id', clientProfile.id)
+              .in('report_id', reportIds)
+          : await supabase
+              .from('report_client_approvers')
+              .select('report_id')
+              .eq('client_id', clientProfile.id)
+              .in('report_id', reportIds);
+        const allowed = new Set<string>(((mine || []) as any[]).map((r) => r.report_id));
+        reportIds = reportIds.filter((id: string) => allowed.has(id));
+        if (!reportIds.length) return [];
+      }
+
 
       // 2) Fetch report data + approver counts
       const { data: rs } = await supabase
