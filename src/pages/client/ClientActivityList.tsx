@@ -11,6 +11,7 @@ import { RenameActivityDialog, type RenameActivityTarget } from '@/components/re
 
 import { ClientLayout } from '@/components/client/ClientLayout';
 import { PageBackHeader } from '@/components/client/PageBackHeader';
+import { SignersManagerDialog } from '@/components/client/SignersManagerDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
