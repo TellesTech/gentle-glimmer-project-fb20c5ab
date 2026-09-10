@@ -1184,6 +1184,15 @@ export default function ClientDashboard() {
           setRenameTarget(null);
         }}
       />
+
+      <SignersManagerDialog
+        open={!!signersScope}
+        onOpenChange={(open) => { if (!open) setSignersScope(null); }}
+        reportIds={signersScope?.reportIds || []}
+        siteId={signersScope?.siteId ?? adminSiteId ?? null}
+        companyId={adminCompanyId ?? null}
+        scopeLabel={signersScope?.label}
+      />
     </ClientLayout>
   );
 }
