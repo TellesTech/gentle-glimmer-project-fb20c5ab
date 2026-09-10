@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format, parseISO, getYear, getMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronRight, CheckCircle2, Clock, Wrench, Pencil, Plus, Eye, EyeOff, Trash2 } from 'lucide-react';
+import { ChevronRight, CheckCircle2, Clock, Wrench, Pencil, Plus, Eye, EyeOff, Trash2, UserCheck } from 'lucide-react';
 import { buildActivityGroups, type ActivityGroupInputReport } from '@/lib/rdoActivityGroups';
 import { useActivityNames } from '@/hooks/useActivityNames';
 import { usePortalHidden } from '@/hooks/usePortalHidden';
