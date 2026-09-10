@@ -89,6 +89,27 @@ serve(async (req) => {
       );
     }
 
+    // Identifica o solicitante (usuário logado) uma única vez
+    let isInternal = false;
+    let callerUserId: string | null = null;
+    {
+      const authHeader = req.headers.get('Authorization') || '';
+      const jwt = authHeader.replace('Bearer ', '').trim();
+      if (jwt) {
+        const { data: userData } = await supabase.auth.getUser(jwt);
+        callerUserId = userData?.user?.id ?? null;
+        if (callerUserId) {
+          const { data: roles } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', callerUserId);
+          isInternal = (roles || []).some((r: any) =>
+            ['super_admin', 'admin', 'director', 'supervisor', 'leader', 'master'].includes(r.role)
+          );
+        }
+      }
+    }
+
     // RDO ocultado/removido do portal pela WEES: cliente não pode abrir
     const { data: hiddenRow } = await supabase
       .from('portal_hidden_reports')
@@ -96,28 +117,46 @@ serve(async (req) => {
       .eq('report_id', targetReportId)
       .maybeSingle();
 
-    if (hiddenRow) {
-      let isInternal = false;
-      const authHeader = req.headers.get('Authorization') || '';
-      const jwt = authHeader.replace('Bearer ', '').trim();
-      if (jwt) {
-        const { data: userData } = await supabase.auth.getUser(jwt);
-        const uid = userData?.user?.id;
-        if (uid) {
-          const { data: roles } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', uid);
-          isInternal = (roles || []).some((r: any) =>
-            ['super_admin', 'admin', 'director', 'supervisor', 'leader', 'collaborator', 'master'].includes(r.role)
+    if (hiddenRow && !isInternal) {
+      return new Response(
+        JSON.stringify({ error: 'Este RDO não está mais disponível no portal.' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Sem link público: usuário do cliente só abre RDOs em que foi indicado
+    if (!accessToken && !isInternal && callerUserId) {
+      const [{ data: contact }, { data: clientProfileRow }] = await Promise.all([
+        supabase.from('company_contacts').select('id').eq('user_id', callerUserId).eq('is_active', true).maybeSingle(),
+        supabase.from('client_profiles').select('id').eq('user_id', callerUserId).eq('is_active', true).maybeSingle(),
+      ]);
+
+      if (contact || clientProfileRow) {
+        let allowed = false;
+        if (contact) {
+          const { data } = await supabase
+            .from('report_company_approvers')
+            .select('id')
+            .eq('report_id', targetReportId)
+            .eq('contact_id', contact.id)
+            .maybeSingle();
+          allowed = Boolean(data);
+        }
+        if (!allowed && clientProfileRow) {
+          const { data } = await supabase
+            .from('report_client_approvers')
+            .select('id')
+            .eq('report_id', targetReportId)
+            .eq('client_id', clientProfileRow.id)
+            .maybeSingle();
+          allowed = Boolean(data);
+        }
+        if (!allowed) {
+          return new Response(
+            JSON.stringify({ error: 'Você não está indicado para ver este RDO.' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-      }
-      if (!isInternal) {
-        return new Response(
-          JSON.stringify({ error: 'Este RDO não está mais disponível no portal.' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
       }
     }
 
