@@ -187,19 +187,14 @@ export async function verifySigner(
 
     const { data: contact } = await service
       .from("company_contacts")
-      .select("id,name,email,role,is_active")
+      .select("id,name,email,role,is_active,company_id,can_approve")
       .eq("user_id", authenticated.id)
       .eq("is_active", true)
       .maybeSingle();
     if (contact) {
-      const { data: assignment } = await service
-        .from("report_company_approvers")
-        .select("id")
-        .eq("report_id", reportId)
-        .eq("contact_id", contact.id)
-        .maybeSingle();
-      if (!assignment) throw new SignatureAuthError("Você não está indicado para assinar este RDO", 403);
-      return { userId: authenticated.id, name: contact.name, email: contact.email || authenticated.email, role: contact.role || "Cliente", kind: "contact", accessId: null, approverTable: "report_company_approvers", approverId: assignment.id };
+      const approverId = await ensureContactApprover(service, reportId, contact);
+      if (!approverId) throw new SignatureAuthError("Você não está indicado para assinar este RDO", 403);
+      return { userId: authenticated.id, name: contact.name, email: contact.email || authenticated.email, role: contact.role || "Cliente", kind: "contact", accessId: null, approverTable: "report_company_approvers", approverId };
     }
 
     throw new SignatureAuthError("Usuário sem perfil autorizado para assinatura", 403);
