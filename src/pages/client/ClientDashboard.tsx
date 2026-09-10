@@ -279,19 +279,9 @@ export default function ClientDashboard() {
         (rca || []).forEach((r: any) => approverByReport.set(r.report_id, r));
       }
 
-      // 2) Todos os RDOs enviados/assinados das unidades do usuário (visibilidade
-      //    automática; RLS já exclui meses ocultados pela WEES).
-      const { data: siteRows } = await (supabase as any).rpc('portal_user_site_ids', {
-        _user_id: user?.id,
-      });
-      const siteIds: string[] = (siteRows || [])
-        .map((s: any) => (typeof s === 'string' ? s : s?.portal_user_site_ids))
-        .filter(Boolean);
-      if (!siteIds.length) return [];
-
-      const { data: projRows } = await supabase.from('projects').select('id').in('site_id', siteIds);
-      const projectIds = (projRows || []).map((p: any) => p.id);
-      if (!projectIds.length) return [];
+      // 2) Somente os RDOs em que ESTA pessoa foi indicada como signatária.
+      const allowedReportIds = Array.from(approverByReport.keys());
+      if (!allowedReportIds.length) return [];
 
       const { data: reports, error } = await supabase
         .from('reports')
@@ -299,7 +289,7 @@ export default function ClientDashboard() {
           id, date, shift, status, rdo_number, location, maintenance_order_number, maintenance_order_title,
           project:projects (id, name, site_id, company:companies (id, name))
         `)
-        .in('project_id', projectIds)
+        .in('id', allowedReportIds)
         .in('status', ['sent', 'signed', 'finalized'])
         .order('date', { ascending: false });
       if (error) throw error;
