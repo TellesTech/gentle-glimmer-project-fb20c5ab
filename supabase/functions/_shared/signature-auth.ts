@@ -48,14 +48,13 @@ async function getAuthenticatedUserId(req: Request): Promise<{ id: string; email
 }
 
 /**
- * Contacts of the client company may sign reports of their own company/site even when
- * nobody indicated them individually. In that case the approver row is created on the fly,
- * so the approval cycle and history stay consistent.
+ * Only contacts explicitly indicated as approvers of the report may sign it.
+ * No approver row is created automatically.
  */
-async function ensureContactApprover(
+async function findContactApprover(
   service: SupabaseClient,
   reportId: string,
-  contact: { id: string; company_id?: string | null; can_approve?: boolean | null },
+  contact: { id: string },
 ): Promise<string | null> {
   const { data: existing } = await service
     .from("report_company_approvers")
@@ -63,36 +62,7 @@ async function ensureContactApprover(
     .eq("report_id", reportId)
     .eq("contact_id", contact.id)
     .maybeSingle();
-  if (existing) return existing.id;
-
-  if (contact.can_approve === false) return null;
-
-  const { data: report } = await service
-    .from("reports")
-    .select("projects(company_id,site_id)")
-    .eq("id", reportId)
-    .maybeSingle();
-  if (!report) return null;
-  const project = Array.isArray(report.projects) ? report.projects[0] : report.projects;
-  if (!project?.company_id || !contact.company_id || project.company_id !== contact.company_id) return null;
-
-  // When the contact has explicit site assignments, the report site must be one of them.
-  const { data: contactSites } = await service.from("contact_sites").select("site_id").eq("contact_id", contact.id);
-  if (contactSites && contactSites.length > 0) {
-    const allowed = contactSites.some((row) => row.site_id === project.site_id);
-    if (!allowed) return null;
-  }
-
-  const { data: created, error } = await service
-    .from("report_company_approvers")
-    .insert({ report_id: reportId, contact_id: contact.id, status: "pending" })
-    .select("id")
-    .single();
-  if (error || !created) {
-    console.error("ensureContactApprover insert failed", error?.message);
-    return null;
-  }
-  return created.id;
+  return existing?.id ?? null;
 }
 
 export async function verifySigner(
@@ -125,7 +95,7 @@ export async function verifySigner(
       .eq("is_active", true)
       .maybeSingle();
     if (assignedContact) {
-      const approverId = await ensureContactApprover(service, reportId, assignedContact);
+      const approverId = await findContactApprover(service, reportId, assignedContact);
       if (approverId) return { userId: authenticated.id, name: assignedContact.name, email: assignedContact.email || authenticated.email, role: assignedContact.role || "Cliente", kind: "contact", accessId: null, approverTable: "report_company_approvers", approverId };
     }
 
@@ -192,7 +162,7 @@ export async function verifySigner(
       .eq("is_active", true)
       .maybeSingle();
     if (contact) {
-      const approverId = await ensureContactApprover(service, reportId, contact);
+      const approverId = await findContactApprover(service, reportId, contact);
       if (!approverId) throw new SignatureAuthError("Você não está indicado para assinar este RDO", 403);
       return { userId: authenticated.id, name: contact.name, email: contact.email || authenticated.email, role: contact.role || "Cliente", kind: "contact", accessId: null, approverTable: "report_company_approvers", approverId };
     }
