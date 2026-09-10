@@ -523,6 +523,15 @@ export default function ClientActivityList() {
           setRenameOpen(false);
         }}
       />
+
+      <SignersManagerDialog
+        open={!!signersScope}
+        onOpenChange={(open) => !open && setSignersScope(null)}
+        reportIds={signersScope?.reportIds || []}
+        siteId={activityInfo?.siteId ?? null}
+        companyId={activityInfo?.companyId ?? null}
+        scopeLabel={signersScope?.label}
+      />
     </ClientLayout>
   );
 }
