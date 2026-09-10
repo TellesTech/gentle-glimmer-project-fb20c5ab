@@ -296,6 +296,7 @@ export default function ClientActivityList() {
   const { names: activityNames, rename: renameActivity, resetName: resetActivityName, isSaving: renamingActivity } =
     useActivityNames(activitySiteIds);
   const [renameOpen, setRenameOpen] = useState(false);
+  const [signersScope, setSignersScope] = useState<{ reportIds: string[]; label: string } | null>(null);
   const customName = projectId ? activityNames.get(projectId) : undefined;
   const displayName = customName || activityInfo?.name || 'Atividade';
 
