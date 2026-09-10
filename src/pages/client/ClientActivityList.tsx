@@ -436,6 +436,20 @@ export default function ClientActivityList() {
                           <Trash2 className="h-3 w-3" />
                         </button>
                       )}
+                      <button
+                        type="button"
+                        title="Definir quem assina este RDO"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSignersScope({
+                            reportIds: [r.id],
+                            label: `RDO #${(r.rdo_number ?? 0).toString().padStart(3, '0')}`,
+                          });
+                        }}
+                        className="rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+                      >
+                        <UserCheck className="h-3 w-3" />
+                      </button>
                     </div>
                   )}
                   {/* Paper sheet */}
