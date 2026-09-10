@@ -1082,6 +1082,23 @@ export default function ClientDashboard() {
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
+                            {canManagePortalVisibility && (
+                              <button
+                                type="button"
+                                title="Definir quem assina esta pasta"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSignersScope({
+                                    reportIds: a.reports.map((r) => r.id),
+                                    label: a.name,
+                                    siteId: a.siteId || adminSiteId || null,
+                                  });
+                                }}
+                                className="rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+                              >
+                                <UserCheck className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                           </div>
                           {/* Folder Rear Part */}
                           <div className={cn(
