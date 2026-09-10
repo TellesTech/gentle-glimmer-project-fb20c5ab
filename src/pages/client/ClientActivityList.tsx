@@ -339,6 +339,19 @@ export default function ClientActivityList() {
                   Novo Relatório
                 </Button>
               )}
+              {canManagePortalVisibility && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => setSignersScope({ reportIds: reports.map((r) => r.id), label: displayName })}
+                  disabled={reports.length === 0}
+                >
+                  <UserCheck className="h-3.5 w-3.5" />
+                  Definir signatários
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="ghost"
