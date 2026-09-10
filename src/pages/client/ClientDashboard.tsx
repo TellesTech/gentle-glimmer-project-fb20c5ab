@@ -540,6 +540,7 @@ export default function ClientDashboard() {
   const { names: activityNames, rename: renameActivity, resetName: resetActivityName, isSaving: renamingActivity } =
     useActivityNames(reportSiteIds);
   const [renameTarget, setRenameTarget] = useState<RenameActivityTarget | null>(null);
+  const [signersScope, setSignersScope] = useState<{ reportIds: string[]; label: string; siteId: string | null } | null>(null);
 
   const monthFolders = useMemo(() => {
     const all = visibleReports;
