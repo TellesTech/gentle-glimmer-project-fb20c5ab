@@ -151,14 +151,9 @@ export function SendForSignatureDialog({
         }));
         setContacts(rows);
 
-        // Auto-select ALL contacts for the unit
+        // Ninguém vem marcado: a WEES escolhe quem deve assinar este RDO.
         if (cancelled) return;
-        const allContactIds = new Set<string>(
-          rows
-            .filter(r => normalize(r.name) !== 'alex manhaes')
-            .map((r) => r.id)
-        );
-        setSelectedIds(allContactIds);
+        setSelectedIds(new Set<string>());
       } catch (e) {
         console.error('Error loading client contacts:', e);
         if (!cancelled) setContacts([]);
