@@ -980,6 +980,21 @@ export default function ClientDashboard() {
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
                           )}
+                          <button
+                            type="button"
+                            title="Definir quem assina os RDOs deste mês"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSignersScope({
+                                reportIds: month.activities.flatMap((a: any) => a.reports.map((r: any) => r.id)),
+                                label: `${month.monthName} ${month.year}`,
+                                siteId: adminSiteId || null,
+                              });
+                            }}
+                            className="rounded-full bg-background border shadow-sm p-1.5 text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+                          >
+                            <UserCheck className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                       )}
                     </div>
