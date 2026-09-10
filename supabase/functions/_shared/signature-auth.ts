@@ -120,13 +120,13 @@ export async function verifySigner(
 
     const { data: assignedContact } = await service
       .from("company_contacts")
-      .select("id,name,email,role,is_active")
+      .select("id,name,email,role,is_active,company_id,can_approve")
       .eq("user_id", authenticated.id)
       .eq("is_active", true)
       .maybeSingle();
     if (assignedContact) {
-      const { data: assignment } = await service.from("report_company_approvers").select("id").eq("report_id", reportId).eq("contact_id", assignedContact.id).maybeSingle();
-      if (assignment) return { userId: authenticated.id, name: assignedContact.name, email: assignedContact.email || authenticated.email, role: assignedContact.role || "Cliente", kind: "contact", accessId: null, approverTable: "report_company_approvers", approverId: assignment.id };
+      const approverId = await ensureContactApprover(service, reportId, assignedContact);
+      if (approverId) return { userId: authenticated.id, name: assignedContact.name, email: assignedContact.email || authenticated.email, role: assignedContact.role || "Cliente", kind: "contact", accessId: null, approverTable: "report_company_approvers", approverId };
     }
 
     const { data: roleRows } = await service.from("user_roles").select("role").eq("user_id", authenticated.id);
