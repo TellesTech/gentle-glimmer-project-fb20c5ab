@@ -715,13 +715,24 @@ export default function UsersPage() {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => exportUsersToCSV(filtered.map(u => ({
-              name: u.name,
-              email: u.email,
-              role: u.role,
-              company_name: '',
-              created_at: u.created_at
-            })))}
+            onClick={async () => {
+              try {
+                await exportUsersToExcel(filtered.map(u => ({
+                  name: u.name,
+                  email: u.email,
+                  role: u.role,
+                  job_title: u.job_title,
+                  state: u.state,
+                  employment_type: u.employment_type,
+                  is_active: u.is_active,
+                  has_pin: u.has_pin,
+                  sites_count: siteCounts[u.id] ?? 0,
+                  created_at: u.created_at,
+                })));
+              } catch (e) {
+                toast({ title: 'Não foi possível gerar a planilha', variant: 'destructive' });
+              }
+            }}
           >
             <Upload className="h-4 w-4 mr-1.5" />
             <span className="hidden xs:inline">Exportar</span>
