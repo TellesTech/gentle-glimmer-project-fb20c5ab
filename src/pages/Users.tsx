@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, UserCog, MoreHorizontal, Pencil, Trash2, Key, Loader2, Wrench, UserX, UserCheck, Eye, EyeOff, Mail, Download, Upload, MapPin, AlertTriangle, CheckSquare, X, KeyRound, Lock, LockOpen, Factory, PowerOff } from 'lucide-react';
 import { SiteAccessSelector } from '@/components/users/SiteAccessSelector';
-import { exportUsersToCSV } from '@/lib/adminExports';
+import { exportUsersToExcel } from '@/lib/usersExcelExport';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
