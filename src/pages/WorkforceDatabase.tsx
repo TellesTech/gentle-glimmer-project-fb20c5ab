@@ -28,7 +28,7 @@ import { WorkforceDelaysTab } from '@/components/workforce/WorkforceDelaysTab';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
-import { buildActivityGroups, type ActivityGroup, type ActivityGroupInputReport } from '@/lib/rdoActivityGroups';
+import { buildActivityGroups, isGenericProjectName, type ActivityGroup, type ActivityGroupInputReport } from '@/lib/rdoActivityGroups';
 
 interface WorkforceRecord {
   id: string;
@@ -68,6 +68,17 @@ const formatHHMMSS = (decimalHours: number) => {
   const m = Math.floor((decimalHours - h) * 60);
   const s = Math.round(((decimalHours - h) * 60 - m) * 60);
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+};
+
+/** Mesmo valor exibido no campo "Atividade" da página do RDO. */
+const reportActivityName = (report: any): string => {
+  const location = (report?.location || '').trim();
+  if (location) return location;
+  const omTitle = (report?.maintenance_order_title || '').trim();
+  if (omTitle) return omTitle;
+  const projectName = (report?.projects?.name || '').trim();
+  if (!isGenericProjectName(projectName)) return projectName;
+  return 'Sem atividade';
 };
 
 export default function WorkforceDatabase() {
@@ -205,11 +216,9 @@ export default function WorkforceDatabase() {
 
   const selectedActivity = activities.find(a => a.id === selectedProject) || null;
 
-  /** Mapas de rótulo de atividade (mesmo texto dos cards "Meus RDOs"). */
-  const activityNameByReport = new Map<string, string>();
+  /** Mapa de rótulo dos projetos usado pelos filtros de atividade. */
   const projectActivityNames = new Map<string, Set<string>>();
   for (const a of activities) {
-    for (const rid of a.reportIds) activityNameByReport.set(rid, a.name);
     for (const pid of a.projectIds) {
       if (!projectActivityNames.has(pid)) projectActivityNames.set(pid, new Set());
       projectActivityNames.get(pid)!.add(a.name);
@@ -263,7 +272,7 @@ export default function WorkforceDatabase() {
             present,
             user_id,
             report_id,
-            reports!inner(id, date, project_id, shift, projects(name))
+            reports!inner(id, date, project_id, shift, location, maintenance_order_title, projects(name))
           `)
           .eq('present', true)
           .gte('reports.date', startDate)
@@ -328,11 +337,7 @@ export default function WorkforceDatabase() {
       for (const [, group] of attByKey) {
         const first = group[0] as any;
         const report = first.reports as any;
-        const projectName =
-          activityNameByReport.get(report?.id) ||
-          activityNameForProject(report?.project_id) ||
-          report?.projects?.name ||
-          'Sem projeto';
+        const projectName = reportActivityName(report);
         
         // Use exact match first, then intelligent matching
         const functionRole = resolveWorkerFunction(
@@ -414,7 +419,7 @@ export default function WorkforceDatabase() {
 
       let manualRecords: WorkforceRecord[] = (manualData || []).map((r: any) => ({
         ...r,
-        activity_name: activityNameForProject(r.project_id) || r.activity_name,
+        activity_name: r.activity_name || activityNameForProject(r.project_id) || 'Sem atividade',
         source: 'manual' as const,
       }));
 
@@ -465,7 +470,7 @@ export default function WorkforceDatabase() {
     while (hasMore) {
       let query = supabase
         .from('reports')
-        .select('id, date, operational_deviation_hours, operational_deviation_details, operational_deviation_reason, climatic_deviation_hours, climatic_deviation_details, climatic_deviation_reason, amt_deviation_hours, amt_deviation_details, amt_deviation_reason, project_id, projects(name, site_id)')
+        .select('id, date, location, maintenance_order_title, operational_deviation_hours, operational_deviation_details, operational_deviation_reason, climatic_deviation_hours, climatic_deviation_details, climatic_deviation_reason, amt_deviation_hours, amt_deviation_details, amt_deviation_reason, project_id, projects(name, site_id)')
         .gte('date', startDate)
         .lte('date', endDate)
         .range(from, from + pageSize - 1)
@@ -487,11 +492,7 @@ export default function WorkforceDatabase() {
       if (error || !page || page.length === 0) break;
 
       for (const report of page) {
-        const projectName =
-          activityNameByReport.get((report as any).id) ||
-          activityNameForProject((report as any).project_id) ||
-          (report as any).projects?.name ||
-          'N/A';
+        const projectName = reportActivityName(report);
         
         // Extract all deviation types from this report
         for (const dt of deviationTypes) {
@@ -564,7 +565,7 @@ export default function WorkforceDatabase() {
 
         allDelayRecords.push({
           id: delay.id,
-          activity_name: resolvedActivity || delay.activity_name,
+          activity_name: delay.activity_name || resolvedActivity || 'Sem atividade',
           date: delay.date,
           reason: delay.delay_type || 'Outro',
           description: delay.description || '',
@@ -636,7 +637,7 @@ export default function WorkforceDatabase() {
           .from('report_attendance')
           .select(`
             id, user_name, arrival_time, departure_time, present, user_id, report_id,
-            reports!inner(id, date, project_id, projects!inner(id, name, site_id, sites!inner(company_id)))
+            reports!inner(id, date, project_id, location, maintenance_order_title, projects!inner(id, name, site_id, sites!inner(company_id)))
           `)
           .eq('present', true)
           .gte('reports.date', startDate)
@@ -696,7 +697,7 @@ export default function WorkforceDatabase() {
           project_id: report?.project_id,
           attendance_id: first.id,
           company_id: project?.sites?.company_id ?? null,
-          activity_name: project?.name || 'Sem projeto',
+          activity_name: reportActivityName(report),
           date: report?.date,
           worker_name: first.user_name || 'Sem nome',
           function_role: null,
@@ -730,7 +731,7 @@ export default function WorkforceDatabase() {
       // 4) Sincronizar atrasos (deviations) dos reports
       let reportsQ = supabase
         .from('reports')
-        .select('id, date, project_id, operational_deviation_hours, operational_deviation_details, operational_deviation_reason, climatic_deviation_hours, climatic_deviation_details, climatic_deviation_reason, amt_deviation_hours, amt_deviation_details, amt_deviation_reason, projects!inner(id, name, site_id, sites!inner(company_id))')
+        .select('id, date, project_id, location, maintenance_order_title, operational_deviation_hours, operational_deviation_details, operational_deviation_reason, climatic_deviation_hours, climatic_deviation_details, climatic_deviation_reason, amt_deviation_hours, amt_deviation_details, amt_deviation_reason, projects!inner(id, name, site_id, sites!inner(company_id))')
         .gte('date', startDate)
         .lte('date', endDate);
       if (selectedActivity) {
@@ -758,7 +759,7 @@ export default function WorkforceDatabase() {
             delay_source: s.src,
             project_id: rep.project_id,
             company_id: rep.projects?.sites?.company_id ?? null,
-            activity_name: rep.projects?.name || 'Sem projeto',
+            activity_name: reportActivityName(rep),
             date: rep.date,
             description: rep[s.d] || rep[s.r] || s.src,
             delay_type: s.enum,
