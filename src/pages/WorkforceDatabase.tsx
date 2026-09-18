@@ -864,14 +864,14 @@ export default function WorkforceDatabase() {
     const ws = wb.addWorksheet('Base de Dados');
     const periodLabel = `${format(new Date(startDate + 'T12:00:00'), 'dd/MM/yyyy')} a ${format(new Date(endDate + 'T12:00:00'), 'dd/MM/yyyy')}`;
     const filtersLabel = `Fábrica: ${selectedSiteName}  |  Atividade: ${selectedActivityLabel}  |  Período: ${periodLabel}  |  Registros: ${records.length}`;
-    ws.columns = [{ header: 'ATIVIDADE', key: 'activity', width: 30 }, { header: 'DIA', key: 'date', width: 12 }, { header: 'NOME', key: 'name', width: 25 }, { header: 'FUNÇÃO', key: 'role', width: 20 }, { header: 'INÍCIO', key: 'start', width: 18 }, { header: 'FIM', key: 'end', width: 16 }, { header: 'HN', key: 'hn', width: 8 }, { header: 'COM', key: 'com', width: 8 }, { header: 'HH-75%', key: 'h75', width: 8 }, { header: 'HH-100%', key: 'h100', width: 10 }, { header: 'ADN', key: 'adn', width: 8 }];
+    ws.columns = [{ header: 'ATIVIDADE', key: 'activity', width: 30 }, { header: 'LOCAL', key: 'local', width: 22 }, { header: 'DIA', key: 'date', width: 12 }, { header: 'NOME', key: 'name', width: 25 }, { header: 'FUNÇÃO', key: 'role', width: 20 }, { header: 'INÍCIO', key: 'start', width: 18 }, { header: 'FIM', key: 'end', width: 16 }, { header: 'HN', key: 'hn', width: 8 }, { header: 'COM', key: 'com', width: 8 }, { header: 'HH-75%', key: 'h75', width: 8 }, { header: 'HH-100%', key: 'h100', width: 10 }, { header: 'ADN', key: 'adn', width: 8 }];
     ws.spliceRows(1, 0, [filtersLabel]);
-    ws.mergeCells(1, 1, 1, 11);
+    ws.mergeCells(1, 1, 1, 12);
     ws.getCell('A1').font = { bold: true, size: 10 };
     ws.getRow(2).eachCell(cell => { Object.assign(cell, { style: headerStyle }); });
     records.forEach(r => {
       const fnValid = r.function_role || 'MEIO OFICIAL';
-      ws.addRow({ activity: r.activity_name?.toUpperCase(), date: format(new Date(r.date + 'T12:00:00'), 'dd/MM/yyyy'), name: r.worker_name, role: fnValid, start: r.start_time || '', end: r.end_time || '', hn: formatHHMM(r.normal_hours), com: formatHHMM(r.compensation_hours), h75: formatHHMM(r.overtime_75), h100: formatHHMM(r.overtime_100), adn: formatHHMM(r.night_bonus) });
+      ws.addRow({ activity: (r.activity_group || r.activity_name)?.toUpperCase(), local: r.activity_name?.toUpperCase(), date: format(new Date(r.date + 'T12:00:00'), 'dd/MM/yyyy'), name: r.worker_name, role: fnValid, start: r.start_time || '', end: r.end_time || '', hn: formatHHMM(r.normal_hours), com: formatHHMM(r.compensation_hours), h75: formatHHMM(r.overtime_75), h100: formatHHMM(r.overtime_100), adn: formatHHMM(r.night_bonus) });
     });
     const totalRow = ws.addRow({ activity: 'TOTAL', hn: formatHHMM(totals.hn), com: formatHHMM(totals.com), h75: formatHHMM(totals.h75), h100: formatHHMM(totals.h100), adn: formatHHMM(totals.adn) });
     totalRow.font = { bold: true };
@@ -989,8 +989,8 @@ export default function WorkforceDatabase() {
     // Accent line
     doc.setFillColor(...accentRgb); doc.rect(0, headerH, pageW, 1, 'F');
 
-    const cols = ['ATIVIDADE', 'DIA', 'NOME', 'FUNÇÃO', 'INÍCIO', 'FIM', 'HN', 'COM', 'HH-75%', 'HH-100%', 'ADN'];
-    const colWidths = [50, 22, 40, 30, 16, 16, 14, 14, 16, 18, 14];
+    const cols = ['ATIVIDADE', 'LOCAL', 'DIA', 'NOME', 'FUNÇÃO', 'INÍCIO', 'FIM', 'HN', 'COM', 'HH-75%', 'HH-100%', 'ADN'];
+    const colWidths = [42, 26, 18, 36, 26, 15, 15, 13, 13, 15, 17, 13];
     let y = headerH + 5; const startX = 10;
     doc.setTextColor(60, 60, 60); doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
     doc.text(`Fábrica: ${selectedSiteName}  |  Atividade: ${selectedActivityLabel}  |  Registros: ${records.length}`, startX, y + 2);
