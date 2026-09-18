@@ -33,6 +33,8 @@ import { buildActivityGroups, isGenericProjectName, type ActivityGroup, type Act
 interface WorkforceRecord {
   id: string;
   activity_name: string;
+  /** Nome do card/pasta (rótulo do grupo de OM, igual aos cards "Meus RDOs"). */
+  activity_group?: string;
   date: string;
   worker_name: string;
   function_role: string | null;
@@ -364,6 +366,7 @@ export default function WorkforceDatabase() {
         rdoRecords.push({
           id: `rdo-${first.id}`,
           activity_name: projectName,
+          activity_group: activityNameForProject(report?.project_id) || projectName,
           date: report?.date || '',
           worker_name: first.user_name || 'Sem nome',
           function_role: functionRole,
@@ -420,6 +423,7 @@ export default function WorkforceDatabase() {
       let manualRecords: WorkforceRecord[] = (manualData || []).map((r: any) => ({
         ...r,
         activity_name: r.activity_name || activityNameForProject(r.project_id) || 'Sem atividade',
+        activity_group: activityNameForProject(r.project_id) || r.activity_name || 'Sem atividade',
         source: 'manual' as const,
       }));
 
