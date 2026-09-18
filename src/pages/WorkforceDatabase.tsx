@@ -216,11 +216,9 @@ export default function WorkforceDatabase() {
 
   const selectedActivity = activities.find(a => a.id === selectedProject) || null;
 
-  /** Mapas de rótulo de atividade (mesmo texto dos cards "Meus RDOs"). */
-  const activityNameByReport = new Map<string, string>();
+  /** Mapa de rótulo dos projetos usado pelos filtros de atividade. */
   const projectActivityNames = new Map<string, Set<string>>();
   for (const a of activities) {
-    for (const rid of a.reportIds) activityNameByReport.set(rid, a.name);
     for (const pid of a.projectIds) {
       if (!projectActivityNames.has(pid)) projectActivityNames.set(pid, new Set());
       projectActivityNames.get(pid)!.add(a.name);
