@@ -393,30 +393,36 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
       const report = reports.find(r => r.id === sourceReportId);
       if (!report) throw new Error('Relatório não encontrado');
 
-      // Prepare data to sync with target folder
-      const updateData: any = {};
-      
+      // A pasta (card) é agrupada pela ATIVIDADE (project_id). Sem ela não há como mover.
+      const targetProjectId = targetFolder.sourceProjects[0]?.id
+        || (targetFolder.id.startsWith('project:') ? targetFolder.id.slice('project:'.length) : null);
+      if (!targetProjectId) throw new Error('Não foi possível identificar a atividade da pasta de destino.');
+
+      const updateData: any = { project_id: targetProjectId };
+
       // If target folder is an OM, apply that OM info
       if (targetFolder.omNumber) {
         updateData.maintenance_order_number = targetFolder.omNumber;
       }
-      
+
       // Use the most frequent title from target folder
       if (targetFolder.omTitle) {
         updateData.maintenance_order_title = targetFolder.omTitle;
       }
 
-      // If the target folder is rooted in a specific project, ensure we might want to link it?
-      // For now, we mainly normalize the OM fields which drives the grouping.
-      
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('reports')
         .update(updateData)
-        .eq('id', sourceReportId);
+        .eq('id', sourceReportId)
+        .select('id');
 
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Sem permissão para mover este RDO ou ele não foi encontrado.');
+      }
       return { sourceReportId, targetFolder };
     },
+
     onSuccess: () => {
       toast({ title: 'Organização atualizada', description: 'O relatório foi movido com sucesso.' });
       queryClient.invalidateQueries({ queryKey: ['reports-cabinet-all-v2'] });
