@@ -398,7 +398,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
         || (targetFolder.id.startsWith('project:') ? targetFolder.id.slice('project:'.length) : null);
       if (!targetProjectId) throw new Error('Não foi possível identificar a atividade da pasta de destino.');
 
-      const updateData: Record<string, any> = { project_id: targetProjectId };
+      const updateData: any = { project_id: targetProjectId };
 
       // If target folder is an OM, apply that OM info
       if (targetFolder.omNumber) {
