@@ -33,6 +33,8 @@ import { buildActivityGroups, isGenericProjectName, type ActivityGroup, type Act
 interface WorkforceRecord {
   id: string;
   activity_name: string;
+  /** Nome do card/pasta (rótulo do grupo de OM, igual aos cards "Meus RDOs"). */
+  activity_group?: string;
   date: string;
   worker_name: string;
   function_role: string | null;
@@ -364,6 +366,7 @@ export default function WorkforceDatabase() {
         rdoRecords.push({
           id: `rdo-${first.id}`,
           activity_name: projectName,
+          activity_group: activityNameForProject(report?.project_id) || projectName,
           date: report?.date || '',
           worker_name: first.user_name || 'Sem nome',
           function_role: functionRole,
@@ -420,6 +423,7 @@ export default function WorkforceDatabase() {
       let manualRecords: WorkforceRecord[] = (manualData || []).map((r: any) => ({
         ...r,
         activity_name: r.activity_name || activityNameForProject(r.project_id) || 'Sem atividade',
+        activity_group: activityNameForProject(r.project_id) || r.activity_name || 'Sem atividade',
         source: 'manual' as const,
       }));
 
@@ -860,14 +864,14 @@ export default function WorkforceDatabase() {
     const ws = wb.addWorksheet('Base de Dados');
     const periodLabel = `${format(new Date(startDate + 'T12:00:00'), 'dd/MM/yyyy')} a ${format(new Date(endDate + 'T12:00:00'), 'dd/MM/yyyy')}`;
     const filtersLabel = `Fábrica: ${selectedSiteName}  |  Atividade: ${selectedActivityLabel}  |  Período: ${periodLabel}  |  Registros: ${records.length}`;
-    ws.columns = [{ header: 'ATIVIDADE', key: 'activity', width: 30 }, { header: 'DIA', key: 'date', width: 12 }, { header: 'NOME', key: 'name', width: 25 }, { header: 'FUNÇÃO', key: 'role', width: 20 }, { header: 'INÍCIO', key: 'start', width: 18 }, { header: 'FIM', key: 'end', width: 16 }, { header: 'HN', key: 'hn', width: 8 }, { header: 'COM', key: 'com', width: 8 }, { header: 'HH-75%', key: 'h75', width: 8 }, { header: 'HH-100%', key: 'h100', width: 10 }, { header: 'ADN', key: 'adn', width: 8 }];
+    ws.columns = [{ header: 'ATIVIDADE', key: 'activity', width: 30 }, { header: 'LOCAL', key: 'local', width: 22 }, { header: 'DIA', key: 'date', width: 12 }, { header: 'NOME', key: 'name', width: 25 }, { header: 'FUNÇÃO', key: 'role', width: 20 }, { header: 'INÍCIO', key: 'start', width: 18 }, { header: 'FIM', key: 'end', width: 16 }, { header: 'HN', key: 'hn', width: 8 }, { header: 'COM', key: 'com', width: 8 }, { header: 'HH-75%', key: 'h75', width: 8 }, { header: 'HH-100%', key: 'h100', width: 10 }, { header: 'ADN', key: 'adn', width: 8 }];
     ws.spliceRows(1, 0, [filtersLabel]);
-    ws.mergeCells(1, 1, 1, 11);
+    ws.mergeCells(1, 1, 1, 12);
     ws.getCell('A1').font = { bold: true, size: 10 };
     ws.getRow(2).eachCell(cell => { Object.assign(cell, { style: headerStyle }); });
     records.forEach(r => {
       const fnValid = r.function_role || 'MEIO OFICIAL';
-      ws.addRow({ activity: r.activity_name?.toUpperCase(), date: format(new Date(r.date + 'T12:00:00'), 'dd/MM/yyyy'), name: r.worker_name, role: fnValid, start: r.start_time || '', end: r.end_time || '', hn: formatHHMM(r.normal_hours), com: formatHHMM(r.compensation_hours), h75: formatHHMM(r.overtime_75), h100: formatHHMM(r.overtime_100), adn: formatHHMM(r.night_bonus) });
+      ws.addRow({ activity: (r.activity_group || r.activity_name)?.toUpperCase(), local: r.activity_name?.toUpperCase(), date: format(new Date(r.date + 'T12:00:00'), 'dd/MM/yyyy'), name: r.worker_name, role: fnValid, start: r.start_time || '', end: r.end_time || '', hn: formatHHMM(r.normal_hours), com: formatHHMM(r.compensation_hours), h75: formatHHMM(r.overtime_75), h100: formatHHMM(r.overtime_100), adn: formatHHMM(r.night_bonus) });
     });
     const totalRow = ws.addRow({ activity: 'TOTAL', hn: formatHHMM(totals.hn), com: formatHHMM(totals.com), h75: formatHHMM(totals.h75), h100: formatHHMM(totals.h100), adn: formatHHMM(totals.adn) });
     totalRow.font = { bold: true };
@@ -985,8 +989,8 @@ export default function WorkforceDatabase() {
     // Accent line
     doc.setFillColor(...accentRgb); doc.rect(0, headerH, pageW, 1, 'F');
 
-    const cols = ['ATIVIDADE', 'DIA', 'NOME', 'FUNÇÃO', 'INÍCIO', 'FIM', 'HN', 'COM', 'HH-75%', 'HH-100%', 'ADN'];
-    const colWidths = [50, 22, 40, 30, 16, 16, 14, 14, 16, 18, 14];
+    const cols = ['ATIVIDADE', 'LOCAL', 'DIA', 'NOME', 'FUNÇÃO', 'INÍCIO', 'FIM', 'HN', 'COM', 'HH-75%', 'HH-100%', 'ADN'];
+    const colWidths = [42, 26, 18, 36, 26, 15, 15, 13, 13, 15, 17, 13];
     let y = headerH + 5; const startX = 10;
     doc.setTextColor(60, 60, 60); doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
     doc.text(`Fábrica: ${selectedSiteName}  |  Atividade: ${selectedActivityLabel}  |  Registros: ${records.length}`, startX, y + 2);
@@ -1002,15 +1006,15 @@ export default function WorkforceDatabase() {
       const bg = idx % 2 === 0 ? [245, 245, 245] : [255, 255, 255];
       doc.setFillColor(bg[0], bg[1], bg[2]); doc.rect(startX, y, colWidths.reduce((a, b) => a + b, 0), 6, 'F');
       doc.setTextColor(30, 30, 30);
-      const values = [(r.activity_name || '').toUpperCase().substring(0, 25), format(new Date(r.date + 'T12:00:00'), 'dd/MM/yy'), r.worker_name.substring(0, 20), normalizeFunction(r.function_role).substring(0, 15), r.start_time || '', r.end_time || '', formatHHMM(r.normal_hours), formatHHMM(r.compensation_hours), formatHHMM(r.overtime_75), formatHHMM(r.overtime_100), formatHHMM(r.night_bonus)];
-      let x = startX; values.forEach((val, i) => { const align = i >= 6 ? 'center' : 'left'; doc.text(val, align === 'center' ? x + colWidths[i] / 2 : x + 1, y + 4, { align }); x += colWidths[i]; }); y += 6;
+      const values = [(r.activity_group || r.activity_name || '').toUpperCase().substring(0, 22), (r.activity_name || '').toUpperCase().substring(0, 16), format(new Date(r.date + 'T12:00:00'), 'dd/MM/yy'), r.worker_name.substring(0, 20), normalizeFunction(r.function_role).substring(0, 14), r.start_time || '', r.end_time || '', formatHHMM(r.normal_hours), formatHHMM(r.compensation_hours), formatHHMM(r.overtime_75), formatHHMM(r.overtime_100), formatHHMM(r.night_bonus)];
+      let x = startX; values.forEach((val, i) => { const align = i >= 7 ? 'center' : 'left'; doc.text(val, align === 'center' ? x + colWidths[i] / 2 : x + 1, y + 4, { align }); x += colWidths[i]; }); y += 6;
     });
     // Totals row with primary color
     doc.setFillColor(...primaryRgb); doc.rect(startX, y, colWidths.reduce((a, b) => a + b, 0), 7, 'F');
     doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
     let x = startX;
-    const totalValues = ['TOTAL', '', '', '', '', '', formatHHMM(totals.hn), formatHHMM(totals.com), formatHHMM(totals.h75), formatHHMM(totals.h100), formatHHMM(totals.adn)];
-    totalValues.forEach((val, i) => { const align = i >= 6 || i === 0 ? 'center' : 'left'; doc.text(val, align === 'center' ? x + colWidths[i] / 2 : x + 1, y + 5, { align }); x += colWidths[i]; });
+    const totalValues = ['TOTAL', '', '', '', '', '', '', formatHHMM(totals.hn), formatHHMM(totals.com), formatHHMM(totals.h75), formatHHMM(totals.h100), formatHHMM(totals.adn)];
+    totalValues.forEach((val, i) => { const align = i >= 7 || i === 0 ? 'center' : 'left'; doc.text(val, align === 'center' ? x + colWidths[i] / 2 : x + 1, y + 5, { align }); x += colWidths[i]; });
     // Footer with dynamic system name
     const pageH = doc.internal.pageSize.getHeight();
     doc.setFontSize(6); doc.setTextColor(128, 128, 128); doc.text(`Gerado por ${systemName} — ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, pageW / 2, pageH - 5, { align: 'center' });
@@ -1364,6 +1368,7 @@ export default function WorkforceDatabase() {
                     <TableHeader>
                       <TableRow className="bg-muted/50">
                         <TableHead className="font-bold">ATIVIDADE</TableHead>
+                        <TableHead className="font-bold">LOCAL</TableHead>
                         <TableHead className="font-bold">DIA</TableHead>
                         <TableHead className="font-bold">NOME</TableHead>
                         <TableHead className="font-bold">FUNÇÃO</TableHead>
@@ -1385,9 +1390,10 @@ export default function WorkforceDatabase() {
                           <TableCell className="text-sm">
                             <div className="flex items-center gap-1.5">
                               {isRdo && <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-300 text-blue-600 dark:border-blue-700 dark:text-blue-400">RDO</Badge>}
-                              {r.activity_name?.toUpperCase()}
+                              {(r.activity_group || r.activity_name)?.toUpperCase()}
                             </div>
                           </TableCell>
+                          <TableCell className="text-sm">{r.activity_name?.toUpperCase()}</TableCell>
                           <TableCell className="text-sm whitespace-nowrap">{format(new Date(r.date + 'T12:00:00'), 'dd/MM/yyyy')}</TableCell>
                           <TableCell className="text-sm font-medium">{isRdo ? r.worker_name : renderEditableCell(r, 'worker_name', r.worker_name)}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">{isRdo ? r.function_role : renderEditableCell(r, 'function_role', r.function_role)}</TableCell>
