@@ -1006,15 +1006,15 @@ export default function WorkforceDatabase() {
       const bg = idx % 2 === 0 ? [245, 245, 245] : [255, 255, 255];
       doc.setFillColor(bg[0], bg[1], bg[2]); doc.rect(startX, y, colWidths.reduce((a, b) => a + b, 0), 6, 'F');
       doc.setTextColor(30, 30, 30);
-      const values = [(r.activity_name || '').toUpperCase().substring(0, 25), format(new Date(r.date + 'T12:00:00'), 'dd/MM/yy'), r.worker_name.substring(0, 20), normalizeFunction(r.function_role).substring(0, 15), r.start_time || '', r.end_time || '', formatHHMM(r.normal_hours), formatHHMM(r.compensation_hours), formatHHMM(r.overtime_75), formatHHMM(r.overtime_100), formatHHMM(r.night_bonus)];
-      let x = startX; values.forEach((val, i) => { const align = i >= 6 ? 'center' : 'left'; doc.text(val, align === 'center' ? x + colWidths[i] / 2 : x + 1, y + 4, { align }); x += colWidths[i]; }); y += 6;
+      const values = [(r.activity_group || r.activity_name || '').toUpperCase().substring(0, 22), (r.activity_name || '').toUpperCase().substring(0, 16), format(new Date(r.date + 'T12:00:00'), 'dd/MM/yy'), r.worker_name.substring(0, 20), normalizeFunction(r.function_role).substring(0, 14), r.start_time || '', r.end_time || '', formatHHMM(r.normal_hours), formatHHMM(r.compensation_hours), formatHHMM(r.overtime_75), formatHHMM(r.overtime_100), formatHHMM(r.night_bonus)];
+      let x = startX; values.forEach((val, i) => { const align = i >= 7 ? 'center' : 'left'; doc.text(val, align === 'center' ? x + colWidths[i] / 2 : x + 1, y + 4, { align }); x += colWidths[i]; }); y += 6;
     });
     // Totals row with primary color
     doc.setFillColor(...primaryRgb); doc.rect(startX, y, colWidths.reduce((a, b) => a + b, 0), 7, 'F');
     doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
     let x = startX;
-    const totalValues = ['TOTAL', '', '', '', '', '', formatHHMM(totals.hn), formatHHMM(totals.com), formatHHMM(totals.h75), formatHHMM(totals.h100), formatHHMM(totals.adn)];
-    totalValues.forEach((val, i) => { const align = i >= 6 || i === 0 ? 'center' : 'left'; doc.text(val, align === 'center' ? x + colWidths[i] / 2 : x + 1, y + 5, { align }); x += colWidths[i]; });
+    const totalValues = ['TOTAL', '', '', '', '', '', '', formatHHMM(totals.hn), formatHHMM(totals.com), formatHHMM(totals.h75), formatHHMM(totals.h100), formatHHMM(totals.adn)];
+    totalValues.forEach((val, i) => { const align = i >= 7 || i === 0 ? 'center' : 'left'; doc.text(val, align === 'center' ? x + colWidths[i] / 2 : x + 1, y + 5, { align }); x += colWidths[i]; });
     // Footer with dynamic system name
     const pageH = doc.internal.pageSize.getHeight();
     doc.setFontSize(6); doc.setTextColor(128, 128, 128); doc.text(`Gerado por ${systemName} — ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, pageW / 2, pageH - 5, { align: 'center' });
@@ -1368,6 +1368,7 @@ export default function WorkforceDatabase() {
                     <TableHeader>
                       <TableRow className="bg-muted/50">
                         <TableHead className="font-bold">ATIVIDADE</TableHead>
+                        <TableHead className="font-bold">LOCAL</TableHead>
                         <TableHead className="font-bold">DIA</TableHead>
                         <TableHead className="font-bold">NOME</TableHead>
                         <TableHead className="font-bold">FUNÇÃO</TableHead>
@@ -1389,9 +1390,10 @@ export default function WorkforceDatabase() {
                           <TableCell className="text-sm">
                             <div className="flex items-center gap-1.5">
                               {isRdo && <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-300 text-blue-600 dark:border-blue-700 dark:text-blue-400">RDO</Badge>}
-                              {r.activity_name?.toUpperCase()}
+                              {(r.activity_group || r.activity_name)?.toUpperCase()}
                             </div>
                           </TableCell>
+                          <TableCell className="text-sm">{r.activity_name?.toUpperCase()}</TableCell>
                           <TableCell className="text-sm whitespace-nowrap">{format(new Date(r.date + 'T12:00:00'), 'dd/MM/yyyy')}</TableCell>
                           <TableCell className="text-sm font-medium">{isRdo ? r.worker_name : renderEditableCell(r, 'worker_name', r.worker_name)}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">{isRdo ? r.function_role : renderEditableCell(r, 'function_role', r.function_role)}</TableCell>
