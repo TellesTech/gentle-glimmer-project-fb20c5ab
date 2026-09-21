@@ -45,28 +45,23 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     fetchingRef.current = userId;
 
     try {
-      const { data, error } = await supabase
-        .from('client_profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+      // Busca os dois cadastros em paralelo. Quando o mesmo login tem os dois,
+      // o contato da empresa tem prioridade: é ele que a WEES usa para indicar
+      // quem assina cada RDO.
+      const [profileRes, contactRes] = await Promise.all([
+        supabase.from('client_profiles').select('*').eq('user_id', userId).maybeSingle(),
+        supabase
+          .from('company_contacts')
+          .select('id, email, name, company_id, role, signature_data, is_active, can_approve, must_change_password')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .maybeSingle(),
+      ]);
 
-      if (error) console.error('Error fetching client profile:', error);
-      if (data) return { ...data, _source: 'client_profiles' as const } as ClientProfile;
+      if (profileRes.error) console.error('Error fetching client profile:', profileRes.error);
+      if (contactRes.error) console.error('Error fetching company contact:', contactRes.error);
 
-      // Fallback: search in company_contacts
-      const { data: contact, error: contactError } = await supabase
-        .from('company_contacts')
-        .select('id, email, name, company_id, role, signature_data, is_active, can_approve, must_change_password')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (contactError) {
-        console.error('Error fetching company contact:', contactError);
-        return null;
-      }
-
+      const contact = contactRes.data;
       if (contact) {
         return {
           id: contact.id,
@@ -82,6 +77,8 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
           _source: 'company_contacts' as const,
         } as ClientProfile;
       }
+
+      if (profileRes.data) return { ...profileRes.data, _source: 'client_profiles' as const } as ClientProfile;
 
       return null;
     } catch {
