@@ -1,0 +1,1 @@
+delete from public.client_profiles where lower(email)='joao.santos.js5@suzano.com.br' and user_id is null;
