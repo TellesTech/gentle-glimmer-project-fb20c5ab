@@ -154,6 +154,25 @@ serve(async (req) => {
       .eq('email', email.toLowerCase())
       .maybeSingle();
 
+    // Evita dois cadastros para a mesma pessoa: se o e-mail já tem um perfil de
+    // cliente, bloqueia a criação de um novo contato da empresa.
+    if (!existing) {
+      const { data: clientProfile } = await supabaseAdmin
+        .from('client_profiles')
+        .select('id')
+        .eq('email', email.toLowerCase())
+        .maybeSingle();
+      if (clientProfile) {
+        return new Response(
+          JSON.stringify({
+            error:
+              'Este e-mail já tem um acesso de cliente cadastrado. Use o cadastro existente em vez de criar um segundo.',
+          }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     if (existing) {
       // Update existing contact's PIN
       const pinHash = await hashPin(pin);
