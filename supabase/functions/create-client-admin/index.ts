@@ -68,14 +68,21 @@ serve(async (req) => {
     if (!companyId) errors.companyId = "Selecione a unidade/empresa";
     if (Object.keys(errors).length) return json({ error: "Dados inválidos", fields: errors }, 400);
 
-    // 4) Evitar duplicidade
-    const { data: existingProfile } = await admin
-      .from("client_profiles")
-      .select("id, user_id")
-      .eq("email", email)
-      .maybeSingle();
+    // 4) Evitar duplicidade — inclusive no outro formato de cadastro (contato da empresa)
+    const [{ data: existingProfile }, { data: existingContact }] = await Promise.all([
+      admin.from("client_profiles").select("id, user_id").eq("email", email).maybeSingle(),
+      admin.from("company_contacts").select("id, name").eq("email", email).maybeSingle(),
+    ]);
     if (existingProfile?.user_id)
       return json({ error: "Já existe um acesso de cliente para este e-mail" }, 409);
+    if (existingContact)
+      return json(
+        {
+          error:
+            "Este e-mail já está cadastrado como contato da empresa. Edite o cadastro existente em Membros da Unidade em vez de criar um segundo acesso.",
+        },
+        409,
+      );
 
     // 5) Criar usuário de autenticação
     const { data: created, error: createErr } = await admin.auth.admin.createUser({
