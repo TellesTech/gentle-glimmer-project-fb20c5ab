@@ -53,6 +53,7 @@ import { cn } from '@/lib/utils';
 import JSZip from 'jszip';
 import { getReportPdfBlob } from '@/lib/clientReportDownload';
 import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
+import { getEdgeFunctionErrorMessage } from '@/lib/edgeFunctionError';
 import { ResponsiveContainer, BarChart, Bar, XAxis as RechartsXAxis, YAxis as RechartsYAxis, Tooltip, CartesianGrid } from 'recharts';
 
 interface PendingReport {
@@ -756,24 +757,24 @@ export default function ClientDashboard() {
     }
     setApprovingId(reportApproverId);
     try {
-      const { error: signatureError } = await supabase
-        .from('report_signatures')
-        .insert({ report_id: reportId, signature_data: effectiveSignatureData, signer_name: effectiveName, signer_role: effectiveRole });
-      if (signatureError) throw signatureError;
-
-      const isContact = clientProfile?._source === 'company_contacts';
-      if (clientProfile) {
-        const { error: updateError } = isContact
-          ? await supabase.from('report_company_approvers').update({ status: 'approved', approved_at: new Date().toISOString() }).eq('id', reportApproverId)
-          : await supabase.from('report_client_approvers').update({ status: 'approved', approved_at: new Date().toISOString() }).eq('id', reportApproverId);
-        if (updateError) throw updateError;
+      const response = await supabase.functions.invoke('submit-signature', {
+        body: { reportId, signatureData: effectiveSignatureData },
+      });
+      if (response.error) {
+        throw new Error(await getEdgeFunctionErrorMessage(response.error, 'Erro ao aplicar sua assinatura'));
       }
+      if (response.data?.error) throw new Error(response.data.error);
 
       toast({ title: 'Relatório aprovado!', description: 'Sua assinatura foi aplicada com sucesso' });
       queryClient.invalidateQueries({ queryKey: ['client-dashboard-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['client-internal-signatures'] });
     } catch (error) {
       console.error('Error approving report:', error);
-      toast({ title: 'Erro ao aprovar', description: 'Ocorreu um erro ao aplicar sua assinatura', variant: 'destructive' });
+      toast({
+        title: 'Não foi possível assinar',
+        description: error instanceof Error ? error.message : 'Ocorreu um erro ao aplicar sua assinatura',
+        variant: 'destructive',
+      });
     } finally {
       setApprovingId(null);
     }

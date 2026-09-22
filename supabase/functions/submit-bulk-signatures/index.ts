@@ -39,6 +39,9 @@ serve(async (req) => {
           ip_address: ipAddress, user_agent: userAgent, legal_basis: "MP 2.200-2/2001",
         }).select("id").single();
         if (signatureError || !signature) {
+          if (signatureError?.code === "23505") {
+            results.push({ reportId: item.reportId, ok: false, error: "Este RDO já foi assinado por você" }); continue;
+          }
           console.error("Bulk signature insert failed:", item.reportId, signatureError);
           results.push({ reportId: item.reportId, ok: false, error: "Não foi possível salvar a assinatura" }); continue;
         }
