@@ -1475,7 +1475,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                               )}
 
                               {/* Header: RDO number + status badges */}
-                              <div className="flex items-center justify-between gap-2 mb-2">
+                              <div className="flex items-center justify-between gap-2 mb-2 pr-9">
                                 <div className="flex items-center gap-2 min-w-0">
                                   <div className="p-2 rounded-lg bg-foreground/10 shrink-0">
                                     <FileText className="h-5 w-5 text-foreground/70" />
@@ -1667,7 +1667,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                 </div>
 
                 {/* Header: icon + name + chevron */}
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-2 pr-16">
                   <div className="p-2 rounded-lg bg-foreground/10 shrink-0">
                     <FolderKanban className="h-5 w-5 text-foreground/70" />
                   </div>
