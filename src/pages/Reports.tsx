@@ -23,6 +23,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { StatusBadge, NoActivityBadge, EmptyState } from '@/components/shared';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { BatchExportDialog, DocumentCabinet, SignedDocumentsSection, ReportProgressStepper } from '@/components/reports';
+import { getReportPdfBlob } from '@/lib/clientReportDownload';
+import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
 import type { CabinetBreadcrumbItem } from '@/components/reports';
 import type { CabinetContext } from '@/components/reports/DocumentCabinet';
 import {
@@ -757,7 +759,25 @@ function ReportCard({ report, selectionMode, isSelected, onToggleSelection }: Re
   const presentCount = report.attendance.filter(a => a.present).length;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const isSuperAdmin = role === 'super_admin';
+
+  const handleDownload = async (blank: boolean) => {
+    setIsDownloading(true);
+    try {
+      const { blob, filename } = await getReportPdfBlob(
+        report.id,
+        blank ? { pdfOptions: { omitSignatures: true }, forceRegenerate: true } : undefined,
+      );
+      triggerDownloadFromBlob(blob, blank ? filename.replace(/\.pdf$/, '-em-branco.pdf') : filename);
+      toast.success('PDF gerado com sucesso');
+    } catch (err) {
+      console.error('[Reports] erro ao baixar PDF', err);
+      toast.error('Não foi possível gerar o PDF deste RDO');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
   
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
@@ -809,25 +829,42 @@ function ReportCard({ report, selectionMode, isSelected, onToggleSelection }: Re
               />
             )}
           </div>
-          {isSuperAdmin && !selectionMode && (
+          {!selectionMode && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
-                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-                  <MoreVertical className="h-4 w-4" />
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  title="Baixar / opções do RDO"
+                  className="h-7 w-7 shrink-0 border border-border shadow-sm bg-background hover:bg-muted"
+                >
+                  {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={(e) => { e.preventDefault(); navigate(`/reports/edit/${report.id}`); }}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Editar
+                <DropdownMenuItem onClick={(e) => { e.preventDefault(); handleDownload(false); }}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Baixar PDF
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="text-destructive focus:text-destructive"
-                  onClick={(e) => { e.preventDefault(); setShowDeleteConfirm(true); }}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Apagar
+                <DropdownMenuItem onClick={(e) => { e.preventDefault(); handleDownload(true); }}>
+                  <FileSignature className="h-4 w-4 mr-2" />
+                  Baixar em branco para assinar
                 </DropdownMenuItem>
+                {isSuperAdmin && (
+                  <>
+                    <DropdownMenuItem onClick={(e) => { e.preventDefault(); navigate(`/reports/edit/${report.id}`); }}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={(e) => { e.preventDefault(); setShowDeleteConfirm(true); }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Apagar
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}

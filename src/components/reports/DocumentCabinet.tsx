@@ -475,13 +475,16 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            variant="ghost"
+            variant="secondary"
             size="icon"
-            className="h-7 w-7 pointer-events-auto"
+            title={isReport ? 'Baixar / opções do RDO' : 'Opções'}
+            className="h-7 w-7 pointer-events-auto border border-border shadow-sm bg-background hover:bg-muted"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
           >
             {downloadingReportId === id ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : isReport ? (
+              <Download className="h-3.5 w-3.5" />
             ) : (
               <MoreVertical className="h-3.5 w-3.5" />
             )}
