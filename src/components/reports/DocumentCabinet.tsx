@@ -5,7 +5,7 @@ import { ptBR } from 'date-fns/locale';
 import { 
   Folder, FileText, ChevronLeft, ChevronRight,
   Building2, MapPin, Calendar, Download, Loader2, HardHat, FolderKanban,
-  MoreVertical, Pencil, Trash2, Plus
+  MoreVertical, Pencil, Trash2, Plus, FileSignature
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useActivityNames } from '@/hooks/useActivityNames';
@@ -50,6 +50,7 @@ import {
   type BatchExportProgress,
 } from '@/lib/generateBatchReportsPdf';
 import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
+import { getReportPdfBlob } from '@/lib/clientReportDownload';
 import { BatchDownloadOptionsDialog } from './BatchDownloadOptionsDialog';
 import type { ReportStatus } from '@/types';
 import type { PdfOptions } from '@/lib/generateReportPdf';
