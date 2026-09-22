@@ -290,6 +290,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
   } | null>(null);
   /** Ids dos RDOs assinados dentro da pasta selecionada para download. */
   const [signedReportIds, setSignedReportIds] = useState<string[]>([]);
+  const [downloadingReportId, setDownloadingReportId] = useState<string | null>(null);
 
   const handleDelete = async () => {
     if (!deletingItem) return;
