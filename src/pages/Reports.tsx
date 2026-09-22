@@ -23,6 +23,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { StatusBadge, NoActivityBadge, EmptyState } from '@/components/shared';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { BatchExportDialog, DocumentCabinet, SignedDocumentsSection, ReportProgressStepper } from '@/components/reports';
+import { getReportPdfBlob } from '@/lib/clientReportDownload';
+import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
 import type { CabinetBreadcrumbItem } from '@/components/reports';
 import type { CabinetContext } from '@/components/reports/DocumentCabinet';
 import {
