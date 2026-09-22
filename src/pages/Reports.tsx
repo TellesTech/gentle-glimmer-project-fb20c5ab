@@ -829,25 +829,42 @@ function ReportCard({ report, selectionMode, isSelected, onToggleSelection }: Re
               />
             )}
           </div>
-          {isSuperAdmin && !selectionMode && (
+          {!selectionMode && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
-                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-                  <MoreVertical className="h-4 w-4" />
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  title="Baixar / opções do RDO"
+                  className="h-7 w-7 shrink-0 border border-border shadow-sm bg-background hover:bg-muted"
+                >
+                  {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={(e) => { e.preventDefault(); navigate(`/reports/edit/${report.id}`); }}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Editar
+                <DropdownMenuItem onClick={(e) => { e.preventDefault(); handleDownload(false); }}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Baixar PDF
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="text-destructive focus:text-destructive"
-                  onClick={(e) => { e.preventDefault(); setShowDeleteConfirm(true); }}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Apagar
+                <DropdownMenuItem onClick={(e) => { e.preventDefault(); handleDownload(true); }}>
+                  <FileSignature className="h-4 w-4 mr-2" />
+                  Baixar em branco para assinar
                 </DropdownMenuItem>
+                {isSuperAdmin && (
+                  <>
+                    <DropdownMenuItem onClick={(e) => { e.preventDefault(); navigate(`/reports/edit/${report.id}`); }}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={(e) => { e.preventDefault(); setShowDeleteConfirm(true); }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Apagar
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
