@@ -21,6 +21,7 @@ interface BatchDownloadOptionsDialogProps {
     includeSignatureFields: boolean;
     signatureFieldLabels: string[];
     onlySigned: boolean;
+    omitSignatures: boolean;
     downloadWindow?: Window | null;
   }) => void;
   reportCount: number;
@@ -38,6 +39,7 @@ export function BatchDownloadOptionsDialog({
   signedCount,
 }: BatchDownloadOptionsDialogProps) {
   const [includeSignatureFields, setIncludeSignatureFields] = useState(false);
+  const [omitSignatures, setOmitSignatures] = useState(false);
   const [onlySigned, setOnlySigned] = useState(false);
   const [signatureLabels, setSignatureLabels] = useState<string[]>([
     'Responsável pela Contratada',
@@ -77,6 +79,7 @@ export function BatchDownloadOptionsDialog({
         includeSignatureFields,
         signatureFieldLabels: signatureLabels.filter((l) => l.trim() !== ''),
         onlySigned,
+        omitSignatures: includeSignatureFields && omitSignatures,
         downloadWindow,
       });
     }, 0);
