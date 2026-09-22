@@ -10,6 +10,12 @@ import { ptBR } from 'date-fns/locale';
     MapPin, Clock, Globe, Timer, CalendarDays, Sparkles, RefreshCw, Download, History, Pencil
   } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -531,18 +537,40 @@ export default function ClientReportView() {
                     {format(parseISO(report.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                   </p>
                 </div>
-                <Button
-                  onClick={handleDownloadPdf}
-                  disabled={isDownloadingPdf}
-                  className="bg-white/20 hover:bg-white/30 text-primary-foreground border border-white/30 shadow-sm"
-                >
-                  {isDownloadingPdf ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Download className="w-4 h-4 mr-2" />
-                  )}
-                  Baixar PDF
-                </Button>
+                <div className="flex">
+                  <Button
+                    onClick={() => handleDownloadPdf(false)}
+                    disabled={isDownloadingPdf}
+                    className="bg-white/20 hover:bg-white/30 text-primary-foreground border border-white/30 shadow-sm rounded-r-none"
+                  >
+                    {isDownloadingPdf ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4 mr-2" />
+                    )}
+                    Baixar PDF
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        disabled={isDownloadingPdf}
+                        className="bg-white/20 hover:bg-white/30 text-primary-foreground border border-white/30 border-l-0 shadow-sm rounded-l-none px-2"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleDownloadPdf(false)}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Com assinaturas
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownloadPdf(true)}>
+                        <FileSignature className="w-4 h-4 mr-2" />
+                        Em branco para assinar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
           </CardContent>
