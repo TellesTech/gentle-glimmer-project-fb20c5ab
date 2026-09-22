@@ -42,6 +42,9 @@ serve(async (req) => {
       ip_address: ipAddress, user_agent: userAgent, legal_basis: "MP 2.200-2/2001",
     }).select("id,signed_at,signer_name").single();
     if (signatureError || !signature) {
+      if (signatureError?.code === "23505") {
+        throw new SignatureAuthError("Este RDO já foi assinado por você", 409);
+      }
       console.error("Error inserting verified signature:", signatureError);
       throw new SignatureAuthError("Não foi possível salvar a assinatura", 500);
     }

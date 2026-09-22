@@ -25,6 +25,7 @@ import { supabase } from '@/integrations/supabase/loose-client';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignatureImage } from '@/components/signatures/SignatureImage';
+import { getEdgeFunctionErrorMessage } from '@/lib/edgeFunctionError';
 import type {
   Report, Company, Site, Project,
   Shift, DeviationType, ImpactLevel, ReportStatus,
@@ -299,19 +300,13 @@ export function SendForSignatureDialog({
     setIsSending(true);
     try {
       if (signerType === 'wees') {
-        // Just register the WEES signature and we're done
-        const { error: sigErr } = await supabase
-          .from('report_signatures')
-          .insert({
-            report_id: report.id,
-            signature_data: weesSigner!.signatureData,
-            signer_name: weesSigner!.name,
-            signer_role: weesSigner!.role || 'Equipe WEES',
-            signer_email: weesSigner!.email,
-            signer_user_id: user.id,
-            legal_basis: 'MP 2.200-2/2001',
-          });
-        if (sigErr) throw sigErr;
+        const response = await supabase.functions.invoke('submit-signature', {
+          body: { reportId: report.id, signatureData: weesSigner!.signatureData },
+        });
+        if (response.error) {
+          throw new Error(await getEdgeFunctionErrorMessage(response.error, 'Erro ao registrar assinatura'));
+        }
+        if (response.data?.error) throw new Error(response.data.error);
 
         await queryClient.invalidateQueries({ queryKey: ['report', report.id] });
         toast.success('Assinatura WEES registrada com sucesso!');
@@ -328,18 +323,13 @@ export function SendForSignatureDialog({
         .maybeSingle();
 
       if (!existingSig) {
-        const { error: sigErr } = await supabase
-          .from('report_signatures')
-          .insert({
-            report_id: report.id,
-            signature_data: weesSigner!.signatureData,
-            signer_name: weesSigner!.name,
-            signer_role: weesSigner!.role || 'Equipe WEES',
-            signer_email: weesSigner!.email,
-            signer_user_id: user.id,
-            legal_basis: 'MP 2.200-2/2001',
-          });
-        if (sigErr) throw sigErr;
+        const response = await supabase.functions.invoke('submit-signature', {
+          body: { reportId: report.id, signatureData: weesSigner!.signatureData },
+        });
+        if (response.error) {
+          throw new Error(await getEdgeFunctionErrorMessage(response.error, 'Erro ao registrar assinatura'));
+        }
+        if (response.data?.error) throw new Error(response.data.error);
       }
 
       // 2) Build PDF with WEES signature embedded
