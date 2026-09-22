@@ -8,9 +8,15 @@ import { ptBR } from 'date-fns/locale';
    AlertTriangle, AlertCircle, CheckCircle2, Circle, Camera, Building2, FolderKanban,
    Edit, Copy, Download, Loader2, X, Archive, Trash2, RotateCcw,
    FileText, CalendarDays, Timer, MessageSquare, ClipboardList, History, Share2,
-   PenTool, Globe, Send, Sparkles, Edit3, RefreshCw, Check, Bot
+   PenTool, Globe, Send, Sparkles, Edit3, RefreshCw, Check, Bot, ChevronDown, FileSignature
  } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { SignatureImage } from '@/components/signatures/SignatureImage';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
