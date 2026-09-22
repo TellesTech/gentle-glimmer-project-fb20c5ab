@@ -757,7 +757,25 @@ function ReportCard({ report, selectionMode, isSelected, onToggleSelection }: Re
   const presentCount = report.attendance.filter(a => a.present).length;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const isSuperAdmin = role === 'super_admin';
+
+  const handleDownload = async (blank: boolean) => {
+    setIsDownloading(true);
+    try {
+      const { blob, filename } = await getReportPdfBlob(
+        report.id,
+        blank ? { pdfOptions: { omitSignatures: true }, forceRegenerate: true } : undefined,
+      );
+      triggerDownloadFromBlob(blob, blank ? filename.replace(/\.pdf$/, '-em-branco.pdf') : filename);
+      toast.success('PDF gerado com sucesso');
+    } catch (err) {
+      console.error('[Reports] erro ao baixar PDF', err);
+      toast.error('Não foi possível gerar o PDF deste RDO');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
   
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
