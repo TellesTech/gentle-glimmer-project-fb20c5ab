@@ -7,7 +7,7 @@ import { ptBR } from 'date-fns/locale';
     Loader2, Sun, Sunset, Moon, Users, CheckCircle2, Circle,
     AlertTriangle, AlertCircle, Camera, Building2, PenLine, Check,
     MessageSquare, ClipboardList, FileText, XCircle, X,
-    MapPin, Clock, Globe, Timer, CalendarDays, Sparkles, RefreshCw, Download, History, Pencil
+    MapPin, Clock, Globe, Timer, CalendarDays, Sparkles, RefreshCw, Download, History, Pencil, ChevronDown, FileSignature
   } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
