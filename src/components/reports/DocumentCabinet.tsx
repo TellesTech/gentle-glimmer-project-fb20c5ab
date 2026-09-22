@@ -1457,7 +1457,8 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                               )}
                             >
                               {/* Actions */}
-                              {isSuperAdmin && (
+                              {(
+
                                 <div className="absolute top-2 right-2 z-10">
                                   <CardActions
                                     id={report.id}
