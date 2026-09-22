@@ -1506,24 +1506,44 @@ export default function ReportDetail() {
         <div className="max-w-2xl mx-auto flex flex-col items-center gap-4">
           
           {/* Botão Principal - Baixar PDF */}
-          <Button 
-            variant="default" 
-            onClick={handleDownloadPdf}
-            disabled={isGeneratingPdf}
-            className="w-full md:w-auto"
-          >
-            {isGeneratingPdf ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Gerando PDF...
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4 mr-2" />
-                Baixar PDF
-              </>
-            )}
-          </Button>
+          <div className="flex w-full md:w-auto">
+            <Button
+              variant="default"
+              onClick={() => handleDownloadPdf(false)}
+              disabled={isGeneratingPdf}
+              className="flex-1 md:flex-none rounded-r-none"
+            >
+              {isGeneratingPdf ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Gerando PDF...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 mr-2" />
+                  Baixar PDF
+                </>
+              )}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="default" disabled={isGeneratingPdf} className="rounded-l-none border-l border-primary-foreground/20 px-2">
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleDownloadPdf(false)}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Com assinaturas
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleDownloadPdf(true)}>
+                  <FileSignature className="w-4 h-4 mr-2" />
+                  Em branco para assinar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           
           {/* Grupo de Ações de Edição - Centralizado */}
           <div className="flex gap-1.5 sm:gap-2 flex-wrap justify-center w-full">
