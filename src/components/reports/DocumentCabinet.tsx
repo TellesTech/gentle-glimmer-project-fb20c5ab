@@ -813,12 +813,10 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
             signed_pdf_url
           `;
 
-  const { data: scopedReports = [], isLoading } = useQuery({
-    queryKey: ['reports-cabinet-all-v2', isRestrictedAdmin ? adminProjectIds : null],
+  const { data: scopedReports = [], isLoading: isLoadingScopedReports } = useQuery({
+    queryKey: ['reports-cabinet-all-v2', user?.id, isRestrictedAdmin ? adminProjectIds : null],
     queryFn: async () => {
-      if (isRestrictedAdmin && (!adminProjectIds || adminProjectIds.length === 0)) {
-        return [] as Report[];
-      }
+      if (!user?.id) return [] as Report[];
 
       // Pagina em chunks de 1000 para evitar o teto padrão do PostgREST.
       const pageSize = 1000;
@@ -834,8 +832,12 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
           .order('date', { ascending: false })
           .range(from, from + pageSize - 1);
 
-        if (isRestrictedAdmin && adminProjectIds && adminProjectIds.length > 0) {
-          query = query.in('project_id', adminProjectIds);
+        if (isRestrictedAdmin) {
+          // A restrição de fábrica vale para RDOs de terceiros, mas nunca deve
+          // esconder um RDO criado pelo próprio usuário.
+          query = adminProjectIds && adminProjectIds.length > 0
+            ? query.or(`created_by.eq.${user.id},project_id.in.(${adminProjectIds.join(',')})`)
+            : query.eq('created_by', user.id);
         }
 
         const { data, error } = await query;
@@ -847,17 +849,18 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
       }
       return all;
     },
-    enabled: !isRestrictedAdmin || (adminProjectIds !== undefined),
+    enabled: !!user?.id && (!isRestrictedAdmin || (adminProjectIds !== undefined)),
   });
 
   // RDOs criados pelo usuário logado — sempre visíveis, independentemente da unidade.
-  const { data: ownReports = [] } = useQuery({
+  const { data: ownReports = [], isLoading: isLoadingOwnReports } = useQuery({
     queryKey: ['reports-cabinet-own-v1', user?.id],
     queryFn: async () => {
+      if (!user?.id) return [] as Report[];
       const { data, error } = await supabase
         .from('reports')
         .select(REPORT_SELECT)
-        .eq('created_by', user!.id)
+        .eq('created_by', user.id)
         .in('status', ['completed', 'draft', 'sent', 'signed', 'finalized'])
         .is('archived_at', null)
         .order('date', { ascending: false })
@@ -875,6 +878,8 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     ownReports.forEach(r => { if (!byId.has(r.id)) byId.set(r.id, r); });
     return Array.from(byId.values()).sort((a, b) => (a.date < b.date ? 1 : -1));
   }, [scopedReports, ownReports]);
+
+  const isLoading = isLoadingScopedReports || isLoadingOwnReports;
 
   // Fetch projects (to surface activities created this month even without RDOs)
   const { data: allProjects = [] } = useQuery({
