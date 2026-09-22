@@ -467,58 +467,16 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     }
   };
 
-  const CardActions = ({ id, type, name, onEdit, reportIds }: { id: string; type: 'company' | 'site' | 'project' | 'report' | 'reportGroup'; name: string; onEdit?: () => void; reportIds?: string[] }) => {
-    const isReport = type === 'report';
+  const CardActions = (props: { id: string; type: 'company' | 'site' | 'project' | 'report' | 'reportGroup'; name: string; onEdit?: () => void; reportIds?: string[] }) => (
+    <CardActionsMenu
+      {...props}
+      isSuperAdmin={isSuperAdmin}
+      downloadingId={downloadingReportId}
+      onDownload={downloadSingleReport}
+      onDelete={(item) => setDeletingItem(item)}
+    />
+  );
 
-    if (!isSuperAdmin && !isReport) return null;
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="secondary"
-            size="icon"
-            title={isReport ? 'Baixar / opções do RDO' : 'Opções'}
-            className="h-7 w-7 pointer-events-auto border border-border shadow-sm bg-background hover:bg-muted"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-          >
-            {downloadingReportId === id ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : isReport ? (
-              <Download className="h-3.5 w-3.5" />
-            ) : (
-              <MoreVertical className="h-3.5 w-3.5" />
-            )}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-          {isReport && (
-            <>
-              <DropdownMenuItem onClick={() => downloadSingleReport(id, false)}>
-                <Download className="h-3.5 w-3.5 mr-2" />
-                Baixar PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => downloadSingleReport(id, true)}>
-                <FileSignature className="h-3.5 w-3.5 mr-2" />
-                Baixar em branco para assinar
-              </DropdownMenuItem>
-            </>
-          )}
-          {isSuperAdmin && (
-            <>
-              <DropdownMenuItem onClick={() => onEdit?.()}>
-                <Pencil className="h-3.5 w-3.5 mr-2" />
-                Editar
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive" onClick={() => setDeletingItem({ id, type, name, reportIds })}>
-                <Trash2 className="h-3.5 w-3.5 mr-2" />
-                {type === 'reportGroup' ? `Excluir ${reportIds?.length ?? 0} RDO(s) desta pasta` : 'Excluir'}
-              </DropdownMenuItem>
-            </>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-  };
 
 
   const openDownloadOptions = (
