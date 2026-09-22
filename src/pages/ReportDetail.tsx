@@ -8,9 +8,15 @@ import { ptBR } from 'date-fns/locale';
    AlertTriangle, AlertCircle, CheckCircle2, Circle, Camera, Building2, FolderKanban,
    Edit, Copy, Download, Loader2, X, Archive, Trash2, RotateCcw,
    FileText, CalendarDays, Timer, MessageSquare, ClipboardList, History, Share2,
-   PenTool, Globe, Send, Sparkles, Edit3, RefreshCw, Check, Bot
+   PenTool, Globe, Send, Sparkles, Edit3, RefreshCw, Check, Bot, ChevronDown, FileSignature
  } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { SignatureImage } from '@/components/signatures/SignatureImage';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -349,7 +355,7 @@ export default function ReportDetail() {
   const rdoDateFormatted = format(parseISO(report.date), 'dd/MM/yyyy');
   const rdoCode = `RDO-${project?.code || 'XXX'}-${format(parseISO(report.date), 'yyyyMMdd')}`;
 
-  const handleDownloadPdf = async () => {
+  const handleDownloadPdf = async (blank = false) => {
     if (report && company && site && project) {
       setIsGeneratingPdf(true);
       try {
@@ -486,7 +492,15 @@ export default function ReportDetail() {
           pdf_logo_url: systemSettings.pdf_logo_url,
         } : undefined;
 
-        await generateReportPdf(reportForPdf, companyForPdf, siteForPdf, projectForPdf, signaturesForPdf, tenantColors);
+        await generateReportPdf(
+          reportForPdf,
+          companyForPdf,
+          siteForPdf,
+          projectForPdf,
+          signaturesForPdf,
+          tenantColors,
+          blank ? { omitSignatures: true } : undefined,
+        );
         toast.success('PDF baixado com sucesso!');
       } catch (error) {
         console.error('Error generating PDF:', error);
@@ -1498,24 +1512,44 @@ export default function ReportDetail() {
         <div className="max-w-2xl mx-auto flex flex-col items-center gap-4">
           
           {/* Botão Principal - Baixar PDF */}
-          <Button 
-            variant="default" 
-            onClick={handleDownloadPdf}
-            disabled={isGeneratingPdf}
-            className="w-full md:w-auto"
-          >
-            {isGeneratingPdf ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Gerando PDF...
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4 mr-2" />
-                Baixar PDF
-              </>
-            )}
-          </Button>
+          <div className="flex w-full md:w-auto">
+            <Button
+              variant="default"
+              onClick={() => handleDownloadPdf(false)}
+              disabled={isGeneratingPdf}
+              className="flex-1 md:flex-none rounded-r-none"
+            >
+              {isGeneratingPdf ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Gerando PDF...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 mr-2" />
+                  Baixar PDF
+                </>
+              )}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="default" disabled={isGeneratingPdf} className="rounded-l-none border-l border-primary-foreground/20 px-2">
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleDownloadPdf(false)}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Com assinaturas
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleDownloadPdf(true)}>
+                  <FileSignature className="w-4 h-4 mr-2" />
+                  Em branco para assinar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           
           {/* Grupo de Ações de Edição - Centralizado */}
           <div className="flex gap-1.5 sm:gap-2 flex-wrap justify-center w-full">

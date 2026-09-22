@@ -5,7 +5,7 @@ import { ptBR } from 'date-fns/locale';
 import { 
   Folder, FileText, ChevronLeft, ChevronRight,
   Building2, MapPin, Calendar, Download, Loader2, HardHat, FolderKanban,
-  MoreVertical, Pencil, Trash2, Plus
+  MoreVertical, Pencil, Trash2, Plus, FileSignature
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useActivityNames } from '@/hooks/useActivityNames';
@@ -50,6 +50,7 @@ import {
   type BatchExportProgress,
 } from '@/lib/generateBatchReportsPdf';
 import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
+import { getReportPdfBlob } from '@/lib/clientReportDownload';
 import { BatchDownloadOptionsDialog } from './BatchDownloadOptionsDialog';
 import type { ReportStatus } from '@/types';
 import type { PdfOptions } from '@/lib/generateReportPdf';
@@ -289,6 +290,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
   } | null>(null);
   /** Ids dos RDOs assinados dentro da pasta selecionada para download. */
   const [signedReportIds, setSignedReportIds] = useState<string[]>([]);
+  const [downloadingReportId, setDownloadingReportId] = useState<string | null>(null);
 
   const handleDelete = async () => {
     if (!deletingItem) return;
@@ -445,9 +447,30 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     }
   };
 
-  const CardActions = ({ id, type, name, onEdit, reportIds }: { id: string; type: 'company' | 'site' | 'project' | 'report' | 'reportGroup'; name: string; onEdit?: () => void; reportIds?: string[] }) => {
+  const downloadSingleReport = async (reportId: string, blank: boolean) => {
+    setDownloadingReportId(reportId);
+    try {
+      const { blob, filename } = await getReportPdfBlob(
+        reportId,
+        blank ? { pdfOptions: { omitSignatures: true }, forceRegenerate: true } : undefined,
+      );
+      triggerDownloadFromBlob(blob, blank ? filename.replace(/\.pdf$/, '-em-branco.pdf') : filename);
+      toast({ title: 'PDF gerado', description: blank ? 'PDF em branco para assinatura.' : 'Download iniciado.' });
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao gerar PDF',
+        description: error?.message || 'Não foi possível gerar o PDF deste RDO.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDownloadingReportId(null);
+    }
+  };
 
-    if (!isSuperAdmin) return null;
+  const CardActions = ({ id, type, name, onEdit, reportIds }: { id: string; type: 'company' | 'site' | 'project' | 'report' | 'reportGroup'; name: string; onEdit?: () => void; reportIds?: string[] }) => {
+    const isReport = type === 'report';
+
+    if (!isSuperAdmin && !isReport) return null;
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -457,22 +480,43 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
             className="h-7 w-7 pointer-events-auto"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
           >
-            <MoreVertical className="h-3.5 w-3.5" />
+            {downloadingReportId === id ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <MoreVertical className="h-3.5 w-3.5" />
+            )}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-          <DropdownMenuItem onClick={() => onEdit?.()}>
-            <Pencil className="h-3.5 w-3.5 mr-2" />
-            Editar
-          </DropdownMenuItem>
-          <DropdownMenuItem className="text-destructive" onClick={() => setDeletingItem({ id, type, name, reportIds })}>
-            <Trash2 className="h-3.5 w-3.5 mr-2" />
-            {type === 'reportGroup' ? `Excluir ${reportIds?.length ?? 0} RDO(s) desta pasta` : 'Excluir'}
-          </DropdownMenuItem>
+          {isReport && (
+            <>
+              <DropdownMenuItem onClick={() => downloadSingleReport(id, false)}>
+                <Download className="h-3.5 w-3.5 mr-2" />
+                Baixar PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => downloadSingleReport(id, true)}>
+                <FileSignature className="h-3.5 w-3.5 mr-2" />
+                Baixar em branco para assinar
+              </DropdownMenuItem>
+            </>
+          )}
+          {isSuperAdmin && (
+            <>
+              <DropdownMenuItem onClick={() => onEdit?.()}>
+                <Pencil className="h-3.5 w-3.5 mr-2" />
+                Editar
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive" onClick={() => setDeletingItem({ id, type, name, reportIds })}>
+                <Trash2 className="h-3.5 w-3.5 mr-2" />
+                {type === 'reportGroup' ? `Excluir ${reportIds?.length ?? 0} RDO(s) desta pasta` : 'Excluir'}
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     );
   };
+
 
   const openDownloadOptions = (
     e: React.MouseEvent,
@@ -514,6 +558,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     includeSignatureFields: boolean;
     signatureFieldLabels: string[];
     onlySigned: boolean;
+    omitSignatures?: boolean;
     downloadWindow?: Window | null;
   }) => {
     if (!pendingDownload) return;
@@ -541,6 +586,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     const pdfOptions: PdfOptions = {
       includeSignatureFields: options.includeSignatureFields,
       signatureFieldLabels: options.signatureFieldLabels,
+      omitSignatures: options.omitSignatures,
     };
 
     try {
@@ -1413,7 +1459,8 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                               )}
                             >
                               {/* Actions */}
-                              {isSuperAdmin && (
+                              {(
+
                                 <div className="absolute top-2 right-2 z-10">
                                   <CardActions
                                     id={report.id}

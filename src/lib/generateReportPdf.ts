@@ -196,6 +196,8 @@ export interface TenantColors {
 export interface PdfOptions {
   includeSignatureFields?: boolean;
   signatureFieldLabels?: string[];
+  /** Não imprime as assinaturas já registradas (PDF em branco para assinar). */
+  omitSignatures?: boolean;
 }
 
 // Helper: Convert hex to RGB
@@ -1066,7 +1068,7 @@ async function buildReportPdfDoc(
       return ta - tb;
     });
   
-  if (manualSignatures.length > 0) {
+  if (!pdfOptions?.omitSignatures && manualSignatures.length > 0) {
     drawSectionTitle('Assinaturas', `${manualSignatures.length} assinatura${manualSignatures.length > 1 ? 's' : ''}`);
     
     for (const sig of manualSignatures) {
@@ -1187,11 +1189,22 @@ async function buildReportPdfDoc(
   }
   
   // === CAMPOS DE ASSINATURA EM BRANCO (para impressão) ===
-  if (pdfOptions?.includeSignatureFields) {
-    const labels = pdfOptions.signatureFieldLabels || [
-      'Responsável pela Contratada',
-      'Responsável pela Contratante'
-    ];
+  if (pdfOptions?.includeSignatureFields || pdfOptions?.omitSignatures) {
+    const signerLabels = pdfOptions?.omitSignatures
+      ? manualSignatures
+          .map((sig) => (sig.signerName || '').replace(/\s*-\s*Wees$/i, '').trim())
+          .filter((n) => n.length > 0)
+      : [];
+
+    const labels = pdfOptions.signatureFieldLabels?.length
+      ? pdfOptions.signatureFieldLabels
+      : signerLabels.length > 0
+      ? signerLabels
+      : [
+          'Responsável pela Contratada',
+          'Responsável pela Contratante'
+        ];
+
     
     drawSectionTitle('Campos para Assinatura', `${labels.length} campo${labels.length > 1 ? 's' : ''}`);
     

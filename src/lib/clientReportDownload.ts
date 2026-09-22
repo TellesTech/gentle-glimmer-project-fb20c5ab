@@ -54,7 +54,11 @@ export async function getReportPdfBlob(
     return t > acc ? t : acc;
   }, 0);
 
-  const mustRegenerate = Boolean(options?.forceRegenerate || options?.pdfOptions?.includeSignatureFields);
+  const mustRegenerate = Boolean(
+    options?.forceRegenerate ||
+      options?.pdfOptions?.includeSignatureFields ||
+      options?.pdfOptions?.omitSignatures,
+  );
 
   if (signedUrl && !mustRegenerate) {
     try {

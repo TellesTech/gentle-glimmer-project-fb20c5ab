@@ -21,6 +21,7 @@ interface BatchDownloadOptionsDialogProps {
     includeSignatureFields: boolean;
     signatureFieldLabels: string[];
     onlySigned: boolean;
+    omitSignatures: boolean;
     downloadWindow?: Window | null;
   }) => void;
   reportCount: number;
@@ -38,6 +39,7 @@ export function BatchDownloadOptionsDialog({
   signedCount,
 }: BatchDownloadOptionsDialogProps) {
   const [includeSignatureFields, setIncludeSignatureFields] = useState(false);
+  const [omitSignatures, setOmitSignatures] = useState(false);
   const [onlySigned, setOnlySigned] = useState(false);
   const [signatureLabels, setSignatureLabels] = useState<string[]>([
     'Responsável pela Contratada',
@@ -77,6 +79,7 @@ export function BatchDownloadOptionsDialog({
         includeSignatureFields,
         signatureFieldLabels: signatureLabels.filter((l) => l.trim() !== ''),
         onlySigned,
+        omitSignatures: includeSignatureFields && omitSignatures,
         downloadWindow,
       });
     }, 0);
@@ -149,6 +152,21 @@ export function BatchDownloadOptionsDialog({
 
           {includeSignatureFields && (
             <div className="ml-6 space-y-3 border-l-2 border-primary/20 pl-4">
+              <div className="flex items-start space-x-3">
+                <Checkbox
+                  id="omit-signatures"
+                  checked={omitSignatures}
+                  onCheckedChange={(checked) => setOmitSignatures(checked === true)}
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="omit-signatures" className="cursor-pointer">
+                    Remover as assinaturas já registradas
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Os PDFs saem em branco, prontos para assinatura manual
+                  </p>
+                </div>
+              </div>
               <Label className="text-sm font-medium">
                 Rótulos dos campos de assinatura:
               </Label>

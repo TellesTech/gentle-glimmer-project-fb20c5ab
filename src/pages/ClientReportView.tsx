@@ -7,9 +7,15 @@ import { ptBR } from 'date-fns/locale';
     Loader2, Sun, Sunset, Moon, Users, CheckCircle2, Circle,
     AlertTriangle, AlertCircle, Camera, Building2, PenLine, Check,
     MessageSquare, ClipboardList, FileText, XCircle, X,
-    MapPin, Clock, Globe, Timer, CalendarDays, Sparkles, RefreshCw, Download, History, Pencil
+    MapPin, Clock, Globe, Timer, CalendarDays, Sparkles, RefreshCw, Download, History, Pencil, ChevronDown, FileSignature
   } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -418,11 +424,14 @@ export default function ClientReportView() {
   const rdoNumber = (report.rdo_number ?? 1).toString().padStart(3, '0');
   const rdoDateFormatted = format(parseISO(report.date), 'dd/MM/yyyy');
 
-  const handleDownloadPdf = async () => {
+  const handleDownloadPdf = async (blank = false) => {
     setIsDownloadingPdf(true);
     try {
-      const { blob, filename } = await getReportPdfBlob(report.id);
-      triggerDownloadFromBlob(blob, filename);
+      const { blob, filename } = await getReportPdfBlob(
+        report.id,
+        blank ? { pdfOptions: { omitSignatures: true }, forceRegenerate: true } : undefined,
+      );
+      triggerDownloadFromBlob(blob, blank ? filename.replace(/\.pdf$/, '-em-branco.pdf') : filename);
       toast.success('PDF gerado com sucesso');
     } catch (err) {
       console.error('[ClientReportView] erro ao baixar PDF', err);
@@ -528,18 +537,40 @@ export default function ClientReportView() {
                     {format(parseISO(report.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                   </p>
                 </div>
-                <Button
-                  onClick={handleDownloadPdf}
-                  disabled={isDownloadingPdf}
-                  className="bg-white/20 hover:bg-white/30 text-primary-foreground border border-white/30 shadow-sm"
-                >
-                  {isDownloadingPdf ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Download className="w-4 h-4 mr-2" />
-                  )}
-                  Baixar PDF
-                </Button>
+                <div className="flex">
+                  <Button
+                    onClick={() => handleDownloadPdf(false)}
+                    disabled={isDownloadingPdf}
+                    className="bg-white/20 hover:bg-white/30 text-primary-foreground border border-white/30 shadow-sm rounded-r-none"
+                  >
+                    {isDownloadingPdf ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4 mr-2" />
+                    )}
+                    Baixar PDF
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        disabled={isDownloadingPdf}
+                        className="bg-white/20 hover:bg-white/30 text-primary-foreground border border-white/30 border-l-0 shadow-sm rounded-l-none px-2"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleDownloadPdf(false)}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Com assinaturas
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownloadPdf(true)}>
+                        <FileSignature className="w-4 h-4 mr-2" />
+                        Em branco para assinar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
           </CardContent>
