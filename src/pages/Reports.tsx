@@ -88,7 +88,7 @@ interface ReportWithRelations {
   signed_pdf_url: string | null;
 }
 
-export default function Reports() {
+function ReportsContent() {
   const { user, role } = useAuth();
   const navigate = useNavigate();
   const { siteIds, isLoading: isLoadingAdminSites } = useAdminSiteAccess();
@@ -916,5 +916,14 @@ function ReportCard({ report, selectionMode, isSelected, onToggleSelection }: Re
         isLoading={isDeleting}
       />
     </>
+  );
+}
+
+/** Protege a tela: uma falha pontual mostra aviso com recarregar, em vez de tela em branco. */
+export default function Reports() {
+  return (
+    <ErrorBoundary>
+      <ReportsContent />
+    </ErrorBoundary>
   );
 }
