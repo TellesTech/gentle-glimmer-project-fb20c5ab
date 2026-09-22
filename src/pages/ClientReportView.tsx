@@ -418,11 +418,14 @@ export default function ClientReportView() {
   const rdoNumber = (report.rdo_number ?? 1).toString().padStart(3, '0');
   const rdoDateFormatted = format(parseISO(report.date), 'dd/MM/yyyy');
 
-  const handleDownloadPdf = async () => {
+  const handleDownloadPdf = async (blank = false) => {
     setIsDownloadingPdf(true);
     try {
-      const { blob, filename } = await getReportPdfBlob(report.id);
-      triggerDownloadFromBlob(blob, filename);
+      const { blob, filename } = await getReportPdfBlob(
+        report.id,
+        blank ? { pdfOptions: { omitSignatures: true }, forceRegenerate: true } : undefined,
+      );
+      triggerDownloadFromBlob(blob, blank ? filename.replace(/\.pdf$/, '-em-branco.pdf') : filename);
       toast.success('PDF gerado com sucesso');
     } catch (err) {
       console.error('[ClientReportView] erro ao baixar PDF', err);
