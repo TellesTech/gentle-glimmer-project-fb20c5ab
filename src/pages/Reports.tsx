@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import ErrorBoundary from '@/components/shared/ErrorBoundary';
 
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -88,7 +89,7 @@ interface ReportWithRelations {
   signed_pdf_url: string | null;
 }
 
-export default function Reports() {
+function ReportsContent() {
   const { user, role } = useAuth();
   const navigate = useNavigate();
   const { siteIds, isLoading: isLoadingAdminSites } = useAdminSiteAccess();
@@ -916,5 +917,14 @@ function ReportCard({ report, selectionMode, isSelected, onToggleSelection }: Re
         isLoading={isDeleting}
       />
     </>
+  );
+}
+
+/** Protege a tela: uma falha pontual mostra aviso com recarregar, em vez de tela em branco. */
+export default function Reports() {
+  return (
+    <ErrorBoundary>
+      <ReportsContent />
+    </ErrorBoundary>
   );
 }
