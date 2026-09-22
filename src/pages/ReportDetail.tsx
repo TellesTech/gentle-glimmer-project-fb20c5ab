@@ -349,7 +349,7 @@ export default function ReportDetail() {
   const rdoDateFormatted = format(parseISO(report.date), 'dd/MM/yyyy');
   const rdoCode = `RDO-${project?.code || 'XXX'}-${format(parseISO(report.date), 'yyyyMMdd')}`;
 
-  const handleDownloadPdf = async () => {
+  const handleDownloadPdf = async (blank = false) => {
     if (report && company && site && project) {
       setIsGeneratingPdf(true);
       try {
@@ -486,7 +486,15 @@ export default function ReportDetail() {
           pdf_logo_url: systemSettings.pdf_logo_url,
         } : undefined;
 
-        await generateReportPdf(reportForPdf, companyForPdf, siteForPdf, projectForPdf, signaturesForPdf, tenantColors);
+        await generateReportPdf(
+          reportForPdf,
+          companyForPdf,
+          siteForPdf,
+          projectForPdf,
+          signaturesForPdf,
+          tenantColors,
+          blank ? { omitSignatures: true } : undefined,
+        );
         toast.success('PDF baixado com sucesso!');
       } catch (error) {
         console.error('Error generating PDF:', error);

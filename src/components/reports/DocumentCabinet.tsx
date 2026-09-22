@@ -558,6 +558,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     includeSignatureFields: boolean;
     signatureFieldLabels: string[];
     onlySigned: boolean;
+    omitSignatures?: boolean;
     downloadWindow?: Window | null;
   }) => {
     if (!pendingDownload) return;
@@ -585,6 +586,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     const pdfOptions: PdfOptions = {
       includeSignatureFields: options.includeSignatureFields,
       signatureFieldLabels: options.signatureFieldLabels,
+      omitSignatures: options.omitSignatures,
     };
 
     try {
