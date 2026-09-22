@@ -814,8 +814,10 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
           `;
 
   const { data: scopedReports = [], isLoading: isLoadingScopedReports } = useQuery({
-    queryKey: ['reports-cabinet-all-v2', isRestrictedAdmin ? adminProjectIds : null],
+    queryKey: ['reports-cabinet-all-v2', user?.id, isRestrictedAdmin ? adminProjectIds : null],
     queryFn: async () => {
+      if (!user?.id) return [] as Report[];
+
       // Pagina em chunks de 1000 para evitar o teto padrão do PostgREST.
       const pageSize = 1000;
       const all: Report[] = [];
@@ -834,8 +836,8 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
           // A restrição de fábrica vale para RDOs de terceiros, mas nunca deve
           // esconder um RDO criado pelo próprio usuário.
           query = adminProjectIds && adminProjectIds.length > 0
-            ? query.or(`created_by.eq.${user?.id},project_id.in.(${adminProjectIds.join(',')})`)
-            : query.eq('created_by', user?.id);
+            ? query.or(`created_by.eq.${user.id},project_id.in.(${adminProjectIds.join(',')})`)
+            : query.eq('created_by', user.id);
         }
 
         const { data, error } = await query;
@@ -854,10 +856,11 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
   const { data: ownReports = [], isLoading: isLoadingOwnReports } = useQuery({
     queryKey: ['reports-cabinet-own-v1', user?.id],
     queryFn: async () => {
+      if (!user?.id) return [] as Report[];
       const { data, error } = await supabase
         .from('reports')
         .select(REPORT_SELECT)
-        .eq('created_by', user!.id)
+        .eq('created_by', user.id)
         .in('status', ['completed', 'draft', 'sent', 'signed', 'finalized'])
         .is('archived_at', null)
         .order('date', { ascending: false })
