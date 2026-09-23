@@ -111,6 +111,27 @@ async function fetchReportFromPortal(reportId: string) {
   }
 }
 
+async function recoverReportPhotos(reportId: string): Promise<any[] | null> {
+  const { data: directPhotos, error } = await supabase
+    .from('report_photos')
+    .select('*')
+    .eq('report_id', reportId);
+  if (!error && Array.isArray(directPhotos)) {
+    if (directPhotos.length > 0) {
+      console.info(`[pdf-foto] fotos recuperadas em consulta direta: ${directPhotos.length}`);
+    }
+    return directPhotos;
+  }
+
+  console.warn('[pdf-foto] consulta direta falhou:', describeError(error));
+  const portalReport = await fetchReportFromPortal(reportId);
+  if (Array.isArray(portalReport?.photos)) {
+    console.info(`[pdf-foto] fotos confirmadas pelo portal: ${portalReport.photos.length}`);
+    return portalReport.photos;
+  }
+  return null;
+}
+
 export function buildRdoFileName(rdoNumber?: number | null, date?: string | null) {
   const num = (rdoNumber ?? 0).toString().padStart(3, '0');
   const d = date ? date.slice(0, 10) : 'sem-data';
@@ -151,6 +172,14 @@ export async function getReportPdfBlob(
   if (!Array.isArray(report.signatures)) {
     const children = await fetchReportChildren(reportId);
     report = { ...report, ...children };
+  }
+
+  if (!Array.isArray(report.photos) || report.photos.length === 0) {
+    const recoveredPhotos = await recoverReportPhotos(reportId);
+    if (recoveredPhotos === null) {
+      throw new Error('Não foi possível confirmar as fotos atuais deste RDO. Tente novamente.');
+    }
+    report.photos = recoveredPhotos;
   }
 
   const filename = buildRdoFileName((report as any).rdo_number, (report as any).date);
@@ -206,33 +235,6 @@ export async function getReportPdfBlob(
     .maybeSingle();
 
   const r: any = report;
-
-  // Rede de segurança: se as fotos não vieram junto (permissão/embed),
-  // busca em consulta separada e, em último caso, pela função do portal.
-  if (!Array.isArray(r.photos) || r.photos.length === 0) {
-    const { data: directPhotos } = await supabase
-      .from('report_photos')
-      .select('*')
-      .eq('report_id', reportId);
-    if (directPhotos && directPhotos.length > 0) {
-      r.photos = directPhotos;
-      console.info(`[pdf-foto] fotos recuperadas em consulta direta: ${directPhotos.length}`);
-    } else {
-      try {
-        const { data: portalData } = await supabase.functions.invoke('get-client-report', {
-          body: { reportId },
-        });
-        const portalPhotos = (portalData as any)?.report?.photos || (portalData as any)?.photos;
-        if (Array.isArray(portalPhotos) && portalPhotos.length > 0) {
-          r.photos = portalPhotos;
-          console.info(`[pdf-foto] fotos recuperadas pelo portal: ${portalPhotos.length}`);
-        }
-      } catch (err) {
-        console.warn('[pdf-foto] não foi possível recuperar as fotos pelo portal', err);
-      }
-    }
-  }
-
 
   const reportForPdf: any = {
     id: r.id,
