@@ -167,6 +167,7 @@ export async function getReportPdfBlob(
       options?.pdfOptions?.includeSignatureFields ||
       options?.pdfOptions?.omitSignatures,
   );
+  let storedPdfIsCurrent = false;
 
   if (signedUrl && !mustRegenerate) {
     try {
@@ -176,6 +177,7 @@ export async function getReportPdfBlob(
         const fileTime = lastModifiedHeader ? new Date(lastModifiedHeader).getTime() : 0;
         const isStale = !fileTime || fileTime < Math.max(lastSignatureAt, latestContentAt);
         if (!isStale) {
+          storedPdfIsCurrent = true;
           const blob = await resp.blob();
           if (blob.size > 0) return { blob, filename };
         } else {
@@ -363,7 +365,7 @@ export async function getReportPdfBlob(
     return { blob, filename };
   } catch (err) {
     console.error('[pdf] falha ao gerar o PDF:', describeError(err));
-    if (!mustRegenerate) {
+    if (!mustRegenerate && storedPdfIsCurrent) {
       const fallback = await tryStoredPdf(signedUrl);
       if (fallback) return { blob: fallback, filename };
     }
