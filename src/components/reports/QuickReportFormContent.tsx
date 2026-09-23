@@ -60,7 +60,6 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useDelayReasons, DelayCategory } from '@/hooks/useDelayReasons';
 import { DelayControlSection } from './DelayControlSection';
-import { syncReportPhotosNow } from '@/lib/reportPhotosSync';
 
 
 interface SelectionData {
@@ -710,19 +709,8 @@ export function QuickReportFormContent({ selection, onBack, onSubmit, isSubmitti
   };
 
   const handlePhotosChange = useCallback((photos: string[]) => {
-    setFormData(prev => {
-      // Em edição de RDO existente, persiste na hora (não depende do "Salvar")
-      if (isEditMode && reportId) {
-        syncReportPhotosNow(reportId, prev.photos || [], photos).catch((err) => {
-          console.error('[report_photos] sync error', err);
-          toast.error('Não foi possível salvar as fotos', {
-            description: err instanceof Error ? err.message : 'Erro desconhecido',
-          });
-        });
-      }
-      return { ...prev, photos };
-    });
-  }, [isEditMode, reportId]);
+    setFormData(prev => ({ ...prev, photos }));
+  }, []);
 
   // RDO novo: fotos só são gravadas ao salvar — avisa antes de sair da página
   useEffect(() => {

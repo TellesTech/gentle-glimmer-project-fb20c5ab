@@ -17,7 +17,7 @@ import { supabase } from '@/integrations/supabase/loose-client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { getValidProfileIds } from '@/lib/sanitizeAttendanceUserIds';
-import { syncReportPhotosNow } from '@/lib/reportPhotosSync';
+import { saveReportPhotos } from '@/lib/reportPhotosSync';
 
 import type { Activity, Deviation, Attendance, Shift } from '@/types';
 import { format, parseISO } from 'date-fns';
@@ -459,20 +459,6 @@ export default function ReportForm() {
   }, [formData, isEditing]);
 
   const updateFormData = (data: Partial<ReportFormData>) => {
-    // Ao editar um RDO existente, grava as fotos imediatamente para que elas
-    // não dependam do clique em "Salvar" (evita fotos órfãs no storage).
-    if (isEditing && id && data.photos) {
-      const prev = formData.photos || [];
-      const next = data.photos;
-      syncReportPhotosNow(id, prev, next).catch((err) => {
-        console.error('[report_photos] sync error', err);
-        toast({
-          title: 'Não foi possível salvar as fotos',
-          description: err instanceof Error ? err.message : 'Erro desconhecido',
-          variant: 'destructive',
-        });
-      });
-    }
     setFormData(prev => ({ ...prev, ...data }));
   };
 
@@ -652,32 +638,7 @@ export default function ReportForm() {
         }
       }
 
-      // Handle photos - sincroniza pelo estado atual do banco
-      const { data: dbPhotos, error: photosFetchError } = await supabase
-        .from('report_photos')
-        .select('id, url')
-        .eq('report_id', reportId);
-      if (photosFetchError) throw new Error('Erro ao carregar fotos: ' + photosFetchError.message);
-
-      const existingPhotoUrls = (dbPhotos || []).map((p: any) => p.url);
-      const currentPhotoUrls = formData.photos;
-      const photosToDelete = (dbPhotos || [])
-        .filter((p: any) => !currentPhotoUrls.includes(p.url))
-        .map((p: any) => p.id);
-
-      // Insert new photos only
-      const newPhotos = currentPhotoUrls.filter(url => !existingPhotoUrls.includes(url));
-      if (newPhotos.length > 0) {
-        const { error: photoInsertError } = await supabase.from('report_photos').insert(
-          newPhotos.map(url => ({ report_id: reportId, url, description: null }))
-        );
-        if (photoInsertError) throw new Error('Não foi possível salvar as fotos: ' + photoInsertError.message);
-      }
-
-      if (photosToDelete.length > 0) {
-        const { error: photoDeleteError } = await supabase.from('report_photos').delete().in('id', photosToDelete);
-        if (photoDeleteError) throw new Error('Não foi possível remover as fotos: ' + photoDeleteError.message);
-      }
+      await saveReportPhotos(reportId, formData.photos);
 
       return { id: reportId };
     } else {
@@ -760,17 +721,7 @@ export default function ReportForm() {
         await supabase.from('report_attendance').insert(attendanceData);
       }
 
-      // Insert photos
-      if (formData.photos.length > 0) {
-        const photosData = formData.photos.map(url => ({
-          report_id: reportId,
-          url: url,
-          description: null,
-        }));
-
-        const { error: photoInsertError } = await supabase.from('report_photos').insert(photosData);
-        if (photoInsertError) throw new Error('Não foi possível salvar as fotos: ' + photoInsertError.message);
-      }
+      await saveReportPhotos(reportId, formData.photos);
 
       return report;
     }

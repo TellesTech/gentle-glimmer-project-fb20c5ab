@@ -28,7 +28,7 @@ export function PhotoUploader({
 }: PhotoUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState<UploadingPhoto[]>([]);
-  const { uploadFile, deleteFile, isUploading } = useStorageUpload('service-report-photos');
+  const { uploadFile, isUploading } = useStorageUpload('service-report-photos');
 
   // Refs to avoid stale closures in async processFiles
   const photosRef = useRef(photos);
@@ -139,16 +139,8 @@ export function PhotoUploader({
     newUploadingPhotos.forEach(p => URL.revokeObjectURL(p.preview));
   };
 
-  const removePhoto = async (index: number) => {
-    const photoUrl = photos[index];
-    
-    // Try to delete from storage (non-blocking)
-    if (photoUrl.includes('supabase')) {
-      deleteFile(photoUrl).catch(() => {
-        // Ignore delete errors - file might already be removed
-      });
-    }
-
+  const removePhoto = (index: number) => {
+    if (!window.confirm('Remover esta foto do RDO? A alteração será aplicada ao salvar.')) return;
     const newPhotos = photos.filter((_, i) => i !== index);
     onPhotosChange(newPhotos);
   };
