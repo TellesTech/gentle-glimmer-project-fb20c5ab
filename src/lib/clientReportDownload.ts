@@ -2,17 +2,79 @@ import { parseISO } from 'date-fns';
 import { supabase } from '@/integrations/supabase/loose-client';
 import { generateReportPdfAsBlob, type PdfOptions } from '@/lib/generateReportPdf';
 
-const REPORT_SELECT = `
+const REPORT_BASE_SELECT = `
   *,
   project:projects(*, site:sites(*, company:companies(*))),
   team:teams(*),
-  creator:profiles!created_by(id, name, avatar_url),
-  activities:report_activities(*),
-  deviations:report_deviations(*),
-  attendance:report_attendance(*),
-  photos:report_photos(*),
-  signatures:report_signatures(*)
+  creator:profiles!created_by(id, name, avatar_url)
 `;
+
+const CHILD_TABLES = [
+  ['activities', 'report_activities'],
+  ['deviations', 'report_deviations'],
+  ['attendance', 'report_attendance'],
+  ['photos', 'report_photos'],
+  ['signatures', 'report_signatures'],
+] as const;
+
+function describeError(err: any) {
+  if (!err) return 'erro desconhecido';
+  const parts = [err.message, err.details, err.hint, err.code].filter(Boolean);
+  return parts.length ? parts.join(' | ') : String(err);
+}
+
+async function fetchReportBase(reportId: string) {
+  let lastError: any = null;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const { data, error } = await supabase
+      .from('reports')
+      .select(REPORT_BASE_SELECT)
+      .eq('id', reportId)
+      .maybeSingle();
+    if (!error && data) return { report: data as any, error: null as any };
+    lastError = error;
+    if (!error && !data) return { report: null, error: null as any };
+    console.warn(`[pdf] tentativa ${attempt} falhou ao buscar o RDO:`, describeError(error));
+    if (attempt === 1) await new Promise((r) => setTimeout(r, 800));
+  }
+  return { report: null, error: lastError };
+}
+
+async function fetchReportChildren(reportId: string) {
+  const results = await Promise.allSettled(
+    CHILD_TABLES.map(([, table]) =>
+      supabase.from(table).select('*').eq('report_id', reportId),
+    ),
+  );
+  const out: Record<string, any[]> = {};
+  results.forEach((res, i) => {
+    const [key, table] = CHILD_TABLES[i];
+    if (res.status === 'fulfilled' && !res.value.error) {
+      out[key] = res.value.data || [];
+    } else {
+      out[key] = [];
+      const reason = res.status === 'fulfilled' ? describeError(res.value.error) : describeError(res.reason);
+      console.warn(`[pdf] não foi possível carregar ${table}: ${reason}`);
+    }
+  });
+  return out;
+}
+
+async function fetchReportFromPortal(reportId: string) {
+  try {
+    const { data, error } = await supabase.functions.invoke('get-client-report', {
+      body: { reportId },
+    });
+    if (error) {
+      console.warn('[pdf] portal não retornou o RDO:', describeError(error));
+      return null;
+    }
+    return (data as any)?.report || (data as any) || null;
+  } catch (err) {
+    console.warn('[pdf] falha ao consultar o portal:', describeError(err));
+    return null;
+  }
+}
 
 export function buildRdoFileName(rdoNumber?: number | null, date?: string | null) {
   const num = (rdoNumber ?? 0).toString().padStart(3, '0');
