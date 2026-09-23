@@ -329,15 +329,23 @@ export async function getReportPdfBlob(
       }
     : undefined;
 
-  const blob = await generateReportPdfAsBlob(
-    reportForPdf,
-    companyForPdf,
-    siteForPdf,
-    projectForPdf,
-    reportForPdf.signatures,
-    tenantColors,
-    options?.pdfOptions,
-  );
-
-  return { blob, filename };
+  try {
+    const blob = await generateReportPdfAsBlob(
+      reportForPdf,
+      companyForPdf,
+      siteForPdf,
+      projectForPdf,
+      reportForPdf.signatures,
+      tenantColors,
+      options?.pdfOptions,
+    );
+    return { blob, filename };
+  } catch (err) {
+    console.error('[pdf] falha ao gerar o PDF:', describeError(err));
+    if (!mustRegenerate) {
+      const fallback = await tryStoredPdf(signedUrl);
+      if (fallback) return { blob: fallback, filename };
+    }
+    throw new Error(`Não foi possível gerar o PDF: ${describeError(err)}`);
+  }
 }
