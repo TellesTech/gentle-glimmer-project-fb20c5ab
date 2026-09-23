@@ -2391,6 +2391,36 @@ export type Database = {
           },
         ]
       }
+      report_photo_deletions: {
+        Row: {
+          deleted_at: string
+          deleted_by: string | null
+          description: string | null
+          id: string
+          photo_id: string
+          report_id: string | null
+          url: string
+        }
+        Insert: {
+          deleted_at?: string
+          deleted_by?: string | null
+          description?: string | null
+          id?: string
+          photo_id: string
+          report_id?: string | null
+          url: string
+        }
+        Update: {
+          deleted_at?: string
+          deleted_by?: string | null
+          description?: string | null
+          id?: string
+          photo_id?: string
+          report_id?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
       report_photos: {
         Row: {
           created_at: string | null
