@@ -1056,9 +1056,12 @@ async function buildReportPdfDoc(
     
     drawSectionTitle('Registro Fotográfico', `${report.photos.length} foto${report.photos.length > 1 ? 's' : ''}`);
     
+    console.info(`[pdf-foto] RDO ${report.id}: ${report.photos.length} foto(s) para embutir`);
     const loadedImages: (string | null)[] = await Promise.all(
       report.photos.map((photo) => loadImageAsBase64(photo.url))
     );
+    const okCount = loadedImages.filter(Boolean).length;
+    console.info(`[pdf-foto] RDO ${report.id}: ${okCount}/${report.photos.length} foto(s) carregada(s)`);
     
     for (let i = 0; i < report.photos.length; i++) {
       const col = i % 2;
@@ -1081,6 +1084,13 @@ async function buildReportPdfDoc(
       setFillColor(COLORS.lightGray);
       doc.rect(x + 1, y + 1, boxW, boxH, 'F');
       
+      const drawUnavailable = (message: string) => {
+        setColor(COLORS.textMuted);
+        doc.setFontSize(7);
+        const lines = doc.splitTextToSize(message, boxW - 4);
+        doc.text(lines, x + photoWidth / 2, y + photoHeight / 2 - 4, { align: 'center' });
+      };
+      
       if (loadedImages[i]) {
         try {
           const imgDims = await getImageDimensions(loadedImages[i]!);
@@ -1089,22 +1099,21 @@ async function buildReportPdfDoc(
           // Imagem centralizada com proporcao correta
           doc.addImage(
             loadedImages[i]!,
-            'JPEG',
+            detectPdfImageFormat(loadedImages[i]!),
             x + 1 + fitted.offsetX,
             y + 1 + fitted.offsetY,
             fitted.width,
             fitted.height
           );
-        } catch {
-          setColor(COLORS.textMuted);
-          doc.setFontSize(7);
-          doc.text('Imagem indisponível', x + photoWidth / 2, y + photoHeight / 2 - 4, { align: 'center' });
+        } catch (err) {
+          console.warn(`[pdf-foto] falha ao inserir foto ${i + 1} no PDF`, err);
+          drawUnavailable('Imagem indisponível');
         }
       } else {
-        setColor(COLORS.textMuted);
-        doc.setFontSize(7);
-        doc.text('Carregando...', x + photoWidth / 2, y + photoHeight / 2 - 4, { align: 'center' });
+        const isLegacy = /\/report-photos\//.test(report.photos[i].url || '');
+        drawUnavailable(isLegacy ? 'Foto do sistema anterior indisponível' : 'Foto indisponível');
       }
+
       
       // Legenda
       if (report.photos[i].description) {
