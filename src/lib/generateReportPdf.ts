@@ -70,13 +70,41 @@ const COLORS: Record<string, RGB> = {
 const SIGNED_GREEN: RGB = { r: 22, g: 128, b: 61 };
 
 // === HELPER: Carregar imagem como Base64 ===
+async function fetchWithTimeout(url: string, ms = 20000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function blobToDataUrl(blob: Blob): Promise<string | null> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(blob);
+  });
+}
+
+/** Formato aceito pelo jsPDF, deduzido do cabeçalho da data URL. */
+export function detectPdfImageFormat(dataUrl: string): 'JPEG' | 'PNG' | 'WEBP' {
+  const header = dataUrl.slice(0, 40).toLowerCase();
+  if (header.includes('image/png')) return 'PNG';
+  if (header.includes('image/webp')) return 'WEBP';
+  return 'JPEG';
+}
+
 async function loadImageAsBase64(storedUrl: string): Promise<string | null> {
+  const label = `[pdf-foto] ${storedUrl.slice(0, 120)}`;
   try {
     let finalUrl = storedUrl;
-    
+
     // Check if it's a public URL (contains /object/public/)
     const isPublicUrl = storedUrl.includes('/object/public/');
-    
+
     // Determine which bucket to use based on URL
     const isSystemSettings = storedUrl.includes('system-settings');
     const isCompanyPhotos = storedUrl.includes('company-photos');
@@ -84,14 +112,17 @@ async function loadImageAsBase64(storedUrl: string): Promise<string | null> {
     const bucketName = isSystemSettings
       ? 'system-settings'
       : (isCompanyPhotos ? 'company-photos' : (isLegacyReportPhotos ? 'report-photos' : 'service-report-photos'));
-    
+
     if (!storedUrl.startsWith('http')) {
       // It's a path, create signed URL
       const { data, error } = await supabase.storage
         .from(bucketName)
         .createSignedUrl(storedUrl, 3600);
-      
-      if (error || !data?.signedUrl) return null;
+
+      if (error || !data?.signedUrl) {
+        console.warn(`${label} — falha ao criar link temporário`, error);
+        return null;
+      }
       finalUrl = data.signedUrl;
     } else if (isPublicUrl) {
       // Public URLs can be used directly
@@ -107,21 +138,54 @@ async function loadImageAsBase64(storedUrl: string): Promise<string | null> {
         if (!error && data?.signedUrl) finalUrl = data.signedUrl;
       }
     }
-    
-    const response = await fetch(finalUrl);
-    if (!response.ok) return null;
-    
-    const blob = await response.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
+
+    // Tenta baixar a imagem; em caso de falha, repete uma vez e depois
+    // tenta por link temporário autenticado (caso o endereço público falhe).
+    const attempts: string[] = [finalUrl, finalUrl];
+    const publicMatch = storedUrl.match(/\/object\/public\/([^/]+)\/(.+)$/);
+    if (publicMatch) {
+      const [, bucketFromUrl, pathFromUrl] = publicMatch;
+      try {
+        const { data } = await supabase.storage
+          .from(bucketFromUrl)
+          .createSignedUrl(decodeURIComponent(pathFromUrl.split('?')[0]), 3600);
+        if (data?.signedUrl) attempts.push(data.signedUrl);
+      } catch {
+        /* ignora — é apenas um plano B */
+      }
+    }
+
+    for (let i = 0; i < attempts.length; i++) {
+      try {
+        const response = await fetchWithTimeout(attempts[i]);
+        if (!response.ok) {
+          console.warn(`${label} — tentativa ${i + 1} respondeu ${response.status}`);
+          continue;
+        }
+        const blob = await response.blob();
+        if (!blob.size) {
+          console.warn(`${label} — tentativa ${i + 1} veio vazia`);
+          continue;
+        }
+        const dataUrl = await blobToDataUrl(blob);
+        if (!dataUrl) {
+          console.warn(`${label} — não foi possível converter a imagem`);
+          continue;
+        }
+        console.info(`${label} — ok (${blob.size} bytes, ${blob.type || 'tipo desconhecido'})`);
+        return dataUrl;
+      } catch (err) {
+        console.warn(`${label} — tentativa ${i + 1} falhou`, err);
+      }
+    }
+
+    return null;
+  } catch (err) {
+    console.warn(`${label} — erro inesperado`, err);
     return null;
   }
 }
+
 
 // Função de preparação de texto - mantém acentos (jsPDF suporta UTF-8)
 const prepareText = (str: string): string => {
