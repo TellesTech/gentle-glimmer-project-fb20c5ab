@@ -93,6 +93,33 @@ export async function getReportPdfBlob(
 
   const r: any = report;
 
+  // Rede de segurança: se as fotos não vieram junto (permissão/embed),
+  // busca em consulta separada e, em último caso, pela função do portal.
+  if (!Array.isArray(r.photos) || r.photos.length === 0) {
+    const { data: directPhotos } = await supabase
+      .from('report_photos')
+      .select('*')
+      .eq('report_id', reportId);
+    if (directPhotos && directPhotos.length > 0) {
+      r.photos = directPhotos;
+      console.info(`[pdf-foto] fotos recuperadas em consulta direta: ${directPhotos.length}`);
+    } else {
+      try {
+        const { data: portalData } = await supabase.functions.invoke('get-client-report', {
+          body: { reportId },
+        });
+        const portalPhotos = (portalData as any)?.report?.photos || (portalData as any)?.photos;
+        if (Array.isArray(portalPhotos) && portalPhotos.length > 0) {
+          r.photos = portalPhotos;
+          console.info(`[pdf-foto] fotos recuperadas pelo portal: ${portalPhotos.length}`);
+        }
+      } catch (err) {
+        console.warn('[pdf-foto] não foi possível recuperar as fotos pelo portal', err);
+      }
+    }
+  }
+
+
   const reportForPdf: any = {
     id: r.id,
     date: parseISO(r.date),
