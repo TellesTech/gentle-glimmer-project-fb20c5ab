@@ -782,11 +782,12 @@ async function upsertActivities(supabase: any, reportId: string, parsedData: any
     .map((d: string) => String(d || "").trim())
     .filter(Boolean);
 
+  // Nunca apaga o que já existe quando a mensagem chega sem atividades:
+  // payload vazio = nada a atualizar (evita RDO ficar em branco).
+  if (!activities.length) return;
   if (isUpdate) {
-    // Substitui integralmente — inclusive quando a nova lista está vazia
     await supabase.from("report_activities").delete().eq("report_id", reportId);
   }
-  if (!activities.length) return;
 
   const { error } = await supabase.from("report_activities").insert(
     activities.map((description: string) => ({
@@ -813,10 +814,10 @@ async function upsertDeviations(supabase: any, reportId: string, parsedData: any
     return !!desc;
   });
 
+  if (!deviations.length) return;
   if (isUpdate) {
     await supabase.from("report_deviations").delete().eq("report_id", reportId);
   }
-  if (!deviations.length) return;
 
   const { error } = await supabase.from("report_deviations").insert(
     deviations.map((d: any) => ({
@@ -848,12 +849,15 @@ async function upsertAttendance(
     return !!String(nome || "").trim();
   });
 
+  if (!efetivo.length) {
+    // Mensagem sem efetivo não apaga a lista já registrada no RDO.
+    if (!isUpdate) {
+      await supabase.from("reports").update({ actual_workforce: 0 }).eq("id", reportId);
+    }
+    return;
+  }
   if (isUpdate) {
     await supabase.from("report_attendance").delete().eq("report_id", reportId);
-  }
-  if (!efetivo.length) {
-    await supabase.from("reports").update({ actual_workforce: 0 }).eq("id", reportId);
-    return;
   }
 
   const attendanceRows = efetivo.map((item: any) => {
