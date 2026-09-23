@@ -313,32 +313,42 @@ async function attachPendingPhotos(
       const pendingMessageId = log.raw_payload?.messageId || log.raw_payload?.id?.id || null;
       if (!mediaUrl && !pendingMessageId) continue;
 
-      try {
-        const imageData = await downloadUazapiMedia(mediaUrl, uazapiToken || undefined, pendingMessageId);
-        if (!imageData) continue;
+      let attached = false;
+      // Até 3 tentativas: falha de rede não pode fazer a foto sumir.
+      for (let attempt = 1; attempt <= 3 && !attached; attempt++) {
+        try {
+          const imageData = await downloadUazapiMedia(mediaUrl, uazapiToken || undefined, pendingMessageId);
+          if (!imageData) throw new Error("media download returned empty");
 
-        const fileName = `whatsapp_${reportId}_${Date.now()}_${attachedCount}.jpg`;
-        const { error: uploadError } = await supabase.storage
-          .from("service-report-photos")
-          .upload(fileName, imageData, { contentType: "image/jpeg" });
+          const fileName = `whatsapp_${reportId}_${Date.now()}_${attachedCount}.jpg`;
+          const { error: uploadError } = await supabase.storage
+            .from("service-report-photos")
+            .upload(fileName, imageData, { contentType: "image/jpeg" });
+          if (uploadError) throw new Error(uploadError.message);
 
-        if (!uploadError) {
           const { data: publicUrl } = supabase.storage.from("service-report-photos").getPublicUrl(fileName);
-          await supabase.from("report_photos").insert({
+          const { error: insertError } = await supabase.from("report_photos").insert({
             report_id: reportId,
             url: publicUrl.publicUrl,
           });
+          if (insertError) throw new Error(insertError.message);
+
           attachedCount++;
+          attached = true;
+        } catch (photoErr) {
+          console.error(`Error attaching pending photo (attempt ${attempt}):`, photoErr);
+          if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 1000));
         }
-      } catch (photoErr) {
-        console.error("Error attaching pending photo:", photoErr);
       }
 
-      // Update log status regardless
-      await supabase
-        .from("whatsapp_rdo_logs")
-        .update({ status: "photo_attached", report_id: reportId })
-        .eq("id", log.id);
+      // Só marca como resolvido quando a foto realmente foi vinculada;
+      // caso contrário fica pendente para nova tentativa.
+      if (attached) {
+        await supabase
+          .from("whatsapp_rdo_logs")
+          .update({ status: "photo_attached", report_id: reportId })
+          .eq("id", log.id);
+      }
     }
 
     console.log(`Attached ${attachedCount} pending photos to RDO #${rdoCode}`);
