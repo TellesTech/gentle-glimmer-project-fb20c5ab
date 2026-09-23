@@ -81,7 +81,13 @@ async function fetchReportFromPortal(reportId: string) {
       console.warn('[pdf] portal não retornou o RDO:', describeError(error));
       return null;
     }
-    return (data as any)?.report || (data as any) || null;
+    const payload = data as any;
+    const rep = payload?.report || payload;
+    if (!rep?.id) return null;
+    if (!Array.isArray(rep.signatures) && Array.isArray(payload?.signatures)) {
+      rep.signatures = payload.signatures;
+    }
+    return rep;
   } catch (err) {
     console.warn('[pdf] falha ao consultar o portal:', describeError(err));
     return null;
