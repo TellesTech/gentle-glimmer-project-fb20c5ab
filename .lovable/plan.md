@@ -1,42 +1,44 @@
-# RDOs baixando sem fotos
+# RDOs baixando sem fotos (inclusive para João e Lucas)
 
-## O que já foi verificado no banco
+## O que já foi verificado
 
-- As fotos estão registradas normalmente: 7.794 fotos ligadas a RDOs, sem perda de vínculo.
+- As fotos estão registradas normalmente: 7.794 fotos ligadas a RDOs.
 - Fotos de junho em diante (3.498) estão no armazenamento atual e abrem normalmente (testado, resposta 200).
-- Fotos de maio para trás (4.296) apontam para o armazenamento do sistema antigo, que está **fora do ar**. Esses arquivos não existem no armazenamento atual — checado arquivo por arquivo. Para esses RDOs antigos não há como recuperar a imagem; só é possível mostrar um aviso claro.
-- Um PDF assinado recente (RDO 029, 22/09) foi baixado e inspecionado: **contém as 4 fotos**. Ou seja, o gerador consegue embutir fotos; a falha não é geral.
+- Fotos de maio para trás (4.296) apontam para o armazenamento do sistema antigo, que está **fora do ar**, e esses arquivos não existem no armazenamento atual (checado um a um). Nesses RDOs antigos a imagem não é recuperável; só dá para mostrar um aviso claro no lugar.
+- Permissão de leitura das fotos para João Santos e Lucas Rosa: **liberada** (testado nos RDOs em que eles são signatários). Ou seja, não é bloqueio de acesso.
+- Um PDF assinado recente (RDO 029, 22/09) foi baixado e inspecionado: **contém as 4 fotos**. O gerador consegue embutir fotos, então a falha não é geral.
 
-Conclusão: a causa exata da falta de fotos nos seus downloads **ainda não está confirmada**. Por isso o primeiro passo do plano é reproduzir e registrar onde a foto se perde, em vez de chutar uma correção.
+Conclusão honesta: a causa exata ainda **não está confirmada**. Por isso o primeiro passo é reproduzir e registrar onde a foto se perde, em vez de chutar a correção.
 
-## Passo 1 — Descobrir onde a foto se perde (diagnóstico)
+## Passo 1 — Descobrir onde a foto se perde
 
-Incluir registro de diagnóstico no gerador de PDF (`src/lib/generateReportPdf.ts`, função `loadImageAsBase64` e o bloco de fotos), informando no console, para cada RDO baixado:
+Incluir registro de diagnóstico no gerador de PDF (`src/lib/generateReportPdf.ts`), mostrando, a cada download:
 
 - quantas fotos vieram junto com o RDO;
-- para cada foto: endereço, se o download da imagem deu certo, tamanho e, se falhou, o motivo (bloqueio, arquivo inexistente, tempo esgotado, formato recusado pelo gerador).
+- para cada foto: endereço, se o download da imagem deu certo, tamanho e, quando falha, o motivo (bloqueio, arquivo inexistente, tempo esgotado, formato recusado).
 
-Com isso, um download de teste mostra imediatamente se o problema é (a) o RDO chegar sem nenhuma foto na hora de gerar, (b) a imagem não baixar, ou (c) o gerador recusar a imagem.
+Com isso, um download de teste na conta do João ou do Lucas mostra na hora se o problema é (a) o RDO chegar sem fotos, (b) a imagem não baixar, ou (c) o gerador recusar a imagem.
 
 ## Passo 2 — Correções previstas conforme o resultado
 
-- **Se o RDO chega sem fotos na geração**: unificar o carregamento das fotos em um único caminho, o mesmo usado pela tela (que mostra as fotos corretamente), para os quatro pontos de download: card do RDO, página do RDO, pasta do mês (ZIP) e portal do cliente.
-- **Se a imagem não baixa**: baixar as fotos pelo caminho autenticado do armazenamento (link temporário) em vez do endereço público, com nova tentativa automática e limite de tempo maior; hoje uma falha passa em silêncio.
-- **Se o gerador recusa a imagem**: detectar o tipo real do arquivo e converter a imagem antes de inserir no PDF.
+- **RDO chega sem fotos na geração**: usar um único caminho de carregamento das fotos, o mesmo da tela (que exibe corretamente), nos quatro pontos de download: card do RDO, página do RDO, pasta do mês (ZIP) e portal do cliente.
+- **A imagem não baixa**: buscar as fotos por link temporário autenticado em vez do endereço público, com nova tentativa automática e tempo limite maior; hoje a falha passa em silêncio e o PDF só mostra "Carregando...".
+- **O gerador recusa a imagem**: detectar o tipo real do arquivo e converter antes de inserir no PDF (hoje todas são inseridas como JPEG).
 
 ## Passo 3 — Fotos antigas perdidas (maio para trás)
 
-Nesses RDOs, em vez de espaço vazio, o PDF passa a mostrar um quadro com o aviso "Foto do sistema anterior indisponível", igual ao que a tela já faz. Assim ninguém acha que o RDO foi emitido sem registro fotográfico.
+Nesses RDOs, em vez de espaço vazio ou "Carregando...", o PDF passa a mostrar "Foto do sistema anterior indisponível", igual ao que a tela já faz.
 
 ## Passo 4 — Verificação
 
 - Baixar, pelos quatro caminhos, um RDO recente com fotos e conferir as imagens no arquivo.
-- Baixar a mesma pasta do mês em ZIP e conferir de 3 a 5 arquivos.
+- Repetir entrando como João e como Lucas no portal.
+- Baixar uma pasta do mês em ZIP e conferir de 3 a 5 arquivos.
 - Baixar um RDO antigo e conferir o aviso no lugar da foto.
-- Conferir no PDF gerado a contagem de imagens embutidas, comparando com a quantidade de fotos do RDO.
+- Conferir a contagem de imagens embutidas no PDF contra a quantidade de fotos do RDO.
 
 ## Detalhes técnicos
 
-- `src/lib/generateReportPdf.ts`: instrumentar `loadImageAsBase64` (retorno nulo hoje é silencioso) e o laço de fotos; trocar `addImage(..., 'JPEG', ...)` por formato detectado a partir dos bytes; `timeout`/retry no fetch.
-- `src/lib/clientReportDownload.ts`: `REPORT_SELECT` já embute `report_photos(*)`; se o diagnóstico mostrar lista vazia sob RLS, buscar as fotos em consulta separada (ou via `get-client-report`) e conferir contagem antes de gerar.
-- Placeholder de foto indisponível desenhado com retângulo + texto, reaproveitando o padrão do `SafeImg`.
+- `src/lib/generateReportPdf.ts`: instrumentar `loadImageAsBase64` (hoje retorna nulo silenciosamente) e o laço de fotos (linhas ~983-1058); `addImage(..., 'JPEG', ...)` passa a usar o formato detectado dos bytes; `fetch` com `AbortController` e retry.
+- `src/lib/clientReportDownload.ts`: `REPORT_SELECT` já embute `report_photos(*)`; se o diagnóstico mostrar lista vazia, buscar as fotos em consulta separada (ou via `get-client-report`, que roda com acesso total) e validar a contagem antes de gerar.
+- Placeholder de indisponível desenhado com retângulo + texto, no mesmo padrão do `SafeImg`.
