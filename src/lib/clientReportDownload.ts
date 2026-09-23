@@ -97,13 +97,26 @@ export async function getReportPdfBlob(
   reportId: string,
   options?: GetReportPdfOptions,
 ): Promise<{ blob: Blob; filename: string }> {
-  const { data: report, error } = await supabase
-    .from('reports')
-    .select(REPORT_SELECT)
-    .eq('id', reportId)
-    .maybeSingle();
+  const { report: baseReport, error } = await fetchReportBase(reportId);
 
-  if (error || !report) throw new Error('Relatório não encontrado');
+  let report: any = baseReport;
+
+  if (!report) {
+    // Último recurso: buscar pelo portal (acesso total no servidor)
+    const portalReport = await fetchReportFromPortal(reportId);
+    if (portalReport?.id) {
+      report = portalReport;
+    } else if (error) {
+      throw new Error(`Não foi possível carregar este RDO: ${describeError(error)}`);
+    } else {
+      throw new Error('Relatório não encontrado');
+    }
+  }
+
+  if (!Array.isArray(report.signatures)) {
+    const children = await fetchReportChildren(reportId);
+    report = { ...report, ...children };
+  }
 
   const filename = buildRdoFileName((report as any).rdo_number, (report as any).date);
 
