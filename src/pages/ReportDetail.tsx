@@ -35,7 +35,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 
 import { toast } from 'sonner';
-import { generateReportPdf } from '@/lib/generateReportPdf';
+import { getReportPdfBlob } from '@/lib/clientReportDownload';
+import { triggerDownloadFromBlob } from '@/lib/downloadUtils';
 import type { Shift, DeviationType, ImpactLevel, ReportStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { ReportDetailTabs } from '@/components/reports/ReportDetailTabs';
@@ -356,158 +357,20 @@ export default function ReportDetail() {
   const rdoCode = `RDO-${project?.code || 'XXX'}-${format(parseISO(report.date), 'yyyyMMdd')}`;
 
   const handleDownloadPdf = async (blank = false) => {
-    if (report && company && site && project) {
-      setIsGeneratingPdf(true);
-      try {
-        // Fetch system settings for brand colors and logo
-        const { data: systemSettings } = await supabase
-          .from('system_settings')
-          .select('primary_color, accent_color, logo_url, pdf_logo_url')
-          .limit(1)
-          .single();
-
-        const reportForPdf = {
-          id: report.id,
-          date: parseISO(report.date),
-          shift: report.shift as Shift,
-          activityLocation: report.location || '',
-          startTime: report.start_time || '',
-          endTime: report.end_time || '',
-          status: report.status as ReportStatus,
-          comments: report.comments || '',
-          ai_summary: report.ai_summary || '',
-          routine: report.routine || '',
-          projectId: project.id,
-          projectName: project.name,
-          teamId: report.team_id || '',
-          teamName: report.team?.name || '',
-          createdById: report.created_by || '',
-          createdByName: report.creator?.name || '',
-          maintenanceOrderTitle: report.maintenance_order_title || '',
-          maintenanceOrderNumber: report.maintenance_order_number || '',
-          ambulancePoint: report.ambulance_point || '',
-          meetingPoint: report.meeting_point || '',
-          radioFrequencyWees: report.radio_frequency_wees || '',
-          radioFrequencyOperation: report.radio_frequency_operation || '',
-          arrivalTimeAtLiberator: report.arrival_time_at_liberator || '',
-          documentReleaseTime: report.document_release_time || '',
-          blockRevalidationTime: report.blockage_revalidation_time || '',
-          activities: (report.activities || []).map((a: any, index: number) => ({
-            id: a.id,
-            reportId: report.id,
-            description: a.description,
-            completed: a.completed,
-            order: index,
-          })),
-          deviations: (report.deviations || []).map((d: any) => ({
-            id: d.id,
-            reportId: report.id,
-            type: d.type as DeviationType,
-            description: d.description,
-            impact: d.impact as ImpactLevel,
-            correctiveAction: d.action_taken,
-            resolved: false,
-          })),
-          attendance: (report.attendance || []).map((a: any) => ({
-            id: a.id,
-            reportId: report.id,
-            userId: a.user_id || '',
-            userName: a.user_name,
-            present: a.present,
-            arrivalTime: a.arrival_time,
-            departureTime: a.departure_time,
-            functionRole: a.function_role,
-          })),
-          photos: (report.photos || []).map((p: any) => ({
-            id: p.id,
-            reportId: report.id,
-            url: p.url,
-            description: p.description,
-            uploadedAt: new Date(p.created_at || Date.now()),
-          })),
-          signatures: (report.signatures || []).map((s: any) => ({
-            id: s.id,
-            reportId: report.id,
-            signerName: s.signer_name,
-            signerRole: s.signer_role,
-            signatureData: s.signature_data,
-            signedAt: new Date(s.signed_at),
-            ipAddress: s.ip_address,
-          })),
-          createdAt: new Date(report.created_at || Date.now()),
-          updatedAt: new Date(report.updated_at || Date.now()),
-        };
-
-        const companyForPdf = {
-          id: company.id,
-          name: company.name,
-          cnpj: company.cnpj || '',
-          logo: company.logo_url || undefined,
-          address: company.address || undefined,
-          phone: company.phone || undefined,
-          email: company.email || undefined,
-          active: true,
-          createdAt: new Date(company.created_at || Date.now()),
-        };
-
-        const siteForPdf = {
-          id: site.id,
-          companyId: site.company_id,
-          name: site.name,
-          city: site.city || '',
-          state: site.state || '',
-          address: site.address || undefined,
-          active: true,
-          createdAt: new Date(site.created_at || Date.now()),
-        };
-
-        const projectForPdf = {
-          id: project.id,
-          companyId: project.company_id,
-          siteId: project.site_id,
-          name: project.name,
-          code: project.code || '',
-          location: '',
-          startDate: new Date(project.start_date || Date.now()),
-          expectedEndDate: project.end_date ? new Date(project.end_date) : undefined,
-          status: (project.status || 'in_progress') as any,
-          supervisorId: '',
-          active: true,
-        };
-
-        const signaturesForPdf = (report.signatures || []).map((s: any) => ({
-          id: s.id,
-          signerName: s.signer_name,
-          signerRole: s.signer_role,
-          signatureData: s.signature_data,
-          signedAt: s.signed_at,
-          ipAddress: s.ip_address,
-        }));
-
-        // Pass system settings (colors + logo) to the PDF generator
-        const tenantColors = systemSettings ? {
-          primary_color: systemSettings.primary_color,
-          accent_color: systemSettings.accent_color,
-          logo_url: systemSettings.logo_url,
-          pdf_logo_url: systemSettings.pdf_logo_url,
-        } : undefined;
-
-        await generateReportPdf(
-          reportForPdf,
-          companyForPdf,
-          siteForPdf,
-          projectForPdf,
-          signaturesForPdf,
-          tenantColors,
-          blank ? { omitSignatures: true } : undefined,
-        );
-        toast.success('PDF baixado com sucesso!');
-      } catch (error) {
-        console.error('Error generating PDF:', error);
-        toast.error('Erro ao gerar PDF');
-      } finally {
-        setIsGeneratingPdf(false);
-      }
+    if (!report) return;
+    setIsGeneratingPdf(true);
+    try {
+      const { blob, filename } = await getReportPdfBlob(
+        report.id,
+        blank ? { pdfOptions: { omitSignatures: true }, forceRegenerate: true } : undefined,
+      );
+      triggerDownloadFromBlob(blob, blank ? filename.replace(/\.pdf$/, '-em-branco.pdf') : filename);
+      toast.success('PDF baixado com sucesso!');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao gerar PDF');
+    } finally {
+      setIsGeneratingPdf(false);
     }
   };
 

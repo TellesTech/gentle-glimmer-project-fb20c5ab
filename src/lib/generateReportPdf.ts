@@ -262,6 +262,8 @@ export interface PdfOptions {
   signatureFieldLabels?: string[];
   /** Não imprime as assinaturas já registradas (PDF em branco para assinar). */
   omitSignatures?: boolean;
+  /** Impede concluir o PDF sem alguma foto atual que existe no RDO. */
+  requireAllCurrentPhotos?: boolean;
 }
 
 // Helper: Convert hex to RGB
@@ -1062,6 +1064,18 @@ async function buildReportPdfDoc(
     );
     const okCount = loadedImages.filter(Boolean).length;
     console.info(`[pdf-foto] RDO ${report.id}: ${okCount}/${report.photos.length} foto(s) carregada(s)`);
+
+    if (pdfOptions?.requireAllCurrentPhotos) {
+      const failedCurrentPhotos = report.photos.filter((photo, index) => {
+        const isUnavailableLegacyFile = /knubzymetllizsgeoikh\.supabase\.co/i.test(photo.url || '');
+        return !loadedImages[index] && !isUnavailableLegacyFile;
+      });
+      if (failedCurrentPhotos.length > 0) {
+        throw new Error(
+          `${failedCurrentPhotos.length} de ${report.photos.length} foto(s) atuais não puderam ser carregadas. Tente novamente.`,
+        );
+      }
+    }
     
     for (let i = 0; i < report.photos.length; i++) {
       const col = i % 2;

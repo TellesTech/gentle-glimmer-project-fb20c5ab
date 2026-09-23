@@ -23,6 +23,23 @@ function describeError(err: any) {
   return parts.length ? parts.join(' | ') : String(err);
 }
 
+function rowTimestamp(row: any): number {
+  const values = [row?.updated_at, row?.created_at, row?.signed_at]
+    .map((value) => value ? new Date(value).getTime() : 0)
+    .filter((value) => Number.isFinite(value));
+  return values.length > 0 ? Math.max(...values) : 0;
+}
+
+function latestReportContentTime(report: any): number {
+  const childKeys = ['activities', 'deviations', 'attendance', 'photos', 'signatures'];
+  return Math.max(
+    rowTimestamp(report),
+    ...childKeys.flatMap((key) =>
+      Array.isArray(report?.[key]) ? report[key].map(rowTimestamp) : [],
+    ),
+  );
+}
+
 async function fetchReportBase(reportId: string) {
   let lastError: any = null;
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -94,6 +111,27 @@ async function fetchReportFromPortal(reportId: string) {
   }
 }
 
+async function recoverReportPhotos(reportId: string): Promise<any[] | null> {
+  const { data: directPhotos, error } = await supabase
+    .from('report_photos')
+    .select('*')
+    .eq('report_id', reportId);
+  if (!error && Array.isArray(directPhotos)) {
+    if (directPhotos.length > 0) {
+      console.info(`[pdf-foto] fotos recuperadas em consulta direta: ${directPhotos.length}`);
+    }
+    return directPhotos;
+  }
+
+  console.warn('[pdf-foto] consulta direta falhou:', describeError(error));
+  const portalReport = await fetchReportFromPortal(reportId);
+  if (Array.isArray(portalReport?.photos)) {
+    console.info(`[pdf-foto] fotos confirmadas pelo portal: ${portalReport.photos.length}`);
+    return portalReport.photos;
+  }
+  return null;
+}
+
 export function buildRdoFileName(rdoNumber?: number | null, date?: string | null) {
   const num = (rdoNumber ?? 0).toString().padStart(3, '0');
   const d = date ? date.slice(0, 10) : 'sem-data';
@@ -136,22 +174,29 @@ export async function getReportPdfBlob(
     report = { ...report, ...children };
   }
 
+  if (!Array.isArray(report.photos) || report.photos.length === 0) {
+    const recoveredPhotos = await recoverReportPhotos(reportId);
+    if (recoveredPhotos === null) {
+      throw new Error('Não foi possível confirmar as fotos atuais deste RDO. Tente novamente.');
+    }
+    report.photos = recoveredPhotos;
+  }
+
   const filename = buildRdoFileName((report as any).rdo_number, (report as any).date);
 
-  // 1) Signed PDF already stored — usar apenas se estiver atualizado
-  // (não pode ser mais antigo que a última assinatura registrada)
+  // 1) PDF guardado só pode ser usado quando estiver mais novo que todo o
+  // conteúdo atual do RDO, inclusive fotos recuperadas depois da assinatura.
   const signedUrl = (report as any).signed_pdf_url;
   const signatureRows: any[] = (report as any).signatures || [];
-  const lastSignatureAt = signatureRows.reduce((acc: number, s: any) => {
-    const t = s?.signed_at ? new Date(s.signed_at).getTime() : 0;
-    return t > acc ? t : acc;
-  }, 0);
+  const lastSignatureAt = signatureRows.reduce((acc: number, s: any) => Math.max(acc, rowTimestamp(s)), 0);
+  const latestContentAt = latestReportContentTime(report);
 
   const mustRegenerate = Boolean(
     options?.forceRegenerate ||
       options?.pdfOptions?.includeSignatureFields ||
       options?.pdfOptions?.omitSignatures,
   );
+  let storedPdfIsCurrent = false;
 
   if (signedUrl && !mustRegenerate) {
     try {
@@ -159,8 +204,9 @@ export async function getReportPdfBlob(
       if (resp.ok) {
         const lastModifiedHeader = resp.headers.get('last-modified');
         const fileTime = lastModifiedHeader ? new Date(lastModifiedHeader).getTime() : 0;
-        const isStale = !fileTime || (lastSignatureAt > 0 && fileTime < lastSignatureAt);
+        const isStale = !fileTime || fileTime < Math.max(lastSignatureAt, latestContentAt);
         if (!isStale) {
+          storedPdfIsCurrent = true;
           const blob = await resp.blob();
           if (blob.size > 0) return { blob, filename };
         } else {
@@ -189,33 +235,6 @@ export async function getReportPdfBlob(
     .maybeSingle();
 
   const r: any = report;
-
-  // Rede de segurança: se as fotos não vieram junto (permissão/embed),
-  // busca em consulta separada e, em último caso, pela função do portal.
-  if (!Array.isArray(r.photos) || r.photos.length === 0) {
-    const { data: directPhotos } = await supabase
-      .from('report_photos')
-      .select('*')
-      .eq('report_id', reportId);
-    if (directPhotos && directPhotos.length > 0) {
-      r.photos = directPhotos;
-      console.info(`[pdf-foto] fotos recuperadas em consulta direta: ${directPhotos.length}`);
-    } else {
-      try {
-        const { data: portalData } = await supabase.functions.invoke('get-client-report', {
-          body: { reportId },
-        });
-        const portalPhotos = (portalData as any)?.report?.photos || (portalData as any)?.photos;
-        if (Array.isArray(portalPhotos) && portalPhotos.length > 0) {
-          r.photos = portalPhotos;
-          console.info(`[pdf-foto] fotos recuperadas pelo portal: ${portalPhotos.length}`);
-        }
-      } catch (err) {
-        console.warn('[pdf-foto] não foi possível recuperar as fotos pelo portal', err);
-      }
-    }
-  }
-
 
   const reportForPdf: any = {
     id: r.id,
@@ -343,12 +362,12 @@ export async function getReportPdfBlob(
       projectForPdf,
       reportForPdf.signatures,
       tenantColors,
-      options?.pdfOptions,
+      { ...options?.pdfOptions, requireAllCurrentPhotos: true },
     );
     return { blob, filename };
   } catch (err) {
     console.error('[pdf] falha ao gerar o PDF:', describeError(err));
-    if (!mustRegenerate) {
+    if (!mustRegenerate && storedPdfIsCurrent) {
       const fallback = await tryStoredPdf(signedUrl);
       if (fallback) return { blob: fallback, filename };
     }
