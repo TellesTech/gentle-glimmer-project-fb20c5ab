@@ -60,6 +60,18 @@ async function fetchReportChildren(reportId: string) {
   return out;
 }
 
+async function tryStoredPdf(signedUrl?: string | null): Promise<Blob | null> {
+  if (!signedUrl) return null;
+  try {
+    const resp = await fetch(signedUrl);
+    if (!resp.ok) return null;
+    const blob = await resp.blob();
+    return blob.size > 0 ? blob : null;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchReportFromPortal(reportId: string) {
   try {
     const { data, error } = await supabase.functions.invoke('get-client-report', {
