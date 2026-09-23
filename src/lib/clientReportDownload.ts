@@ -158,7 +158,11 @@ export async function getReportPdfBlob(
   const project = (report as any).project;
   const site = project?.site;
   const company = site?.company;
-  if (!project || !site || !company) throw new Error('Dados do relatório incompletos');
+  if (!project || !site || !company) {
+    const fallback = await tryStoredPdf(signedUrl);
+    if (fallback) return { blob: fallback, filename };
+    throw new Error('Dados do relatório incompletos');
+  }
 
   const { data: systemSettings } = await supabase
     .from('system_settings')
