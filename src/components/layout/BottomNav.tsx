@@ -60,7 +60,7 @@ export function BottomNav() {
           {displayItems.map((item) => {
             const Icon = item.icon;
             const active = item.href ? isActive(item.href) : false;
-            const isNewButton = item.href === '/reports/quick';
+            const isNewButton = item.href === '/reports/new';
 
             if (isNewButton) {
               return (

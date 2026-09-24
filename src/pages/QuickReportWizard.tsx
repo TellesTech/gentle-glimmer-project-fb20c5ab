@@ -77,12 +77,15 @@ export default function QuickReportWizard() {
 
   const initialData = useMemo(() => {
     if (contextFromState?.siteId && contextFromState?.companyId) {
+      const ctx = contextFromState as any;
       return {
         companyId: contextFromState.companyId,
         companyName: contextFromState.companyName || '',
         siteId: contextFromState.siteId,
         siteName: contextFromState.siteName || '',
         omNumber: contextFromState.omNumber || null,
+        omTitle: contextFromState.omTitle || null,
+        ...(ctx.projectId ? { projectId: ctx.projectId, projectName: ctx.projectName || '' } : {}),
       };
     }
     if (role === 'admin') {
