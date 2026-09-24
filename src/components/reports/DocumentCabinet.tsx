@@ -1436,7 +1436,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                 size="sm"
                 className="gap-1.5"
                 onClick={() =>
-                  navigate('/reports/wizard', {
+                  navigate('/reports/new', {
                     state: {
                       companyId: selectedCompany.id,
                       companyName: selectedCompany.name,
@@ -1444,6 +1444,12 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                       siteName: selectedSiteFolder.name,
                       omNumber: selectedProjectFolder.omNumber,
                       omTitle: selectedProjectFolder.name,
+                      projectId:
+                        (selectedProjectFolder as any).sourceProjects?.[0]?.id ||
+                        (String((selectedProjectFolder as any).id || '').startsWith('project:')
+                          ? String((selectedProjectFolder as any).id).slice('project:'.length)
+                          : null),
+                      projectName: selectedProjectFolder.name,
                     }
                   })
                 }
