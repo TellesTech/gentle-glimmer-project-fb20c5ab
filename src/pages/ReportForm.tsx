@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
-import { useSmartBack } from '@/hooks/useSmartBack';
+import { useSmartBack, useGoBackOr } from '@/hooks/useSmartBack';
 import { ArrowLeft, ArrowRight, Save, Send, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -117,6 +117,7 @@ const steps = [
 export default function ReportForm() {
   const navigate = useNavigate();
   const smartBack = useSmartBack('/reports');
+  const goBackOr = useGoBackOr();
   const location = useLocation();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -738,7 +739,7 @@ export default function ReportForm() {
         title: 'Relatório enviado!',
         description: 'Seu relatório foi salvo com sucesso.',
       });
-      navigate('/reports');
+      goBackOr('/reports');
     } catch (error) {
       console.error('Error submitting report:', error);
       toast({

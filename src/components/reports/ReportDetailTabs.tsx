@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
@@ -24,12 +24,13 @@ interface ReportDetailTabsProps {
 
 export function ReportDetailTabs({ siblings, activeReportId, projectId, reportDate, onDuplicate }: ReportDetailTabsProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [popoverOpen, setPopoverOpen] = useState(false);
 
   const handleNewBlank = () => {
     setPopoverOpen(false);
     navigate(`/reports/create/${projectId}`, {
-      state: { date: reportDate },
+      state: { date: reportDate, from: location.pathname + location.search },
     });
   };
 
@@ -94,7 +95,7 @@ export function ReportDetailTabs({ siblings, activeReportId, projectId, reportDa
               <TooltipTrigger asChild>
                 <button
                   onClick={() => {
-                    if (!isActive) navigate(`/reports/${sibling.id}`);
+                    if (!isActive) navigate(`/reports/${sibling.id}`, { replace: true, state: location.state });
                   }}
                   className={cn(
                     "group flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all min-w-0 shrink-0",
