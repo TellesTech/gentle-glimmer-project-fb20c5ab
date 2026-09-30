@@ -875,12 +875,13 @@ async function upsertAttendance(
   const norm = (s: string) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   let knownTeam: Array<{ user_id: string | null; user_name: string; function_role: string | null }> = [];
   try {
-    const { data: rep } = await supabase.from("reports").select("site_id").eq("id", reportId).maybeSingle();
-    if (rep?.site_id) {
+    const { data: rep } = await supabase.from("reports").select("projects(site_id)").eq("id", reportId).maybeSingle();
+    const siteId = (rep as any)?.projects?.site_id;
+    if (siteId) {
       const { data: prev } = await supabase
         .from("report_attendance")
-        .select("user_id, user_name, function_role, reports!inner(site_id)")
-        .eq("reports.site_id", rep.site_id)
+        .select("user_id, user_name, function_role, reports!inner(projects!inner(site_id))")
+        .eq("reports.projects.site_id", siteId)
         .not("user_id", "is", null)
         .neq("report_id", reportId)
         .order("created_at", { ascending: false })
