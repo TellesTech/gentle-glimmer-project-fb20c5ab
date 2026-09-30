@@ -560,8 +560,16 @@ export default function SimplifiedReportForm() {
         params.set('month', String(reportDate.getMonth()));
       }
 
+      // Volta sempre para a página de origem (ex.: Agenda) para criar o próximo RDO
+      queryClient.invalidateQueries();
       const originFrom = (location.state as { from?: string } | null)?.from;
-      goBackOr(originFrom || (params.toString() ? `/reports?${params.toString()}` : '/reports'));
+      if (originFrom) {
+        navigate(originFrom, { replace: true });
+      } else if (projectId) {
+        navigate(`/projects/${projectId}`, { replace: true });
+      } else {
+        goBackOr(params.toString() ? `/reports?${params.toString()}` : '/reports');
+      }
     },
     onError: (error) => {
       console.error('Error creating report:', error);
