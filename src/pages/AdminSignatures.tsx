@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, FileText, Loader2, Search, Download, CheckCircle2, Clock, XCircle, ExternalLink, Eye, EyeOff, Copy, Send, ChevronDown, ChevronRight, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -55,6 +56,7 @@ const statusMeta: Record<string, { label: string; icon: any; className: string }
 
 export default function AdminSignatures() {
   const navigate = useNavigate();
+  const smartBack = useSmartBack('/reports');
   const [rows, setRows] = useState<ApproverRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -183,7 +185,7 @@ export default function AdminSignatures() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+        <Button variant="ghost" size="icon" onClick={smartBack}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div>

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRecentProjects } from '@/hooks/useRecentProjects';
 import { 
@@ -75,6 +76,8 @@ export default function ProjectCalendar() {
   const { projectId } = useParams<{ projectId: string }>();
   const { settings } = useSystemSettings();
   const navigate = useNavigate();
+  const routerLocation = useLocation();
+  const calendarBack = useSmartBack('/reports');
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentMonth, setCurrentMonth] = useState(() => {
@@ -711,7 +714,7 @@ export default function ProjectCalendar() {
       <EmptyState
         icon={CalendarIcon}
         title="Atividade não encontrada"
-        action={<Button asChild><Link to="/">Voltar</Link></Button>}
+        action={<Button onClick={calendarBack}>Voltar</Button>}
       />
     );
   }
@@ -724,7 +727,7 @@ export default function ProjectCalendar() {
       <div className="flex items-start gap-2 xs:gap-3 sm:gap-4">
               <Button 
                 variant="ghost" 
-                onClick={() => navigate(-1)} 
+                onClick={calendarBack} 
                 className="flex-shrink-0 mt-0.5 h-8 sm:h-10 gap-1 px-2"
               >
                 <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -744,7 +747,7 @@ export default function ProjectCalendar() {
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-2">
         <Button asChild size="sm" className="gap-2">
-          <Link to={getNewReportUrl()}>
+          <Link to={getNewReportUrl()} state={{ from: routerLocation.pathname + routerLocation.search }}>
             <Plus className="h-4 w-4" />
             Novo RDO
           </Link>
@@ -977,7 +980,7 @@ export default function ProjectCalendar() {
                         setSelectedDate(isSelected ? null : day);
                       }
                     } else {
-                      navigate(getNewReportUrl(day));
+                      navigate(getNewReportUrl(day), { state: { from: routerLocation.pathname + routerLocation.search } });
                     }
                   }}
                   className={cn(
@@ -1131,7 +1134,7 @@ export default function ProjectCalendar() {
               <CardTitle className="text-base">Últimos Relatórios</CardTitle>
               {latestReport && (
                 <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" asChild>
-                  <Link to={getNewReportUrl(undefined, latestReport.id)}>
+                  <Link to={getNewReportUrl(undefined, latestReport.id)} state={{ from: routerLocation.pathname + routerLocation.search }}>
                     <Copy className="h-3 w-3" />
                     Copiar último
                   </Link>

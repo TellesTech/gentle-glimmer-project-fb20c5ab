@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/loose-client';
 import { getValidProfileIds } from '@/lib/sanitizeAttendanceUserIds';
@@ -54,6 +55,7 @@ export default function SimplifiedReportForm() {
   const { projectId, reportId } = useParams<{ projectId?: string; reportId?: string }>();
   const location = useLocation();
   const navigate = useNavigate();
+  const smartBack = useSmartBack(projectId ? `/projects/${projectId}` : '/reports');
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
@@ -557,6 +559,11 @@ export default function SimplifiedReportForm() {
         params.set('month', String(reportDate.getMonth()));
       }
 
+      const originFrom = (location.state as { from?: string } | null)?.from;
+      if (originFrom) {
+        navigate(originFrom, { replace: true });
+        return;
+      }
       navigate(params.toString() ? `/reports?${params.toString()}` : '/reports', { replace: true });
     },
     onError: (error) => {
@@ -781,7 +788,7 @@ export default function SimplifiedReportForm() {
     }
     
     if (target === 'back') {
-      navigate(-1);
+      smartBack();
     }
   };
 

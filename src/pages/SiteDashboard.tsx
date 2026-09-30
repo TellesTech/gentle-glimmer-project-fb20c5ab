@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -89,6 +90,7 @@ interface WorkforceData {
 export default function SiteDashboard() {
   const { siteId } = useParams<{ siteId: string }>();
   const navigate = useNavigate();
+  const smartBack = useSmartBack('/reports');
   const { role } = useAuth();
   const { toast } = useToast();
 
@@ -506,7 +508,7 @@ export default function SiteDashboard() {
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => navigate(-1)}
+              onClick={smartBack}
               className="rounded-full hover:bg-primary/10 h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0"
             >
               <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />

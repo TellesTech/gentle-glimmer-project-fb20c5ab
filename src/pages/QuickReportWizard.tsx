@@ -128,9 +128,10 @@ export default function QuickReportWizard() {
         date: (data as any).date,
         omNumber: keepOrigin ? (originOm?.omNumber ?? null) : (data.omNumber ?? null),
         omTitle: keepOrigin ? (originOm?.omTitle ?? null) : (data.omTitle ?? null),
+        from: (location.state as { from?: string } | null)?.from,
       }
     });
-  }, [navigate, originOm]);
+  }, [navigate, originOm, location.state]);
 
   const handleSelectionComplete = useCallback((data: SelectionData) => {
     if (originOm && isOmContextMismatch(originOm, { omNumber: data.omNumber, omTitle: data.omTitle })) {
