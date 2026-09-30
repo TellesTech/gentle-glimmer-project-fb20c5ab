@@ -1438,6 +1438,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                 onClick={() =>
                   navigate('/reports/new', {
                     state: {
+                      from: window.location.pathname + window.location.search,
                       companyId: selectedCompany.id,
                       companyName: selectedCompany.name,
                       siteId: selectedSiteFolder.id,
