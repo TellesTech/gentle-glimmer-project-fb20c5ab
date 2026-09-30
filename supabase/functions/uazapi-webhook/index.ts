@@ -870,12 +870,45 @@ async function upsertAttendance(
     await supabase.from("report_attendance").delete().eq("report_id", reportId);
   }
 
+  // Equipe já registrada em RDOs anteriores da mesma fábrica: usada quando
+  // o nome chega abreviado/com grafia diferente (ex.: "Daniel Magalhães").
+  const norm = (s: string) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  let knownTeam: Array<{ user_id: string | null; user_name: string; function_role: string | null }> = [];
+  try {
+    const { data: rep } = await supabase.from("reports").select("site_id").eq("id", reportId).maybeSingle();
+    if (rep?.site_id) {
+      const { data: prev } = await supabase
+        .from("report_attendance")
+        .select("user_id, user_name, function_role, reports!inner(site_id)")
+        .eq("reports.site_id", rep.site_id)
+        .not("user_id", "is", null)
+        .neq("report_id", reportId)
+        .order("created_at", { ascending: false })
+        .limit(300);
+      knownTeam = (prev || []).filter((p: any) => p.function_role && norm(p.function_role) !== "convencional");
+    }
+  } catch (e) {
+    console.warn("[NAME_MATCH] known team lookup failed", e);
+  }
+  const matchKnown = (nome: string) => {
+    const t = norm(nome).split(/\s+/).filter((w) => w.length > 2);
+    if (t.length < 2) return null;
+    return knownTeam.find((k) => {
+      const kt = norm(k.user_name).split(/\s+/);
+      return kt[0] === t[0] && t.slice(1).some((w) => kt.some((x) => x === w || (w.length > 4 && x.startsWith(w.slice(0, 4)))));
+    }) || null;
+  };
+
   const attendanceRows = efetivo.map((item: any) => {
     const nome = typeof item === "string" ? item : item.nome || "";
     const funcao = typeof item === "string" ? null : item.funcao || null;
     const presente = typeof item === "object" && item.presente === false ? false : true;
 
-    const matched = matchCollaborator(nome, siteProfiles, preferredIds);
+    let matched = matchCollaborator(nome, siteProfiles, preferredIds);
+    if (!matched) {
+      const k = matchKnown(nome);
+      if (k) matched = { id: k.user_id!, name: k.user_name, job_title: k.function_role };
+    }
     if (!matched) {
       console.log(`[NAME_MATCH] unresolved_attendance name="${nome}" funcao="${funcao}" — saving with user_id=NULL`);
     }
