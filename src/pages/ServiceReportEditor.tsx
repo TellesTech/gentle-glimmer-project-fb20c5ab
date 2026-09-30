@@ -3,6 +3,7 @@ import type { Editor } from '@tiptap/react';
 import type { CanvasTool } from '@/components/service-reports/InteractivePdfPage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/loose-client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -81,6 +82,7 @@ interface SectionState {
 export default function ServiceReportEditor() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const smartBack = useSmartBack('/reports');
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -619,7 +621,7 @@ export default function ServiceReportEditor() {
       {/* Top toolbar */}
       <div className="flex items-center justify-between gap-3 p-2 border-b border-border bg-card shrink-0">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="shrink-0">
+          <Button variant="ghost" size="sm" onClick={smartBack} className="shrink-0">
             <ArrowLeft className="w-4 h-4" />
           </Button>
           {(() => {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, ArrowRight, Save, Send, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -115,6 +116,7 @@ const steps = [
 
 export default function ReportForm() {
   const navigate = useNavigate();
+  const smartBack = useSmartBack('/reports');
   const location = useLocation();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -857,7 +859,7 @@ export default function ReportForm() {
     <div className="max-w-3xl mx-auto pb-24 md:pb-8">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+        <Button variant="ghost" size="icon" onClick={smartBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, Building2, ChevronLeft, ShieldPlus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -27,6 +28,7 @@ interface PortalSite {
 export default function ClientPortalPicker() {
   const { user, role } = useAuth();
   const navigate = useNavigate();
+  const smartBack = useSmartBack('/home');
   const [adminDialogOpen, setAdminDialogOpen] = useState(false);
 
   const { data: sites, isLoading } = useQuery({
@@ -122,7 +124,7 @@ export default function ClientPortalPicker() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate('/home')}
+          onClick={smartBack}
           className="h-8 px-2 text-muted-foreground"
         >
           <ChevronLeft className="h-4 w-4 mr-1" />

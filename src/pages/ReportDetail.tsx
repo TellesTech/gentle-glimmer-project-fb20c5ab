@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { useQueryClient } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -75,6 +76,7 @@ const IMPACT_CONFIG: Record<ImpactLevel, { label: string; color: string; badge: 
 export default function ReportDetail() {
   const { id: reportId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const smartBack = useSmartBack('/reports');
   const { user, role } = useAuth();
   
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
@@ -613,7 +615,7 @@ export default function ReportDetail() {
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => navigate(-1)}
+        onClick={smartBack}
         className="gap-1.5 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -1416,7 +1418,7 @@ export default function ReportDetail() {
           
           {/* Grupo de Ações de Edição - Centralizado */}
           <div className="flex gap-1.5 sm:gap-2 flex-wrap justify-center w-full">
-            <Button variant="outline" size="sm" className="min-w-0 px-2 sm:px-3 text-muted-foreground hover:text-foreground transition-colors" onClick={() => navigate(-1)}>
+            <Button variant="outline" size="sm" className="min-w-0 px-2 sm:px-3 text-muted-foreground hover:text-foreground transition-colors" onClick={smartBack}>
               <ArrowLeft className="w-4 h-4 sm:mr-2" />
               <span>Voltar</span>
             </Button>

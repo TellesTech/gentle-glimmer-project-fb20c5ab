@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRecentProjects } from '@/hooks/useRecentProjects';
 import { 
@@ -75,6 +76,8 @@ export default function ProjectCalendar() {
   const { projectId } = useParams<{ projectId: string }>();
   const { settings } = useSystemSettings();
   const navigate = useNavigate();
+  const routerLocation = useLocation();
+  const calendarBack = useSmartBack('/reports');
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentMonth, setCurrentMonth] = useState(() => {

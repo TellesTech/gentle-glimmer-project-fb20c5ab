@@ -2,6 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -42,6 +43,7 @@ export default function AdminExports() {
   const { role, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const smartBack = useSmartBack('/reports');
 
   if (!authLoading && role !== 'admin' && role !== 'super_admin') {
     return <Navigate to="/" replace />;
@@ -129,7 +131,7 @@ export default function AdminExports() {
     <div className="p-4 md:p-6 space-y-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+        <Button variant="ghost" size="icon" onClick={smartBack}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div className="flex items-center gap-3">
