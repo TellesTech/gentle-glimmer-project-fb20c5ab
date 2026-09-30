@@ -975,7 +975,7 @@ export default function ProjectCalendar() {
                           currentParams.set('month', formatMonthParam(currentMonth));
                           setSearchParams(currentParams, { replace: true });
                         }
-                        navigate(`/reports/${dayReportsLocal[0].id}`);
+                        navigate(`/reports/${dayReportsLocal[0].id}`, { state: { from: `${routerLocation.pathname}?${currentParams.toString()}` } });
                       } else {
                         setSelectedDate(isSelected ? null : day);
                       }

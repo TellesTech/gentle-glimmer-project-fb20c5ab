@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { useSmartBack } from '@/hooks/useSmartBack';
+import { useSmartBack, useGoBackOr } from '@/hooks/useSmartBack';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/loose-client';
 import { getValidProfileIds } from '@/lib/sanitizeAttendanceUserIds';
@@ -56,6 +56,7 @@ export default function SimplifiedReportForm() {
   const location = useLocation();
   const navigate = useNavigate();
   const smartBack = useSmartBack(projectId ? `/projects/${projectId}` : '/reports');
+  const goBackOr = useGoBackOr();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
@@ -560,11 +561,7 @@ export default function SimplifiedReportForm() {
       }
 
       const originFrom = (location.state as { from?: string } | null)?.from;
-      if (originFrom) {
-        navigate(originFrom, { replace: true });
-        return;
-      }
-      navigate(params.toString() ? `/reports?${params.toString()}` : '/reports', { replace: true });
+      goBackOr(originFrom || (params.toString() ? `/reports?${params.toString()}` : '/reports'));
     },
     onError: (error) => {
       console.error('Error creating report:', error);
@@ -763,7 +760,7 @@ export default function SimplifiedReportForm() {
       queryClient.invalidateQueries({ queryKey: ['reports'] });
       queryClient.invalidateQueries({ queryKey: ['report', reportId] });
       toast.success(status === 'draft' ? 'Rascunho salvo!' : 'Relatório atualizado!');
-      navigate(`/reports/${report.id}`, { replace: true });
+      goBackOr(`/reports/${report.id}`);
     },
     onError: (error) => {
       console.error('Error updating report:', error);
