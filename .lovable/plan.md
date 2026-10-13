@@ -21,6 +21,14 @@ Conclusão: os RDOs enviados pelo WhatsApp desde 03/10, incluindo os do dia 8, n
    - A proteção contra duplicados impede criar de novo um RDO que já exista.
    - Se o WhatsApp não liberar o histórico antigo, informar quais grupos e dias faltaram. Nesse caso, os RDOs podem ser reenviados no grupo ou colados com "Colar Relatório do WhatsApp".
 
+3. **Avisar e reconectar sozinho**
+   - Quando o WhatsApp cair, o sistema tenta reconectar sozinho algumas vezes.
+   - Se não conseguir, os super admins recebem um aviso: uma faixa vermelha no topo do sistema, uma notificação no sino e um e-mail. O aviso traz um botão que abre o QR Code.
+   - Quando a conexão volta, chega um aviso de "WhatsApp reconectado" e a faixa some.
+   - Limite: quando o próprio WhatsApp encerra a sessão, nenhum sistema consegue voltar sem ler o QR Code no celular. Nesse caso o aviso garante que a queda não passe despercebida.
+   - Uma verificação a cada 10 minutos confere a conexão, mesmo que nenhum evento de queda chegue.
+
+
 ## Detalhes técnicos
 - `whatsapp_rdo_logs`: último registro em `2026-10-02 22:58 UTC`. Os eventos `connection` em `uazapi-webhook` mostram `status: disconnected` e `lastDisconnectReason: "QR Code timeout"`.
 - Recuperação: nova ação em edge function que usa a API da UAZAPI para buscar mensagens por chat (grupos de `whatsapp_group_projects`) a partir de 03/10 e repassar cada uma ao processamento de `uazapi-webhook`. A deduplicação existente continua valendo.
