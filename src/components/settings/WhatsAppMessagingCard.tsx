@@ -17,6 +17,8 @@ const fmtPhone = (d: string) => {
   return d;
 };
 
+type AlertContact = { name: string; phone: string };
+
 async function callFn(action: string, body: Record<string, unknown>) {
   const { data: { session } } = await supabase.auth.getSession();
   const res = await fetch(`${FN_URL}?action=${action}`, {
@@ -36,56 +38,61 @@ async function callFn(action: string, body: Record<string, unknown>) {
 export function WhatsAppMessagingCard() {
   const { toast } = useToast();
   const [rowId, setRowId] = useState<string | null>(null);
-  const [phones, setPhones] = useState<string[]>([]);
+  const [contacts, setContacts] = useState<AlertContact[]>([]);
+  const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     (supabase.from('whatsapp_integration_settings') as any)
-      .select('id, alert_phones').order('updated_at', { ascending: false }).limit(1).maybeSingle()
+      .select('id, alert_contacts').order('updated_at', { ascending: false }).limit(1).maybeSingle()
       .then(({ data }: any) => {
         if (data) {
           setRowId(data.id);
-          setPhones(Array.isArray(data.alert_phones) ? data.alert_phones : []);
+          const list = Array.isArray(data.alert_contacts) ? data.alert_contacts : [];
+          setContacts(list.filter((c: any) => c && c.phone).map((c: any) => ({ name: String(c.name || ''), phone: String(c.phone) })));
         }
       });
   }, []);
 
   const err = (title: string, e: any) => toast({ title, description: e?.message || String(e), variant: 'destructive' });
 
-  const persist = async (list: string[]) => {
+  const persist = async (list: AlertContact[]) => {
     if (!rowId) { err('Configuração não encontrada', 'Configure a conexão do WhatsApp primeiro.'); return false; }
     setSaving(true);
     const { error } = await (supabase.from('whatsapp_integration_settings') as any)
-      .update({ alert_phones: list }).eq('id', rowId);
+      .update({ alert_contacts: list }).eq('id', rowId);
     setSaving(false);
     if (error) { err('Não foi possível salvar', error); return false; }
     return true;
   };
 
-  const addPhone = async () => {
+  const addContact = async () => {
+    const name = newName.trim();
+    if (!name || name.length > 60) return err('Nome inválido', 'Informe um nome de até 60 caracteres.');
     if (!validPhone(newPhone)) return err('Número inválido', 'Use DDD + número, ex: 27 99999-9999');
     const d = digits(newPhone);
-    if (phones.includes(d)) return err('Número já cadastrado', 'Este número já está na lista.');
-    const list = [...phones, d];
+    if (contacts.some((c) => c.phone === d)) return err('Número já cadastrado', 'Este número já está na lista.');
+    const list = [...contacts, { name, phone: d }];
     if (await persist(list)) {
-      setPhones(list);
+      setContacts(list);
+      setNewName('');
       setNewPhone('');
-      toast({ title: 'Número adicionado' });
+      toast({ title: 'Contato adicionado' });
     }
   };
 
-  const removePhone = async (p: string) => {
-    const list = phones.filter((x) => x !== p);
+  const removeContact = async (phone: string) => {
+    const list = contacts.filter((c) => c.phone !== phone);
     if (await persist(list)) {
-      setPhones(list);
-      toast({ title: 'Número removido' });
+      setContacts(list);
+      toast({ title: 'Contato removido' });
     }
   };
 
   const testAlert = async () => {
-    if (!phones.length) return err('Lista vazia', 'Adicione ao menos um número.');
+    if (!contacts.length) return err('Lista vazia', 'Adicione ao menos um contato.');
     setTesting(true);
     try {
       const r = await callFn('test_alert', {});
@@ -93,7 +100,7 @@ export function WhatsAppMessagingCard() {
       if (failed.length) {
         toast({ title: 'Teste enviado com falhas', description: `Não saiu para: ${failed.map(fmtPhone).join(', ')}`, variant: 'destructive' });
       } else {
-        toast({ title: 'Mensagem de teste enviada para todos os números' });
+        toast({ title: 'Mensagem de teste enviada para todos os contatos' });
       }
     } catch (e) { err('Teste não enviado', e); } finally { setTesting(false); }
   };
@@ -105,30 +112,43 @@ export function WhatsAppMessagingCard() {
         <CardDescription>Recebem pelo WhatsApp os avisos de desconexão e reconexão. O envio sai sempre pelo WhatsApp que captura os RDOs.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex gap-2 items-end">
-          <div className="space-y-1 flex-1">
+        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          <div className="space-y-1">
+            <Label htmlFor="alert-name">Nome</Label>
+            <Input
+              id="alert-name"
+              placeholder="Ex.: Dayvison"
+              maxLength={60}
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
             <Label htmlFor="alert-phone">WhatsApp (com DDD)</Label>
             <Input
               id="alert-phone"
               placeholder="27 99999-9999"
               value={newPhone}
               onChange={(e) => setNewPhone(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addPhone(); } }}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addContact(); } }}
             />
           </div>
-          <Button onClick={addPhone} disabled={saving}>
+          <Button onClick={addContact} disabled={saving}>
             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}Adicionar
           </Button>
         </div>
 
-        {phones.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum número cadastrado.</p>
+        {contacts.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhum contato cadastrado.</p>
         ) : (
           <ul className="divide-y rounded-md border">
-            {phones.map((p) => (
-              <li key={p} className="flex items-center justify-between px-3 py-2 text-sm">
-                <span>{fmtPhone(p)}</span>
-                <Button variant="ghost" size="icon" onClick={() => removePhone(p)} disabled={saving} aria-label={`Remover ${fmtPhone(p)}`}>
+            {contacts.map((c) => (
+              <li key={c.phone} className="flex items-center justify-between px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium">{c.name || 'Sem nome'}</p>
+                  <p className="text-xs text-muted-foreground">{fmtPhone(c.phone)}</p>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => removeContact(c.phone)} disabled={saving} aria-label={`Remover ${c.name || fmtPhone(c.phone)}`}>
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </li>
@@ -136,9 +156,9 @@ export function WhatsAppMessagingCard() {
           </ul>
         )}
 
-        <p className="text-xs text-muted-foreground">Se o WhatsApp cair de vez, o aviso de queda pode não sair por ele; nesse caso chega pelo sino e e-mail, e estes números recebem o aviso ao reconectar.</p>
+        <p className="text-xs text-muted-foreground">Se o WhatsApp cair de vez, o aviso de queda pode não sair por ele; nesse caso chega pelo sino e e-mail, e estes contatos recebem o aviso ao reconectar.</p>
 
-        <Button variant="outline" onClick={testAlert} disabled={testing || !phones.length}>
+        <Button variant="outline" onClick={testAlert} disabled={testing || !contacts.length}>
           {testing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}Enviar teste
         </Button>
       </CardContent>

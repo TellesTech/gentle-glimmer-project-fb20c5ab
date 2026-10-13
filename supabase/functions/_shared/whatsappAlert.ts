@@ -38,22 +38,27 @@ export async function recordWhatsAppConnection(
   await supabase.from("whatsapp_integration_settings").update(patch).eq("id", row.id);
   if (!alertType) return;
 
-  // Aviso por WhatsApp para os números cadastrados (falha não bloqueia sino/e-mail)
+  // Aviso por WhatsApp para os contatos cadastrados (falha não bloqueia sino/e-mail)
   try {
     const { data: s } = await supabase.from("whatsapp_integration_settings")
-      .select("alert_phones, connection_changed_at").eq("id", row.id).maybeSingle();
-    const phones: string[] = [...new Set(
-      (Array.isArray(s?.alert_phones) ? s.alert_phones : [])
-        .map((p: unknown) => normalizePhone(p))
-        .filter((p: string | null): p is string => !!p),
-    )];
-    if (phones.length) {
+      .select("alert_contacts, connection_changed_at").eq("id", row.id).maybeSingle();
+    const contacts: { name: string; phone: string }[] = [];
+    const seen = new Set<string>();
+    for (const c of Array.isArray(s?.alert_contacts) ? s.alert_contacts : []) {
+      const phone = normalizePhone(c?.phone);
+      if (phone && !seen.has(phone)) {
+        seen.add(phone);
+        contacts.push({ name: String(c?.name || "").trim().slice(0, 60), phone });
+      }
+    }
+    if (contacts.length) {
       const fmt = (iso?: string | null) => iso
         ? new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "";
-      const text = alertType === "down"
-        ? `⚠️ *WhatsApp do Sistema RDO desconectado*\nOs RDOs enviados pelo WhatsApp não estão entrando no sistema. Leia o QR Code em ${APP_URL}/settings?tab=whatsapp${reason ? `\nMotivo: ${reason}` : ""}`
-        : `✅ *WhatsApp do Sistema RDO reconectado*\nEle esteve desconectado${row.disconnect_alerted_at ? ` desde ${fmt(row.disconnect_alerted_at)}` : ""}. Os RDOs voltaram a entrar no sistema.`;
-      for (const phone of phones) {
+      for (const { name, phone } of contacts) {
+        const hi = name ? `Olá, ${name}! ` : "";
+        const text = alertType === "down"
+          ? `${hi}⚠️ *WhatsApp do Sistema RDO desconectado*\nOs RDOs enviados pelo WhatsApp não estão entrando no sistema. Leia o QR Code em ${APP_URL}/settings?tab=whatsapp${reason ? `\nMotivo: ${reason}` : ""}`
+          : `${hi}✅ *WhatsApp do Sistema RDO reconectado*\nEle esteve desconectado${row.disconnect_alerted_at ? ` desde ${fmt(row.disconnect_alerted_at)}` : ""}. Os RDOs voltaram a entrar no sistema.`;
         const r = await sendWhatsAppText(phone, text);
         if (!r.ok) console.error(`Aviso WhatsApp não enviado para ${phone} [${r.status}]: ${r.body}`);
       }
