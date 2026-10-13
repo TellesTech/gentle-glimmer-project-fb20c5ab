@@ -3489,10 +3489,14 @@ export type Database = {
       whatsapp_integration_settings: {
         Row: {
           base_url: string
+          connection_changed_at: string | null
+          connection_status: string | null
           created_at: string
+          disconnect_alerted_at: string | null
           id: string
           instance_name: string | null
           instance_token: string | null
+          last_disconnect_reason: string | null
           updated_at: string
           updated_by: string | null
           webhook_events: string[]
@@ -3500,10 +3504,14 @@ export type Database = {
         }
         Insert: {
           base_url?: string
+          connection_changed_at?: string | null
+          connection_status?: string | null
           created_at?: string
+          disconnect_alerted_at?: string | null
           id?: string
           instance_name?: string | null
           instance_token?: string | null
+          last_disconnect_reason?: string | null
           updated_at?: string
           updated_by?: string | null
           webhook_events?: string[]
@@ -3511,10 +3519,14 @@ export type Database = {
         }
         Update: {
           base_url?: string
+          connection_changed_at?: string | null
+          connection_status?: string | null
           created_at?: string
+          disconnect_alerted_at?: string | null
           id?: string
           instance_name?: string | null
           instance_token?: string | null
+          last_disconnect_reason?: string | null
           updated_at?: string
           updated_by?: string | null
           webhook_events?: string[]
