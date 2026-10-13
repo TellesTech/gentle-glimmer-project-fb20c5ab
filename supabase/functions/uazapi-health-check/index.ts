@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getUazapiConfig, getUazapiToken } from "../_shared/uazapiConfig.ts";
+import { recordWhatsAppConnection } from "../_shared/whatsappAlert.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
