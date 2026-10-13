@@ -170,6 +170,33 @@ export function WhatsAppConnectionSettingsCard() {
     }
   }, [authHeaders, statusFnUrl, toast]);
 
+  // Recuperar RDOs enviados enquanto o WhatsApp estava desconectado
+  const [recovering, setRecovering] = useState(false);
+  const [recoverResult, setRecoverResult] = useState<string | null>(null);
+  const handleRecover = useCallback(async () => {
+    if (!window.confirm('Buscar no WhatsApp as mensagens dos grupos desde 03/10 e criar os RDOs que faltam?')) return;
+    setRecovering(true);
+    setRecoverResult(null);
+    try {
+      const headers = await authHeaders();
+      const res = await fetch(`${statusFnUrl}?action=recover`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ since: '2026-10-03T00:00:00-03:00' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || `Erro ${res.status}`);
+      const lines = (data.summary || []).map((s: any) =>
+        `${s.group}: ${s.ok ? `${s.total} mensagens reprocessadas` : 'histórico indisponível'}`);
+      setRecoverResult(lines.length ? lines.join('\n') : 'Nenhum grupo vinculado encontrado.');
+      toast({ title: 'Recuperação concluída', description: 'Confira os RDOs em Meus RDOs.' });
+    } catch (err: any) {
+      setRecoverResult('Não foi possível recuperar: ' + (err?.message || 'erro desconhecido'));
+    } finally {
+      setRecovering(false);
+    }
+  }, [authHeaders, statusFnUrl, toast]);
+
   // Fetch QR Code
   const fetchQrCode = useCallback(async () => {
     try {
@@ -467,7 +494,16 @@ export function WhatsAppConnectionSettingsCard() {
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Trocar número / Reconectar
                 </Button>
+                <Button variant="outline" onClick={handleRecover} disabled={recovering}>
+                  {recovering ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                  Recuperar RDOs desde 03/10
+                </Button>
               </div>
+              {recoverResult && (
+                <Alert>
+                  <AlertDescription className="whitespace-pre-line text-sm">{recoverResult}</AlertDescription>
+                </Alert>
+              )}
             </>
           )}
         </CardContent>
