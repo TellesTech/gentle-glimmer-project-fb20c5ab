@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/loose-client';
@@ -8,11 +9,13 @@ import { useAuth } from '@/contexts/AuthContext';
 export function WhatsAppStatusBanner() {
   const { role } = useAuth() as any;
   const isSuperAdmin = role === 'super_admin';
+  const queryClient = useQueryClient();
 
   const { data } = useQuery({
     queryKey: ['whatsapp-connection-status'],
     enabled: isSuperAdmin,
-    refetchInterval: 60_000,
+    refetchInterval: (query) =>
+      query.state.data?.connection_status === 'disconnected' ? 15_000 : 60_000,
     queryFn: async () => {
       const { data } = await supabase
         .from('whatsapp_integration_settings')
@@ -23,6 +26,24 @@ export function WhatsAppStatusBanner() {
       return data as { connection_status: string | null; connection_changed_at: string | null } | null;
     },
   });
+
+  // Some na hora ao reconectar: escuta mudanças de status em tempo real.
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    const channel = supabase
+      .channel('whatsapp-connection-status')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'whatsapp_integration_settings' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['whatsapp-connection-status'] });
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isSuperAdmin, queryClient]);
 
   if (!isSuperAdmin || data?.connection_status !== 'disconnected') return null;
 
