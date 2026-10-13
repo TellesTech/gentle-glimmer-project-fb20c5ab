@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      if (action === "send_text" || action === "test_alert") {
+      if (action === "test_alert") {
         const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), {
           status, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -104,18 +104,27 @@ Deno.serve(async (req) => {
           : { data: false };
         if (!isSa) return json({ error: "Apenas super admin" }, 403);
         const { normalizePhone, sendWhatsAppText } = await import("../_shared/whatsappSend.ts");
-        const phone = normalizePhone(reqBody?.phone);
-        if (!phone) return json({ error: "Número inválido. Use DDD + número." }, 400);
-        const text = action === "test_alert"
-          ? "✅ Teste: este número receberá os avisos do WhatsApp do Sistema RDO (WEES)."
-          : String(reqBody?.text || "").trim();
-        if (!text || text.length > 4000) return json({ error: "Mensagem vazia ou longa demais (máx. 4000)." }, 400);
-        const r = await sendWhatsAppText(phone, text);
-        if (!r.ok) {
-          console.error(`send_text falhou [${r.status}]: ${r.body}`);
-          return json({ error: "O WhatsApp não enviou a mensagem (verifique se está conectado).", status: r.status, details: r.body.slice(0, 500) }, 502);
+        const { data: s } = await sb.from("whatsapp_integration_settings")
+          .select("alert_phones").order("updated_at", { ascending: false }).limit(1).maybeSingle();
+        const phones: string[] = [...new Set(
+          (Array.isArray(s?.alert_phones) ? s.alert_phones : [])
+            .map((p: unknown) => normalizePhone(p))
+            .filter((p: string | null): p is string => !!p),
+        )];
+        if (!phones.length) return json({ error: "Nenhum número cadastrado para avisos." }, 400);
+        const text = "✅ Teste: este número receberá os avisos do WhatsApp do Sistema RDO (WEES).";
+        const failed: string[] = [];
+        for (const phone of phones) {
+          const r = await sendWhatsAppText(phone, text);
+          if (!r.ok) {
+            console.error(`test_alert falhou para ${phone} [${r.status}]: ${r.body}`);
+            failed.push(phone);
+          }
         }
-        return json({ sent: true, phone });
+        if (failed.length === phones.length) {
+          return json({ error: "O WhatsApp não enviou a mensagem (verifique se está conectado).", failed }, 502);
+        }
+        return json({ sent: true, phones, failed });
       }
 
       if (action === "recover") {
