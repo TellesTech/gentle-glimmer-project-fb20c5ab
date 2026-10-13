@@ -8,6 +8,9 @@ O número da WEES conectado envia para esse número:
 - **WhatsApp desconectado** — quando a verificação automática percebe a queda.
 - Os avisos no sino e por e-mail continuam como hoje.
 
+## Enviar mensagem para qualquer número
+Na mesma tela, um quadro **"Enviar mensagem"**: você digita o número (com DDD) e o texto, e clica em **Enviar**. A mensagem sai pelo WhatsApp que captura os RDOs. Aparece confirmação de enviado ou o motivo do erro (por exemplo, WhatsApp desconectado). Só super admins veem esse quadro.
+
 ## Limite importante
 Quando o WhatsApp da WEES cai de verdade, ele não consegue enviar nenhuma mensagem, nem o aviso de queda. Por isso:
 - O sistema tenta enviar o aviso de queda pelo WhatsApp; se não conseguir, a queda fica avisada só no sino e no e-mail.
