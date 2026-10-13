@@ -356,7 +356,7 @@ export default function Settings() {
         <p className="text-sm text-muted-foreground">Gerencie suas preferências</p>
       </div>
 
-      <Tabs defaultValue="profile" className="w-full">
+      <Tabs defaultValue={new URLSearchParams(window.location.search).get("tab") || "profile"} className="w-full">
         <TabsList className="flex w-full h-auto flex-wrap gap-1">
           <TabsTrigger value="profile" className="gap-1.5 px-3 py-2 flex-shrink-0">
             <User className="h-4 w-4 shrink-0" />

@@ -91,6 +91,60 @@ Deno.serve(async (req) => {
         });
       }
 
+      if (action === "recover") {
+        // Reprocessa as mensagens dos grupos vinculados desde uma data (só super admin)
+        const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+        const sb = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+        const jwt = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+        const { data: u } = await sb.auth.getUser(jwt);
+        const { data: isSa } = u?.user
+          ? await sb.rpc("has_role", { _user_id: u.user.id, _role: "super_admin" })
+          : { data: false };
+        if (!isSa) {
+          return new Response(JSON.stringify({ error: "Apenas super admin" }), {
+            status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const since = new Date(String(reqBody?.since || "2026-10-03T00:00:00-03:00")).getTime();
+        if (isNaN(since)) {
+          return new Response(JSON.stringify({ error: "Data inválida" }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const { data: groups } = await sb.from("whatsapp_group_projects").select("group_id, group_name");
+        const webhookUrl = `${supabaseUrl}/functions/v1/uazapi-webhook`;
+        const summary: any[] = [];
+        for (const g of groups || []) {
+          const chatid = `${String(g.group_id).replace(/@g\.us$/i, "")}@g.us`;
+          const res = await uaFetch("/message/find", token, {
+            method: "POST",
+            body: JSON.stringify({ chatid, limit: 1000 }),
+          });
+          const data = await res.json().catch(() => ({}));
+          const list: any[] = Array.isArray(data) ? data : data?.messages || data?.data || [];
+          const toMs = (m: any) => {
+            const t = Number(m.messageTimestamp || m.timestamp || m.messagetimestamp || 0);
+            return t > 1e12 ? t : t * 1000;
+          };
+          const msgs = list
+            .filter((m) => !(m.fromMe ?? m.fromme) && toMs(m) >= since)
+            .sort((a, b) => toMs(a) - toMs(b));
+          let sent = 0;
+          for (const m of msgs) {
+            const r = await fetch(webhookUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY") || ""}` },
+              body: JSON.stringify({ EventType: "messages", message: m, recovered: true }),
+            }).catch(() => null);
+            if (r?.ok) sent++;
+          }
+          summary.push({ group: g.group_name || g.group_id, ok: res.ok, found: list.length, processed: sent, total: msgs.length });
+        }
+        return new Response(JSON.stringify({ recovered: true, summary }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       if (action === "delete-instance") {
         const res = await uaFetch("/instance", token, { method: "DELETE" });
         const data = await res.json().catch(() => ({}));
@@ -192,6 +246,7 @@ Deno.serve(async (req) => {
     const webhookData = await webhookRes.json().catch(() => ({}));
 
     const connected = !!(
+      statusData?.status?.connected === true ||
       statusData?.connected ||
       statusData?.instance?.status === "connected" ||
       statusData?.status === "connected"
