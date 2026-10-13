@@ -1,0 +1,1 @@
+ALTER TABLE public.whatsapp_integration_settings ADD COLUMN IF NOT EXISTS alert_phone text;
