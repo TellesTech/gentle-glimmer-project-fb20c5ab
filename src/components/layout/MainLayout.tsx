@@ -49,6 +49,7 @@ export function MainLayout() {
           onMobileMenuToggle={() => setMobileMenuOpen(true)}
           mobileMenuOpen={mobileMenuOpen}
         />
+        <WhatsAppStatusBanner />
         
         {/* Conteúdo que ROLA */}
         <main className={cn(
