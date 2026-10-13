@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getUazapiConfig, getUazapiToken } from "../_shared/uazapiConfig.ts";
+import { recordWhatsAppConnection } from "../_shared/whatsappAlert.ts";
 import {
   buildProjectName as buildProjectNameShared,
 
@@ -972,7 +973,7 @@ Deno.serve(async (req) => {
             sb,
             st === "connected",
             rawPayload?.instance?.lastDisconnectReason || null,
-            { alertNow: st === "disconnected" },
+            { alertNow: false }, // o aviso sai pela verificação periódica, após tentar reconectar
           );
         } catch (e) {
           console.error("Erro ao registrar conexão do WhatsApp:", e);
