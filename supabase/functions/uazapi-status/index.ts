@@ -91,6 +91,33 @@ Deno.serve(async (req) => {
         });
       }
 
+      if (action === "send_text" || action === "test_alert") {
+        const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), {
+          status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+        const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+        const sb = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+        const jwt = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+        const { data: u } = await sb.auth.getUser(jwt);
+        const { data: isSa } = u?.user
+          ? await sb.rpc("has_role", { _user_id: u.user.id, _role: "super_admin" })
+          : { data: false };
+        if (!isSa) return json({ error: "Apenas super admin" }, 403);
+        const { normalizePhone, sendWhatsAppText } = await import("../_shared/whatsappSend.ts");
+        const phone = normalizePhone(reqBody?.phone);
+        if (!phone) return json({ error: "Número inválido. Use DDD + número." }, 400);
+        const text = action === "test_alert"
+          ? "✅ Teste: este número receberá os avisos do WhatsApp do Sistema RDO (WEES)."
+          : String(reqBody?.text || "").trim();
+        if (!text || text.length > 4000) return json({ error: "Mensagem vazia ou longa demais (máx. 4000)." }, 400);
+        const r = await sendWhatsAppText(phone, text);
+        if (!r.ok) {
+          console.error(`send_text falhou [${r.status}]: ${r.body}`);
+          return json({ error: "O WhatsApp não enviou a mensagem (verifique se está conectado).", status: r.status, details: r.body.slice(0, 500) }, 502);
+        }
+        return json({ sent: true, phone });
+      }
+
       if (action === "recover") {
         // Reprocessa as mensagens dos grupos vinculados desde uma data (só super admin)
         const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");

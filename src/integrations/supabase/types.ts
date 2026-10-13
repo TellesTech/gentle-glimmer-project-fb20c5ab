@@ -3488,6 +3488,7 @@ export type Database = {
       }
       whatsapp_integration_settings: {
         Row: {
+          alert_phone: string | null
           base_url: string
           connection_changed_at: string | null
           connection_status: string | null
@@ -3503,6 +3504,7 @@ export type Database = {
           webhook_url: string | null
         }
         Insert: {
+          alert_phone?: string | null
           base_url?: string
           connection_changed_at?: string | null
           connection_status?: string | null
@@ -3518,6 +3520,7 @@ export type Database = {
           webhook_url?: string | null
         }
         Update: {
+          alert_phone?: string | null
           base_url?: string
           connection_changed_at?: string | null
           connection_status?: string | null

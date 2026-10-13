@@ -19,6 +19,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { WhatsAppConnectionSettingsCard } from '@/components/settings/WhatsAppConnectionSettingsCard';
+import { WhatsAppMessagingCard } from '@/components/settings/WhatsAppMessagingCard';
 
 
 export function WhatsAppSettingsTab() {
@@ -298,6 +299,7 @@ export function WhatsAppSettingsTab() {
   return (
     <div className="space-y-6">
       <WhatsAppConnectionSettingsCard />
+      <WhatsAppMessagingCard />
 
       {/* Pausar automação */}
 
