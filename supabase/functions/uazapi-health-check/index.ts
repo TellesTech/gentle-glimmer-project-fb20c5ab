@@ -44,26 +44,34 @@ Deno.serve(async (req) => {
     let logStatus = "ok";
     const logDetails: Record<string, unknown> = {};
 
-    // 1) Conferir status da instância e reconectar se desconectada
+    // 1) Conferir status da instância; se caiu, tentar reconectar e avisar se não voltar
+    const isConnected = (d: any) =>
+      d?.status?.connected === true || d?.connected === true || d?.instance?.status === "connected";
     try {
       const statusRes = await uaFetch("/instance/status", token, { method: "GET" });
       const statusData = await statusRes.json().catch(() => ({}));
       logDetails.instanceStatus = statusData?.status ?? statusData;
-      const connected =
-        statusData?.status?.connected === true ||
-        statusData?.connected === true ||
-        statusData?.instance?.status === "connected";
-      logDetails.connected = connected;
+      let connected = isConnected(statusData);
 
       if (!connected) {
         console.log("UAZAPI instance disconnected; attempting auto-reconnect");
-        const connectRes = await uaFetch("/instance/connect", token, {
-          method: "POST",
-          body: JSON.stringify({}),
-        });
-        logDetails.reconnectResult = await connectRes.json().catch(() => ({}));
-        logStatus = "reconnect_attempted";
+        for (let attempt = 1; attempt <= 3 && !connected; attempt++) {
+          const connectRes = await uaFetch("/instance/connect", token, { method: "POST", body: JSON.stringify({}) });
+          const r = await connectRes.json().catch(() => ({}));
+          logDetails[`reconnect${attempt}`] = { connected: r?.connected, status: r?.instance?.status };
+          await new Promise((res) => setTimeout(res, 5000));
+          const again = await uaFetch("/instance/status", token, { method: "GET" });
+          connected = isConnected(await again.json().catch(() => ({})));
+        }
+        logStatus = connected ? "reconnected" : "still_disconnected";
       }
+      logDetails.connected = connected;
+      await recordWhatsAppConnection(
+        supabase,
+        connected,
+        statusData?.instance?.lastDisconnectReason || null,
+        { alertNow: !connected },
+      );
     } catch (err) {
       console.error("Error checking instance status:", err);
       logDetails.instanceStatusError = err instanceof Error ? err.message : String(err);
