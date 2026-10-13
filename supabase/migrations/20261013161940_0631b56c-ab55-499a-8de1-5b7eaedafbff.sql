@@ -1,0 +1,1 @@
+ALTER TABLE public.whatsapp_integration_settings ADD COLUMN IF NOT EXISTS pending_down_alert_at timestamptz;

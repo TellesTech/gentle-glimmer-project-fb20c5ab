@@ -3500,6 +3500,7 @@ export type Database = {
           instance_name: string | null
           instance_token: string | null
           last_disconnect_reason: string | null
+          pending_down_alert_at: string | null
           updated_at: string
           updated_by: string | null
           webhook_events: string[]
@@ -3518,6 +3519,7 @@ export type Database = {
           instance_name?: string | null
           instance_token?: string | null
           last_disconnect_reason?: string | null
+          pending_down_alert_at?: string | null
           updated_at?: string
           updated_by?: string | null
           webhook_events?: string[]
@@ -3536,6 +3538,7 @@ export type Database = {
           instance_name?: string | null
           instance_token?: string | null
           last_disconnect_reason?: string | null
+          pending_down_alert_at?: string | null
           updated_at?: string
           updated_by?: string | null
           webhook_events?: string[]
