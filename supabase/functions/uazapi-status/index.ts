@@ -246,6 +246,7 @@ Deno.serve(async (req) => {
     const webhookData = await webhookRes.json().catch(() => ({}));
 
     const connected = !!(
+      statusData?.status?.connected === true ||
       statusData?.connected ||
       statusData?.instance?.status === "connected" ||
       statusData?.status === "connected"
