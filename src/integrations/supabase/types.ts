@@ -3488,6 +3488,7 @@ export type Database = {
       }
       whatsapp_integration_settings: {
         Row: {
+          alert_contacts: Json
           alert_phone: string | null
           alert_phones: string[]
           base_url: string
@@ -3505,6 +3506,7 @@ export type Database = {
           webhook_url: string | null
         }
         Insert: {
+          alert_contacts?: Json
           alert_phone?: string | null
           alert_phones?: string[]
           base_url?: string
@@ -3522,6 +3524,7 @@ export type Database = {
           webhook_url?: string | null
         }
         Update: {
+          alert_contacts?: Json
           alert_phone?: string | null
           alert_phones?: string[]
           base_url?: string

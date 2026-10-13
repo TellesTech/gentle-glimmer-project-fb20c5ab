@@ -105,26 +105,30 @@ Deno.serve(async (req) => {
         if (!isSa) return json({ error: "Apenas super admin" }, 403);
         const { normalizePhone, sendWhatsAppText } = await import("../_shared/whatsappSend.ts");
         const { data: s } = await sb.from("whatsapp_integration_settings")
-          .select("alert_phones").order("updated_at", { ascending: false }).limit(1).maybeSingle();
-        const phones: string[] = [...new Set(
-          (Array.isArray(s?.alert_phones) ? s.alert_phones : [])
-            .map((p: unknown) => normalizePhone(p))
-            .filter((p: string | null): p is string => !!p),
-        )];
-        if (!phones.length) return json({ error: "Nenhum número cadastrado para avisos." }, 400);
-        const text = "✅ Teste: este número receberá os avisos do WhatsApp do Sistema RDO (WEES).";
+          .select("alert_contacts").order("updated_at", { ascending: false }).limit(1).maybeSingle();
+        const contacts: { name: string; phone: string }[] = [];
+        const seen = new Set<string>();
+        for (const c of Array.isArray(s?.alert_contacts) ? s.alert_contacts : []) {
+          const phone = normalizePhone(c?.phone);
+          if (phone && !seen.has(phone)) {
+            seen.add(phone);
+            contacts.push({ name: String(c?.name || "").trim().slice(0, 60), phone });
+          }
+        }
+        if (!contacts.length) return json({ error: "Nenhum contato cadastrado para avisos." }, 400);
         const failed: string[] = [];
-        for (const phone of phones) {
-          const r = await sendWhatsAppText(phone, text);
+        for (const { name, phone } of contacts) {
+          const hi = name ? `Olá, ${name}! ` : "";
+          const r = await sendWhatsAppText(phone, `${hi}✅ Teste: este número receberá os avisos do WhatsApp do Sistema RDO (WEES).`);
           if (!r.ok) {
             console.error(`test_alert falhou para ${phone} [${r.status}]: ${r.body}`);
             failed.push(phone);
           }
         }
-        if (failed.length === phones.length) {
+        if (failed.length === contacts.length) {
           return json({ error: "O WhatsApp não enviou a mensagem (verifique se está conectado).", failed }, 502);
         }
-        return json({ sent: true, phones, failed });
+        return json({ sent: true, phones: contacts.map((c) => c.phone), failed });
       }
 
       if (action === "recover") {
