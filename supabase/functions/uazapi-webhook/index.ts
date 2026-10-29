@@ -1385,21 +1385,23 @@ Deno.serve(async (req) => {
       routedId = matchProjectDeterministic(messageText, activeProjects);
     }
 
-    // Garantia: mesma OM nunca gera card novo. Procura a OM em TODAS as
-    // atividades da unidade (qualquer status/data) antes de criar.
-    if (!routedId && omNumberEarly) {
+    // Mesma OM + mesma atividade nunca gera card novo. A OM pode ser um
+    // contrato com várias atividades, então o título também precisa bater.
+    if (!routedId && omNumberEarly && omTitleEarly) {
       const omDigits = omKey(omNumberEarly);
+      const normTitle = (s: any) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+      const wantTitle = normTitle(omTitleEarly);
       const allIds = (activeProjectsRaw || []).map((p: any) => p.id);
-      if (omDigits && allIds.length) {
+      if (omDigits && wantTitle && allIds.length) {
         const { data: allOmRows } = await supabase
           .from("reports")
-          .select("project_id, maintenance_order_number, date")
+          .select("project_id, maintenance_order_number, maintenance_order_title, date")
           .in("project_id", allIds)
           .not("maintenance_order_number", "is", null)
           .order("date", { ascending: true });
         const counts = new Map<string, number>();
         for (const r of allOmRows || []) {
-          if (omKey(r.maintenance_order_number) === omDigits) {
+          if (omKey(r.maintenance_order_number) === omDigits && normTitle(r.maintenance_order_title) === wantTitle) {
             counts.set(r.project_id, (counts.get(r.project_id) || 0) + 1);
           }
         }
