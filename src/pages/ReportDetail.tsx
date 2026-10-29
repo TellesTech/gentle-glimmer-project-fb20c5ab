@@ -94,6 +94,7 @@ export default function ReportDetail() {
   const [isRegeneratingSummary, setIsRegeneratingSummary] = useState(false);
 
   const queryClient = useQueryClient();
+  const [moveOpen, setMoveOpen] = useState(false);
 
   const { data: reportData, isLoading } = useQuery({
     queryKey: ['report', reportId],
@@ -431,7 +432,6 @@ export default function ReportDetail() {
                   (user?.id === report.created_by && (report.status === 'draft' || report.status === 'completed'));
   const canDelete = role === 'super_admin' || role === 'admin';
   const canArchive = canEdit;
-  const [moveOpen, setMoveOpen] = useState(false);
   const isArchived = !!report.archived_at;
 
   const handleArchive = async () => {
