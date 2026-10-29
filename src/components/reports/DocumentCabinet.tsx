@@ -1,3 +1,5 @@
+import { MoveReportDialog } from './MoveReportDialog';
+import { ArrowRightLeft } from 'lucide-react';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format, parseISO, subDays, startOfDay, endOfDay, isWithinInterval, differenceInDays, getYear, getMonth } from 'date-fns';
@@ -197,6 +199,7 @@ interface CardActionsMenuProps {
   downloadingId: string | null;
   onDownload: (reportId: string, blank: boolean) => void;
   onDelete: (item: { id: string; type: CardActionsType; name: string; reportIds?: string[] }) => void;
+  onMove?: (id: string, name: string) => void;
 }
 
 /** Menu de ações do card (download do RDO + edição/exclusão para super admin). */
@@ -210,6 +213,7 @@ function CardActionsMenu({
   downloadingId,
   onDownload,
   onDelete,
+  onMove,
 }: CardActionsMenuProps) {
   const isReport = type === 'report';
   if (!isSuperAdmin && !isReport) return null;
@@ -244,6 +248,12 @@ function CardActionsMenu({
               <FileSignature className="h-3.5 w-3.5 mr-2" />
               Baixar em branco para assinar
             </DropdownMenuItem>
+            {onMove && (
+              <DropdownMenuItem onClick={() => onMove(id, name)}>
+                <ArrowRightLeft className="h-3.5 w-3.5 mr-2" />
+                Mover para outro card
+              </DropdownMenuItem>
+            )}
           </>
         )}
         {isSuperAdmin && (
@@ -469,6 +479,11 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
     }
   };
 
+  const [moveTarget, setMoveTarget] = useState<{ ids: string[]; label: string } | null>(null);
+  const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
+  const toggleSelected = (id: string) =>
+    setSelectedReportIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
   const mergeReportsMutation = useMutation({
     mutationFn: async ({ sourceReportId, targetFolder }: { sourceReportId: string, targetFolder: ProjectFolder }) => {
       // Find the source report
@@ -554,6 +569,7 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
       downloadingId={downloadingReportId}
       onDownload={downloadSingleReport}
       onDelete={(item) => setDeletingItem(item)}
+      onMove={(id, name) => setMoveTarget({ ids: [id], label: name })}
     />
   );
 
@@ -1486,11 +1502,28 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
           </div>
 
           {/* Reports list with Drag and Drop */}
+          <MoveReportDialog
+            open={!!moveTarget}
+            onOpenChange={(o) => { if (!o) setMoveTarget(null); }}
+            reportIds={moveTarget?.ids ?? []}
+            label={moveTarget?.label}
+            onMoved={() => setSelectedReportIds([])}
+          />
           <DragDropContext onDragEnd={onDragEnd}>
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Main reports list (Draggable items) */}
               <div className="flex-1">
-                <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">Relatórios (Arraste para organizar)</h3>
+                <div className="flex items-center justify-between gap-2 mb-3 px-1">
+                  <h3 className="text-sm font-medium text-muted-foreground">Relatórios (arraste ou marque para mover)</h3>
+                  {selectedReportIds.length > 0 && (
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="ghost" onClick={() => setSelectedReportIds([])}>Limpar</Button>
+                      <Button size="sm" className="gap-1.5" onClick={() => setMoveTarget({ ids: selectedReportIds, label: `${selectedReportIds.length} RDO(s)` })}>
+                        <ArrowRightLeft className="h-3.5 w-3.5" /> Mover selecionados ({selectedReportIds.length})
+                      </Button>
+                    </div>
+                  )}
+                </div>
                 <Droppable droppableId="reports-list">
                   {(provided) => (
                     <div 
@@ -1527,6 +1560,14 @@ export function DocumentCabinet({ onBreadcrumbChange, onContextChange }: Documen
                               {/* Header: RDO number + status badges */}
                               <div className="flex items-center justify-between gap-2 mb-2 pr-9">
                                 <div className="flex items-center gap-2 min-w-0">
+                                  <input
+                                    type="checkbox"
+                                    aria-label="Selecionar RDO"
+                                    className="h-4 w-4 shrink-0 accent-primary cursor-pointer"
+                                    checked={selectedReportIds.includes(report.id)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={() => toggleSelected(report.id)}
+                                  />
                                   <div className="p-2 rounded-lg bg-foreground/10 shrink-0">
                                     <FileText className="h-5 w-5 text-foreground/70" />
                                   </div>
