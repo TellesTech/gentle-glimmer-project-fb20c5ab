@@ -1,3 +1,5 @@
+import { MoveReportDialog } from '@/components/reports/MoveReportDialog';
+import { ArrowRightLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useSmartBack } from '@/hooks/useSmartBack';
@@ -429,6 +431,7 @@ export default function ReportDetail() {
                   (user?.id === report.created_by && (report.status === 'draft' || report.status === 'completed'));
   const canDelete = role === 'super_admin' || role === 'admin';
   const canArchive = canEdit;
+  const [moveOpen, setMoveOpen] = useState(false);
   const isArchived = !!report.archived_at;
 
   const handleArchive = async () => {
@@ -1430,6 +1433,19 @@ export default function ReportDetail() {
                 </Link>
               </Button>
             )}
+            {canEdit && (
+              <Button variant="outline" size="sm" className="min-w-0 px-2 sm:px-3" onClick={() => setMoveOpen(true)}>
+                <ArrowRightLeft className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Mover</span>
+              </Button>
+            )}
+            <MoveReportDialog
+              open={moveOpen}
+              onOpenChange={setMoveOpen}
+              reportIds={[report.id]}
+              label="este RDO"
+              onMoved={() => queryClient.invalidateQueries()}
+            />
             <Button variant="outline" size="sm" className="min-w-0 px-2 sm:px-3" onClick={handleDuplicate}>
               <Copy className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Duplicar</span>
