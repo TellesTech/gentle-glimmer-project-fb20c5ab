@@ -1,14 +1,4 @@
 import { getUazapiConfig, getUazapiToken, saveInstanceToDb } from "../_shared/uazapiConfig.ts";
-
-async function syncConnected(connected: boolean) {
-  if (!connected) return;
-  try {
-    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-    const { recordWhatsAppConnection } = await import("../_shared/whatsappAlert.ts");
-    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    await recordWhatsAppConnection(sb, true);
-  } catch (e) { console.error("syncConnected", e); }
-}
 // instanceName incluído no diagnóstico do GET
 
 const corsHeaders = {
@@ -262,7 +252,6 @@ Deno.serve(async (req) => {
       // Strip data:image/png;base64, prefix if present for unified rendering on the client
       const image = qrRaw.startsWith("data:") ? qrRaw.split(",")[1] : qrRaw;
 
-      await syncConnected(!!connected);
       return new Response(JSON.stringify({ connected, value: image, image, raw: data }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -303,7 +292,6 @@ Deno.serve(async (req) => {
       statusData?.status === "connected"
     );
 
-    await syncConnected(connected);
     const tokenLength = token.length;
     const tokenLooksLikeUrl = /^https?:\/\//i.test(token);
     const credentialsValid = !!token && !tokenLooksLikeUrl && tokenLength >= 20;

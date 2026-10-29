@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -50,7 +49,6 @@ function formatPhone(jid: string | null | undefined): string {
 
 export function WhatsAppConnectionSettingsCard() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const { role } = useAuth();
   const isSuperAdmin = role === 'super_admin';
 
@@ -104,7 +102,6 @@ export function WhatsAppConnectionSettingsCard() {
         return;
       }
       if (data?.connected) {
-        queryClient.invalidateQueries({ queryKey: ['whatsapp-connection-status'] });
         setStatus('connected');
         setStatusMessage(data?.smartPhoneConnected ? 'Instância online e celular conectado' : 'Instância online');
       } else {
@@ -210,7 +207,6 @@ export function WhatsAppConnectionSettingsCard() {
       if (data?.connected) {
         // Já conectado — pular QR e configurar webhook
         setQrStatus('connected');
-        queryClient.invalidateQueries({ queryKey: ['whatsapp-connection-status'] });
         await configureWebhook();
         return;
       } else if (data?.value) {

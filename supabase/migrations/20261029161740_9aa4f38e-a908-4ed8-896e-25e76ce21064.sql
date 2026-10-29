@@ -1,1 +1,0 @@
-REVOKE EXECUTE ON FUNCTION public.route_report_to_existing_om_project() FROM PUBLIC, anon, authenticated;

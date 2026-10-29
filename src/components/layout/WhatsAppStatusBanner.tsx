@@ -17,25 +17,13 @@ export function WhatsAppStatusBanner() {
     refetchInterval: (query) =>
       query.state.data?.connection_status === 'disconnected' ? 15_000 : 60_000,
     queryFn: async () => {
-      const read = async () => {
-        const { data } = await supabase
-          .from('whatsapp_integration_settings')
-          .select('connection_status, connection_changed_at')
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        return data as { connection_status: string | null; connection_changed_at: string | null } | null;
-      };
-      const row = await read();
-      if (row?.connection_status !== 'disconnected') return row;
-      // Confere o status real: se já conectou, a verificação atualiza o registro.
-      try {
-        const { data: live } = await supabase.functions.invoke('uazapi-status', { method: 'GET' });
-        if (live?.connected) return { ...row, connection_status: 'connected' };
-      } catch {
-        /* mantém o status salvo */
-      }
-      return row;
+      const { data } = await supabase
+        .from('whatsapp_integration_settings')
+        .select('connection_status, connection_changed_at')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data as { connection_status: string | null; connection_changed_at: string | null } | null;
     },
   });
 

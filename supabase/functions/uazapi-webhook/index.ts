@@ -1385,36 +1385,6 @@ Deno.serve(async (req) => {
       routedId = matchProjectDeterministic(messageText, activeProjects);
     }
 
-    // Mesma OM + mesma atividade nunca gera card novo. A OM pode ser um
-    // contrato com várias atividades, então o título também precisa bater.
-    if (!routedId && omNumberEarly && omTitleEarly) {
-      const omDigits = omKey(omNumberEarly);
-      const normTitle = (s: any) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
-      const wantTitle = normTitle(omTitleEarly);
-      const allIds = (activeProjectsRaw || []).map((p: any) => p.id);
-      if (omDigits && wantTitle && allIds.length) {
-        const { data: allOmRows } = await supabase
-          .from("reports")
-          .select("project_id, maintenance_order_number, maintenance_order_title, date")
-          .in("project_id", allIds)
-          .not("maintenance_order_number", "is", null)
-          .order("date", { ascending: true });
-        const counts = new Map<string, number>();
-        for (const r of allOmRows || []) {
-          if (omKey(r.maintenance_order_number) === omDigits && normTitle(r.maintenance_order_title) === wantTitle) {
-            counts.set(r.project_id, (counts.get(r.project_id) || 0) + 1);
-          }
-        }
-        const best = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
-        if (best) {
-          routedId = best[0];
-          await supabase.from("projects").update({ status: "in_progress" })
-            .eq("id", routedId).in("status", ["completed", "suspended"]);
-          console.log(`[ROUTE] OM ${omNumberEarly} já existe no projeto ${routedId} (busca ampla)`);
-        }
-      }
-    }
-
     if (!routedId) {
       // Cria uma nova atividade para esta OM, mesmo havendo outras ativas
       const { data: siteData } = await supabase
