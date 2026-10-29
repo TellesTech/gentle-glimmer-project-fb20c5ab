@@ -1385,6 +1385,34 @@ Deno.serve(async (req) => {
       routedId = matchProjectDeterministic(messageText, activeProjects);
     }
 
+    // Garantia: mesma OM nunca gera card novo. Procura a OM em TODAS as
+    // atividades da unidade (qualquer status/data) antes de criar.
+    if (!routedId && omNumberEarly) {
+      const omDigits = omKey(omNumberEarly);
+      const allIds = (activeProjectsRaw || []).map((p: any) => p.id);
+      if (omDigits && allIds.length) {
+        const { data: allOmRows } = await supabase
+          .from("reports")
+          .select("project_id, maintenance_order_number, date")
+          .in("project_id", allIds)
+          .not("maintenance_order_number", "is", null)
+          .order("date", { ascending: true });
+        const counts = new Map<string, number>();
+        for (const r of allOmRows || []) {
+          if (omKey(r.maintenance_order_number) === omDigits) {
+            counts.set(r.project_id, (counts.get(r.project_id) || 0) + 1);
+          }
+        }
+        const best = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+        if (best) {
+          routedId = best[0];
+          await supabase.from("projects").update({ status: "in_progress" })
+            .eq("id", routedId).in("status", ["completed", "suspended"]);
+          console.log(`[ROUTE] OM ${omNumberEarly} já existe no projeto ${routedId} (busca ampla)`);
+        }
+      }
+    }
+
     if (!routedId) {
       // Cria uma nova atividade para esta OM, mesmo havendo outras ativas
       const { data: siteData } = await supabase
