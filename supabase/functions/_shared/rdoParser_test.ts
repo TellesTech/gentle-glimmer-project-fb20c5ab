@@ -257,7 +257,8 @@ Deno.test("G - palavras genéricas não causam associação errada", () => {
     projects,
     projectOmNumbers: { p1: ["999999"] },
   });
-  assertEquals(res3.projectId, "p1");
+  // card p1 pertence a outra OM: não herda RDOs que caíram nele por engano
+  assertEquals(res3.projectId, null);
 
   // Sem OM: título genérico de uma palavra não pode rotear
   const res4 = routeProject({ omNumber: null, omTitle: "Limpeza", projects });
