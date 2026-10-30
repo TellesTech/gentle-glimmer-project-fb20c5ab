@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -253,6 +254,7 @@ interface ReturnState {
 
 export function ProjectSelector({ onComplete, initialData, originOm }: ProjectSelectorProps) {
   const navigate = useNavigate();
+  const smartBack = useSmartBack('/reports');
   const location = useLocation();
   const returnState = location.state as ReturnState | null;
   const { user, role } = useAuth();
@@ -1458,11 +1460,11 @@ export function ProjectSelector({ onComplete, initialData, originOm }: ProjectSe
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => navigate('/reports')}
+              onClick={smartBack}
               className="h-8 px-2 text-muted-foreground"
             >
               <ChevronLeft className="h-4 w-4 mr-1" />
-              Relatórios
+              Voltar
             </Button>
           ) : (
             <Button 
