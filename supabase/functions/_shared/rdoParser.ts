@@ -961,13 +961,6 @@ export function routeProject(input: RouteInput): RouteResult {
   // 3. Título da OM com correspondência forte
   const title = input.omTitle;
   if (title) {
-    // Sem OM na mensagem: nunca joga em card que pertence a uma OM específica
-    // a menos que o título bata exatamente.
-    const allProjects = projects;
-    for (const p of allProjects) {
-      if (projectTitleKey(p.name) === normKey(title)) return { projectId: p.id, reason: "title_exact" };
-    }
-    const projects = allProjects.filter((p) => !projectOmKey(p.name));
     const tKey = normKey(title);
 
     // 3a. Igualdade exata com o nome do projeto ou com um título de OM já usado
