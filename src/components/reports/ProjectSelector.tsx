@@ -254,6 +254,7 @@ interface ReturnState {
 
 export function ProjectSelector({ onComplete, initialData, originOm }: ProjectSelectorProps) {
   const navigate = useNavigate();
+  const smartBack = useSmartBack('/reports');
   const location = useLocation();
   const returnState = location.state as ReturnState | null;
   const { user, role } = useAuth();
@@ -1463,7 +1464,7 @@ export function ProjectSelector({ onComplete, initialData, originOm }: ProjectSe
               className="h-8 px-2 text-muted-foreground"
             >
               <ChevronLeft className="h-4 w-4 mr-1" />
-              Relatórios
+              Voltar
             </Button>
           ) : (
             <Button 
