@@ -257,7 +257,8 @@ Deno.test("G - palavras genéricas não causam associação errada", () => {
     projects,
     projectOmNumbers: { p1: ["999999"] },
   });
-  assertEquals(res3.projectId, "p1");
+  // card p1 pertence a outra OM: não herda RDOs que caíram nele por engano
+  assertEquals(res3.projectId, null);
 
   // Sem OM: título genérico de uma palavra não pode rotear
   const res4 = routeProject({ omNumber: null, omTitle: "Limpeza", projects });
@@ -356,4 +357,25 @@ Deno.test("J - campo vazio não engole o próximo rótulo", () => {
   assertEquals(r.numeroOM, null);
   assertEquals(r.tituloOM, "Limpeza da TCM");
   assertEquals(r.localAtividade, "Secagem C");
+});
+Deno.test("routeProject: OM no nome do card vence RDOs em card errado", () => {
+  const projects = [
+    { id: "errado", name: "OM 111111 — Telhado", code: null },
+    { id: "certo", name: "OM 4600039631 — Parada", code: null },
+  ] as any;
+  const r = routeProject({ omNumber: "4600039631", omTitle: null, projects,
+    projectOmNumbers: { errado: ["4600039631", "4600039631"] } });
+  assertEquals(r.projectId, "certo");
+});
+
+Deno.test("routeProject: OM com sufixo casa com o card", () => {
+  const projects = [{ id: "a", name: "OM 4600039631 — Parada", code: null }] as any;
+  assertEquals(routeProject({ omNumber: "4600039631/01", omTitle: null, projects }).projectId, "a");
+});
+
+Deno.test("routeProject: empate em relatórios vai para o card com mais RDOs", () => {
+  const projects = [{ id: "x", name: "Parada", code: null }, { id: "y", name: "Caldeira", code: null }] as any;
+  const r = routeProject({ omNumber: "555555", omTitle: null, projects,
+    projectOmNumbers: { x: ["555555"], y: ["555555", "555555"] } });
+  assertEquals(r.projectId, "y");
 });

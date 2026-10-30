@@ -157,6 +157,24 @@ export function omKey(value: unknown): string | null {
   return d || null;
 }
 
+/** Chave principal da OM: primeiro bloco numérico (ignora sufixos como "/01"). */
+export function omMainKey(value: unknown): string | null {
+  const s = sanitizeOmNumber(value);
+  if (!s) return null;
+  const blocks = s.match(/\d+/g) || [];
+  const main = blocks.find((b) => b.length >= 4) || blocks.join("");
+  return main || null;
+}
+
+/** Duas OMs são a mesma se dígitos completos ou bloco principal coincidem. */
+export function sameOm(a: unknown, b: unknown): boolean {
+  const ka = omKey(a), kb = omKey(b);
+  if (!ka || !kb) return false;
+  if (ka === kb) return true;
+  const ma = omMainKey(a), mb = omMainKey(b);
+  return !!ma && ma === mb;
+}
+
 export function normalizeTime(value: unknown): string | null {
   const raw = cleanLine(String(value ?? ""));
   if (!raw || isPlaceholder(raw)) return null;
@@ -916,18 +934,27 @@ export function routeProject(input: RouteInput): RouteResult {
   const om = omKey(input.omNumber);
 
   if (om) {
-    // 1. OM já registrada em relatórios do projeto
-    for (const [pid, oms] of Object.entries(input.projectOmNumbers || {})) {
-      if (oms.some((o) => omKey(o) === om) && projects.some((p) => p.id === pid)) {
-        return { projectId: pid, reason: "om_in_reports" };
-      }
-    }
-    // 2. OM no nome padronizado do projeto
+    const rawOm = input.omNumber;
+    const projectOm = (p: RoutableProject) => {
+      const m = String(p.name || "").match(/^\s*OM\s*[:\-]?\s*([\w./-]+)/i);
+      return m ? m[1] : null;
+    };
+    // 1. OM no nome/código do card manda em tudo
     for (const p of projects) {
-      if (projectOmKey(p.name) === om) return { projectId: p.id, reason: "om_in_project_name" };
-      if (p.code && omKey(p.code) === om) return { projectId: p.id, reason: "om_in_project_code" };
+      const pom = projectOm(p);
+      if (pom && sameOm(pom, rawOm)) return { projectId: p.id, reason: "om_in_project_name" };
+      if (p.code && sameOm(p.code, rawOm)) return { projectId: p.id, reason: "om_in_project_code" };
     }
-    // OM explícita e diferente de tudo → nova atividade
+    // 2. OM em relatórios: vence o card com mais RDOs dessa OM.
+    //    Cards cujo nome tem OUTRA OM são ignorados (RDO caído no lugar errado).
+    let best: { id: string; count: number } | null = null;
+    for (const p of projects) {
+      const pom = projectOm(p);
+      if (pom && !sameOm(pom, rawOm)) continue;
+      const count = ((input.projectOmNumbers || {})[p.id] || []).filter((o) => sameOm(o, rawOm)).length;
+      if (count > 0 && (!best || count > best.count)) best = { id: p.id, count };
+    }
+    if (best) return { projectId: best.id, reason: "om_in_reports" };
     return { projectId: null, reason: "om_not_found" };
   }
 
