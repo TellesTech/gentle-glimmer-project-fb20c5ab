@@ -1365,7 +1365,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    const route = routeProject({
+    // OM explícita: considera também cards antigos/concluídos da unidade
+    if (omNumberEarly) {
+      const ids = new Set(activeProjects.map((p) => p.id));
+      for (const p of (activeProjectsRaw || []) as any[]) {
+        if (!ids.has(p.id)) activeProjects.push(p);
+      }
+    }
+
+    let route = routeProject({
       omNumber: omNumberEarly,
       omTitle: omTitleEarly,
       projects: activeProjects,
@@ -1373,6 +1381,24 @@ Deno.serve(async (req) => {
       projectOmTitles,
       defaultProjectId: groupDefaultProjectId,
     });
+    // OM não encontrada na unidade: procura na empresa inteira
+    if (!route.projectId && omNumberEarly) {
+      const { data: siteCo } = await supabase.from("sites").select("company_id").eq("id", siteId).maybeSingle();
+      if (siteCo?.company_id) {
+        const { data: coProjects } = await supabase
+          .from("projects")
+          .select("id, name, code, site_id, sites!inner(company_id)")
+          .eq("sites.company_id", siteCo.company_id)
+          .neq("site_id", siteId);
+        const coRoute = routeProject({ omNumber: omNumberEarly, omTitle: null, projects: (coProjects || []) as any });
+        if (coRoute.projectId) {
+          const hit = (coProjects || []).find((p: any) => p.id === coRoute.projectId) as any;
+          console.warn(`[ROUTE] OM ${omNumberEarly} encontrada em outra unidade (${hit?.site_id}); usando card ${hit?.name}`);
+          route = { projectId: coRoute.projectId, reason: `${coRoute.reason}_outra_unidade` };
+          if (hit?.site_id) siteId = hit.site_id;
+        }
+      }
+    }
     console.log(`[ROUTE] om=${omNumberEarly ?? "-"} titulo="${omTitleEarly ?? "-"}" -> ${route.projectId ?? "novo"} (${route.reason})`);
     const routeReason = route.reason;
 
