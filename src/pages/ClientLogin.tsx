@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/loose-client';
 import { validatePinWithRetry, isValidatePinFailure } from '@/lib/validatePin';
@@ -371,16 +371,15 @@ export default function ClientLogin() {
 
   // Email/password is always the default entry point. PIN is a secondary path,
   // reachable through a link below the form (or via ?mode=pin in the invite).
+  // Applied only once: afterwards the user must be free to switch to the PIN list.
+  const defaultModeAppliedRef = useRef(false);
   useEffect(() => {
-    if (
-      !loading &&
-      !urlModeApplied &&
-      !showSiteSelection &&
-      mode === 'select'
-    ) {
-      setMode('email');
-    }
-  }, [loading, urlModeApplied, showSiteSelection, mode]);
+    if (loading || showSiteSelection || defaultModeAppliedRef.current) return;
+    defaultModeAppliedRef.current = true;
+    const urlMode = new URLSearchParams(window.location.search).get('mode');
+    if (urlMode === 'email' || urlMode === 'pin' || urlMode === 'magic') return;
+    setMode((current) => (current === 'select' ? 'email' : current));
+  }, [loading, showSiteSelection]);
 
   if (loading) {
     return (
