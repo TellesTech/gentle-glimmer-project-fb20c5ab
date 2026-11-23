@@ -192,12 +192,14 @@ serve(async (req) => {
 
       // Defensive guard: refuse PIN login if the linked auth user is an internal collaborator.
       // Avoids cross-contamination between client PIN flow and the WEES collaborator login.
-      const { data: internalRole } = await supabase
+      // Super admins have full access and may enter the client portal to test it.
+      const { data: internalRoles } = await supabase
         .from('user_roles')
-        .select('user_id')
-        .eq('user_id', contact.user_id)
-        .maybeSingle();
-      if (internalRole) {
+        .select('role')
+        .eq('user_id', contact.user_id);
+      const roles = (internalRoles ?? []).map((r: { role: string }) => r.role);
+      const isInternal = roles.length > 0 && !roles.includes('super_admin');
+      if (isInternal) {
         return respond({
           success: false,
           error: 'Este e-mail pertence a um colaborador interno. Acesse pelo login de colaborador.',
